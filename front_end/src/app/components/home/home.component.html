@@ -1,0 +1,161 @@
+<div class="page-container">
+  <h2>📱 Complete Device Information Dashboard</h2>
+  
+  <div class="welcome-card">
+    <h3>{{ welcomeMessage }}</h3>
+    <p>Comprehensive device, network, and location analysis</p>
+  </div>
+
+  <div class="info-section">
+    <h3>🌐 Network & IP Information</h3>
+    
+    <div class="ip-info" *ngIf="ipInfo">
+      <div *ngIf="ipInfo.error; else ipData">
+        <p class="error-message">{{ ipInfo.error }}</p>
+      </div>
+      <ng-template #ipData>
+        <div class="info-item"><strong>IP Address:</strong> {{ ipInfo.ip }}</div>
+        <div class="info-item"><strong>IP Type:</strong> {{ ipInfo.type }}</div>
+      </ng-template>
+    </div>
+
+    <div *ngIf="!ipInfo" class="loading-message">🔍 Detecting IP address...</div>
+
+    <div *ngIf="ipLocationInfo">
+      <h4>📍 Location from IP Address</h4>
+      <div *ngIf="ipLocationInfo.error; else ipLocationData" class="error-message">
+        {{ ipLocationInfo.error }}
+      </div>
+      <ng-template #ipLocationData>
+        <div class="coordinate-display">
+          <div class="info-item"><strong>🏙️ City:</strong> {{ ipLocationInfo.city }}</div>
+          <div class="info-item"><strong>🗺️ Region:</strong> {{ ipLocationInfo.region }}</div>
+          <div class="info-item"><strong>🏳️ Country:</strong> {{ ipLocationInfo.country }} ({{ ipLocationInfo.countryCode }})</div>
+          <div class="info-item"><strong>📮 Postal:</strong> {{ ipLocationInfo.postal }}</div>
+          <div class="info-item"><strong>🌍 Coordinates:</strong> {{ ipLocationInfo.latitude }}, {{ ipLocationInfo.longitude }}</div>
+          <div class="info-item"><strong>🕒 Timezone:</strong> {{ ipLocationInfo.timezone }}</div>
+          <div class="info-item"><strong>🌐 ISP:</strong> {{ ipLocationInfo.isp }}</div>
+          <div class="info-item"><strong>🔍 Accuracy:</strong> {{ ipLocationInfo.accuracy }}</div>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <h4>🔍 Browser Information</h4>
+      <div class="info-item"><strong>User Agent:</strong> {{ deviceInfo.userAgent }}</div>
+      <div class="info-item"><strong>Platform:</strong> {{ deviceInfo.platform }}</div>
+      <div class="info-item"><strong>Language:</strong> {{ deviceInfo.language }}</div>
+      <div class="info-item"><strong>Languages:</strong> {{ deviceInfo.languages | json }}</div>
+      <div class="info-item"><strong>Cookies:</strong> <span [class]="deviceInfo.cookieEnabled ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.cookieEnabled ? 'Enabled' : 'Disabled' }}</span></div>
+      <div class="info-item"><strong>Online:</strong> <span [class]="deviceInfo.onLine ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.onLine ? 'Yes' : 'No' }}</span></div>
+      <div class="info-item"><strong>Do Not Track:</strong> {{ deviceInfo.doNotTrack || 'Not set' }}</div>
+      <div class="info-item"><strong>Referrer:</strong> {{ deviceInfo.referrer || 'Direct visit' }}</div>
+    </div>
+
+    <div class="info-card">
+      <h4>📺 Screen & Display</h4>
+      <div class="info-item"><strong>Screen Size:</strong> {{ deviceInfo.screen?.width }} × {{ deviceInfo.screen?.height }}</div>
+      <div class="info-item"><strong>Available Size:</strong> {{ deviceInfo.screen?.availWidth }} × {{ deviceInfo.screen?.availHeight }}</div>
+      <div class="info-item"><strong>Viewport:</strong> {{ deviceInfo.viewport?.width }} × {{ deviceInfo.viewport?.height }}</div>
+      <div class="info-item"><strong>Color Depth:</strong> {{ deviceInfo.screen?.colorDepth }} bits</div>
+      <div class="info-item"><strong>Pixel Depth:</strong> {{ deviceInfo.screen?.pixelDepth }} bits</div>
+      <div class="info-item"><strong>Pixel Ratio:</strong> {{ fingerprintInfo.pixelRatio }}x</div>
+    </div>
+
+    <div class="info-card">
+      <h4>⚙️ System Information</h4>
+      <div class="info-item"><strong>Timezone:</strong> {{ deviceInfo.timeZone }}</div>
+      <div class="info-item"><strong>UTC Offset:</strong> {{ deviceInfo.timezoneOffset }} minutes</div>
+      <div class="info-item"><strong>CPU Cores:</strong> {{ deviceInfo.hardwareConcurrency }}</div>
+      <div class="info-item"><strong>Touch Points:</strong> {{ deviceInfo.maxTouchPoints }}</div>
+      
+      <div *ngIf="deviceInfo.connection">
+        <div class="info-item"><strong>Connection:</strong> {{ deviceInfo.connection.effectiveType }}</div>
+        <div class="info-item"><strong>Downlink:</strong> {{ deviceInfo.connection.downlink }} Mbps</div>
+        <div class="info-item"><strong>Latency:</strong> {{ deviceInfo.connection.rtt }} ms</div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h4>📍 GPS Location (Permission Required)</h4>
+      <div *ngIf="locationInfo">
+        <div *ngIf="locationInfo.error; else gpsLocationData" class="error-message">
+          🚫 {{ locationInfo.error }}
+        </div>
+        <ng-template #gpsLocationData>
+          <div class="success-message">✅ GPS location accessed</div>
+          <div class="coordinate-display">
+            <div class="info-item"><strong>Latitude:</strong> {{ locationInfo.latitude }}</div>
+            <div class="info-item"><strong>Longitude:</strong> {{ locationInfo.longitude }}</div>
+            <div class="info-item"><strong>Accuracy:</strong> {{ locationInfo.accuracy }} meters</div>
+            <div class="info-item"><strong>Altitude:</strong> {{ locationInfo.altitude || 'N/A' }}</div>
+            <div class="info-item"><strong>Speed:</strong> {{ locationInfo.speed || 'N/A' }}</div>
+            <div class="info-item"><strong>Timestamp:</strong> {{ locationInfo.timestamp }}</div>
+          </div>
+        </ng-template>
+      </div>
+      <div *ngIf="!locationInfo" class="loading-message">🔍 Requesting GPS access...</div>
+    </div>
+
+    <div class="info-card">
+      <h4>🎥 Media Devices</h4>
+      <div *ngIf="mediaInfo">
+        <div *ngIf="mediaInfo.error; else mediaData" class="error-message">
+          🚫 {{ mediaInfo.error }}
+        </div>
+        <ng-template #mediaData>
+          <div class="info-item"><strong>🎤 Audio Inputs:</strong> {{ mediaInfo.audioInputs }}</div>
+          <div class="info-item"><strong>📹 Video Inputs:</strong> {{ mediaInfo.videoInputs }}</div>
+          <div class="info-item"><strong>🔊 Audio Outputs:</strong> {{ mediaInfo.audioOutputs }}</div>
+        </ng-template>
+      </div>
+      <div *ngIf="!mediaInfo" class="loading-message">🔍 Checking media devices...</div>
+    </div>
+
+    <div class="info-card">
+      <h4>📱 Motion Sensors</h4>
+      <div *ngIf="motionInfo">
+        <div *ngIf="motionInfo.error; else motionData" class="error-message">
+          🚫 {{ motionInfo.error }}
+        </div>
+        <ng-template #motionData>
+          <div *ngIf="motionInfo.status; else fullMotionData" class="loading-message">
+            {{ motionInfo.status }}
+          </div>
+          <ng-template #fullMotionData>
+            <div class="success-message">✅ Motion data available</div>
+            <div *ngIf="motionInfo.acceleration" class="info-item">
+              <strong>Acceleration:</strong> X:{{ motionInfo.acceleration.x }}, Y:{{ motionInfo.acceleration.y }}, Z:{{ motionInfo.acceleration.z }}
+            </div>
+          </ng-template>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-section">
+    <h3>🔧 Browser Features Support</h3>
+    <div class="info-grid">
+      <div class="info-item"><strong>WebGL:</strong> <span [class]="deviceInfo.features?.webGL ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.features?.webGL ? '✅ Supported' : '❌ Not supported' }}</span></div>
+      <div class="info-item"><strong>WebGL2:</strong> <span [class]="deviceInfo.features?.webGL2 ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.features?.webGL2 ? '✅ Supported' : '❌ Not supported' }}</span></div>
+      <div class="info-item"><strong>WebRTC:</strong> <span [class]="deviceInfo.features?.webRTC ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.features?.webRTC ? '✅ Supported' : '❌ Not supported' }}</span></div>
+      <div class="info-item"><strong>Local Storage:</strong> <span [class]="deviceInfo.features?.localStorage ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.features?.localStorage ? '✅ Supported' : '❌ Not supported' }}</span></div>
+      <div class="info-item"><strong>Service Workers:</strong> <span [class]="deviceInfo.features?.serviceWorkers ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.features?.serviceWorkers ? '✅ Supported' : '❌ Not supported' }}</span></div>
+      <div class="info-item"><strong>WebAssembly:</strong> <span [class]="deviceInfo.features?.webAssembly ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.features?.webAssembly ? '✅ Supported' : '❌ Not supported' }}</span></div>
+      <div class="info-item"><strong>Touch Support:</strong> <span [class]="deviceInfo.features?.touchSupport ? 'feature-supported' : 'feature-not-supported'">{{ deviceInfo.features?.touchSupport ? '✅ Supported' : '❌ Not supported' }}</span></div>
+    </div>
+  </div>
+
+  <div class="info-section">
+    <h3>🔒 Advanced Fingerprinting</h3>
+    <div class="info-grid">
+      <div class="info-item"><strong>Canvas ID:</strong> ...{{ fingerprintInfo.canvasFingerprint }}</div>
+      <div class="info-item"><strong>Audio Context:</strong> {{ fingerprintInfo.audioFingerprint }}</div>
+      <div class="info-item"><strong>Available Fonts:</strong> {{ fingerprintInfo.availableFonts?.join(', ') }}</div>
+      <div *ngIf="fingerprintInfo.webglInfo?.vendor" class="info-item"><strong>GPU Vendor:</strong> {{ fingerprintInfo.webglInfo.vendor }}</div>
+      <div *ngIf="fingerprintInfo.webglInfo?.renderer" class="info-item"><strong>GPU Renderer:</strong> {{ fingerprintInfo.webglInfo.renderer }}</div>
+    </div>
+  </div>
+</div>

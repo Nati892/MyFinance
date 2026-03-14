@@ -1,0 +1,272 @@
+<div class="page-container">
+  <div class="settings-header">
+    <h2>System Settings - Configuration Control 🔧</h2>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="showAddSettingForm()" [disabled]="showAddForm">
+        + Add Setting
+      </button>
+      <button class="btn-export" (click)="exportSettings()" [disabled]="loading">
+        Export JSON 💾
+      </button>
+      <div class="view-toggle">
+        <button [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">Table</button>
+        <button [class.active]="viewMode === 'cards'" (click)="viewMode = 'cards'">Cards</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Setting Form -->
+  <div class="add-setting-form" *ngIf="showAddForm">
+    <h3>Add New Setting</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Key *</label>
+        <input 
+          type="text" 
+          [(ngModel)]="newSetting.key" 
+          placeholder="setting.key.name"
+          class="form-input"
+        />
+      </div>
+      <div class="form-group">
+        <label>Value</label>
+        <textarea 
+          [(ngModel)]="newSetting.value" 
+          placeholder="Setting value (can be JSON)"
+          class="form-textarea"
+          rows="3"
+        ></textarea>
+      </div>
+      <div class="form-group full-width">
+        <label>Description</label>
+        <input 
+          type="text" 
+          [(ngModel)]="newSetting.description" 
+          placeholder="What does this setting do?"
+          class="form-input"
+        />
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input 
+            type="checkbox" 
+            [(ngModel)]="newSetting.sendWithConfig"
+          />
+          Send with Config
+        </label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" (click)="addSetting()">Create Setting</button>
+      <button class="btn-secondary" (click)="cancelAdd()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-container">
+    <div class="filters-row">
+      <div class="filter-group">
+        <label>Search</label>
+        <input 
+          type="text" 
+          placeholder="Search settings..."
+          [value]="searchTerm"
+          #searchInput
+          (input)="onSearchChange(searchInput.value)"
+          class="filter-input"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label>Type</label>
+        <select [(ngModel)]="filterCore" (change)="onFilterChange()" class="filter-select">
+          <option value="">All Types</option>
+          <option value="true">Core Settings</option>
+          <option value="false">Custom Settings</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Config</label>
+        <select [(ngModel)]="filterConfig" (change)="onFilterChange()" class="filter-select">
+          <option value="">All Settings</option>
+          <option value="true">Sent with Config</option>
+          <option value="false">Not in Config</option>
+        </select>
+      </div>
+
+      <button class="btn-clear" (click)="clearFilters()">
+        Clear Filters ✨
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="error-message" *ngIf="error">
+    <span>⚠️ {{ error }}</span>
+  </div>
+
+  <!-- Table View -->
+  <div class="settings-table-container" *ngIf="!loading && viewMode === 'table'">
+    <table class="settings-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Key</th>
+          <th>Value</th>
+          <th>Description</th>
+          <th>Config</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let setting of settings; trackBy: trackBySettingId" 
+            [class.core-setting]="setting.core_setting"
+            [class.editing]="editingId === setting.id">
+          <td class="type-cell">
+            <span [title]="getSettingTypeTooltip(setting)">
+              {{ getSettingTypeIcon(setting) }}
+            </span>
+          </td>
+          <td class="key-cell">
+            <code>{{ setting.key }}</code>
+          </td>
+          <td class="value-cell">
+            <div *ngIf="editingId !== setting.id" class="value-display">
+              {{ setting.value || '-' }}
+            </div>
+            <textarea 
+              *ngIf="editingId === setting.id"
+              [(ngModel)]="editingValue[setting.id]"
+              class="edit-textarea"
+              rows="2"
+            ></textarea>
+          </td>
+          <td class="description-cell">
+            <div *ngIf="editingId !== setting.id">
+              {{ setting.description || '-' }}
+            </div>
+            <input 
+              *ngIf="editingId === setting.id"
+              type="text"
+              [(ngModel)]="editingDescription[setting.id]"
+              class="edit-input"
+            />
+          </td>
+          <td class="config-cell">
+            <div *ngIf="editingId !== setting.id">
+              <span class="config-badge" [class.active]="setting.sendWithConfig">
+                {{ setting.sendWithConfig ? '✓' : '✗' }}
+              </span>
+            </div>
+            <label *ngIf="editingId === setting.id" class="checkbox-label">
+              <input 
+                type="checkbox" 
+                [(ngModel)]="editingConfig[setting.id]"
+              />
+            </label>
+          </td>
+          <td class="actions-cell">
+            <div class="action-buttons" *ngIf="editingId !== setting.id">
+              <button class="btn-icon" (click)="startEdit(setting)" title="Edit">
+                ✏️
+              </button>
+              <button 
+                class="btn-icon" 
+                (click)="deleteSetting(setting)" 
+                [disabled]="setting.core_setting"
+                [title]="setting.core_setting ? 'Core settings cannot be deleted' : 'Delete'"
+              >
+                🗑️
+              </button>
+            </div>
+            <div class="action-buttons" *ngIf="editingId === setting.id">
+              <button class="btn-icon success" (click)="saveEdit(setting)" title="Save">
+                ✅
+              </button>
+              <button class="btn-icon danger" (click)="cancelEdit(setting.id)" title="Cancel">
+                ❌
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="settings.length === 0">
+          <td colspan="6" class="no-data">No settings found 📭</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Card View -->
+  <div class="settings-cards" *ngIf="!loading && viewMode === 'cards'">
+    <div *ngFor="let setting of settings; trackBy: trackBySettingId" 
+         class="setting-card" 
+         [class.core-setting]="setting.core_setting">
+      <div class="card-header">
+        <span class="setting-type" [title]="getSettingTypeTooltip(setting)">
+          {{ getSettingTypeIcon(setting) }}
+        </span>
+        <code class="setting-key">{{ setting.key }}</code>
+      </div>
+      <div class="card-body">
+        <div class="setting-value">
+          <strong>Value:</strong>
+          <pre>{{ setting.value || '-' }}</pre>
+        </div>
+        <div class="setting-description" *ngIf="setting.description">
+          <strong>Description:</strong>
+          <p>{{ setting.description }}</p>
+        </div>
+        <div class="card-meta">
+          <span class="config-status" [class.active]="setting.sendWithConfig">
+            {{ setting.sendWithConfig ? '📡 In Config' : '📴 Not in Config' }}
+          </span>
+          <span class="core-status" *ngIf="setting.core_setting">
+            🔒 Core Setting
+          </span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-secondary" (click)="startEdit(setting)">Edit</button>
+        <button 
+          class="btn-danger" 
+          (click)="deleteSetting(setting)"
+          [disabled]="setting.core_setting"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading configuration... ⚙️</p>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="!loading && settings.length > 0">
+    <button (click)="prevPage()" [disabled]="currentPage === 1">
+      ⬅️ Previous
+    </button>
+    
+    <div class="page-info">
+      <span>Page</span>
+      <input 
+        type="number" 
+        [value]="currentPage" 
+        #pageInput
+        (change)="goToPage(+pageInput.value)"
+        min="1" 
+        [max]="totalPages"
+        class="page-input"
+      />
+      <span>of {{ totalPages }}</span>
+    </div>
+    
+    <button (click)="nextPage()" [disabled]="currentPage === totalPages">
+      Next ➡️
+    </button>
+  </div>
+</div>

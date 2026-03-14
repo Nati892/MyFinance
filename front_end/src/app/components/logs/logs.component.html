@@ -1,0 +1,239 @@
+<div class="page-container">
+  <div class="logs-header">
+    <h2>System Logs - The Archives 📜</h2>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportLogs()" [disabled]="loading">
+        Export CSV 💾
+      </button>
+      <div class="view-toggle">
+        <button [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">Table</button>
+        <button [class.active]="viewMode === 'cards'" (click)="viewMode = 'cards'">Cards</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section - Master your search! 🔍 -->
+  <div class="filters-container">
+    <div class="filters-row">
+      <!-- Search -->
+      <div class="filter-group">
+        <label>Search</label>
+        <input 
+          type="text" 
+          placeholder="Search logs..."
+          #searchInput
+          (input)="onSearchChange(searchInput.value)"
+          class="filter-input"
+        />
+      </div>
+
+      <!-- Level Filter -->
+      <div class="filter-group">
+        <label>Level</label>
+        <select [(ngModel)]="filters.level" (change)="onFilterChange()" class="filter-select">
+          <option value="">All Levels</option>
+          <option *ngFor="let level of availableLevels" [value]="level">
+            {{ level | uppercase }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Source Filter -->
+      <div class="filter-group">
+        <label>Source</label>
+        <select [(ngModel)]="filters.source" (change)="onFilterChange()" class="filter-select">
+          <option value="">All Sources</option>
+          <option *ngFor="let source of availableSources" [value]="source">
+            {{ source | titlecase }}
+          </option>
+        </select>
+      </div>
+
+      <!-- User Filter -->
+      <div class="filter-group">
+        <label>User</label>
+        <select [(ngModel)]="filters.userId" (change)="onFilterChange()" class="filter-select">
+          <option value="">All Users</option>
+          <option *ngFor="let user of availableUsers" [value]="user.id">
+            {{ user.username }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Action Filter -->
+      <div class="filter-group">
+        <label>Action</label>
+        <select [(ngModel)]="filters.action" (change)="onFilterChange()" class="filter-select">
+          <option value="">All Actions</option>
+          <option *ngFor="let action of availableActions" [value]="action">
+            {{ action }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filters-row">
+      <!-- Date Preset -->
+      <div class="filter-group">
+        <label>Date Range</label>
+        <select [(ngModel)]="selectedPreset" (change)="onPresetChange()" class="filter-select">
+          <option value="">All Time</option>
+          <option *ngFor="let preset of datePresets" [value]="preset.value">
+            {{ preset.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Custom Date Range -->
+      <div class="filter-group" *ngIf="showCustomDate">
+        <label>From</label>
+        <input 
+          type="datetime-local" 
+          [(ngModel)]="filters.dateFrom" 
+          (change)="onDateRangeChange()"
+          class="filter-input"
+        />
+      </div>
+
+      <div class="filter-group" *ngIf="showCustomDate">
+        <label>To</label>
+        <input 
+          type="datetime-local" 
+          [(ngModel)]="filters.dateTo" 
+          (change)="onDateRangeChange()"
+          class="filter-input"
+        />
+      </div>
+
+      <button class="btn-clear" (click)="clearFilters()">
+        Clear Filters ✨
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="error-message" *ngIf="error">
+    <span>⚠️ {{ error }}</span>
+  </div>
+
+  <!-- Table View -->
+  <div class="logs-table-container" *ngIf="!loading && viewMode === 'table'">
+    <table class="logs-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Level</th>
+          <th>Source</th>
+          <th>Action</th>
+          <th>Description</th>
+          <th>User</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let log of logs; let i = index">
+          <tr [class]="getLogLevelClass(log.level)">
+            <td class="time-cell">{{ log.createdAt | date:'short' }}</td>
+            <td class="level-cell">
+              <span class="level-badge" [class]="getLogLevelClass(log.level)">
+                {{ log.level | uppercase }}
+              </span>
+            </td>
+            <td>{{ log.source | titlecase }}</td>
+            <td class="action-cell">{{ log.action }}</td>
+            <td class="description-cell">{{ log.description || '-' }}</td>
+            <td>{{ log.user?.username || 'System' }}</td>
+            <td class="details-cell">
+              <button 
+                class="btn-details" 
+                (click)="toggleLogDetails(log.id)"
+                [class.expanded]="expandedLogId === log.id"
+              >
+                {{ expandedLogId === log.id ? '🔽' : '▶️' }}
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="expandedLogId === log.id" class="details-row">
+            <td colspan="7">
+              <div class="log-details">
+                <div class="detail-section" *ngIf="log.data && hasKeys(log.data)">
+                  <strong>Data:</strong>
+                  <pre>{{ formatJson(log.data) }}</pre>
+                </div>
+                <div class="detail-section" *ngIf="log.metadata && hasKeys(log.metadata)">
+                  <strong>Metadata:</strong>
+                  <pre>{{ formatJson(log.metadata) }}</pre>
+                </div>
+                <div class="detail-section" *ngIf="log.errorStack">
+                  <strong>Error Stack:</strong>
+                  <pre class="error-stack">{{ log.errorStack }}</pre>
+                </div>
+                <div class="detail-info">
+                  <span *ngIf="log.method"><strong>Method:</strong> {{ log.method }}</span>
+                  <span *ngIf="log.path"><strong>Path:</strong> {{ log.path }}</span>
+                  <span *ngIf="log.statusCode"><strong>Status:</strong> {{ log.statusCode }}</span>
+                  <span *ngIf="log.duration"><strong>Duration:</strong> {{ log.duration }}ms</span>
+                  <span *ngIf="log.ipAddress"><strong>IP:</strong> {{ log.ipAddress }}</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+        <tr *ngIf="logs.length === 0">
+          <td colspan="7" class="no-data">No logs found in the archives 📭</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Card View -->
+  <div class="logs-cards" *ngIf="!loading && viewMode === 'cards'">
+    <div *ngFor="let log of logs" class="log-card" [class]="getLogLevelClass(log.level)">
+      <div class="card-header">
+        <span class="level-badge" [class]="getLogLevelClass(log.level)">
+          {{ log.level | uppercase }}
+        </span>
+        <span class="card-time">{{ log.createdAt | date:'short' }}</span>
+      </div>
+      <div class="card-body">
+        <h4>{{ log.action }}</h4>
+        <p>{{ log.description || 'No description' }}</p>
+        <div class="card-meta">
+          <span>{{ log.source | titlecase }}</span>
+          <span>{{ log.user?.username || 'System' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading the archives... 📚</p>
+  </div>
+
+  <!-- Pagination - Navigate the chronicles! 📖 -->
+  <div class="pagination" *ngIf="!loading && logs.length > 0">
+    <button (click)="prevPage()" [disabled]="currentPage === 1">
+      ⬅️ Previous
+    </button>
+    
+    <div class="page-info">
+      <span>Page</span>
+      <input 
+        type="number" 
+        [value]="currentPage" 
+        #pageInput
+        (change)="goToPage(+pageInput.value)"
+        min="1" 
+        [max]="totalPages"
+        class="page-input"
+      />
+      <span>of {{ totalPages }}</span>
+    </div>
+    
+    <button (click)="nextPage()" [disabled]="currentPage === totalPages">
+      Next ➡️
+    </button>
+  </div>
+</div>

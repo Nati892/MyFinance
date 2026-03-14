@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:latest
+    container_name: app_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345678 
+      MYSQL_DATABASE: app_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: 12345678
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3309:3306"
+    networks:
+      - app_network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app_backend
+    environment:
+     # ENV: ${ENV}
+      DB_HOST: 172.29.80.1
+     # DB_NAME: ${DB_NAME}
+     # DB_USER: ${DB_USER}
+     # DB_PASSWORD: ${DB_PASSWORD}
+     # DB_PORT: 3306
+     # BASE_ADDRESS: ${BASE_ADDRESS}
+     # PORT: 13244
+     # JWT_SECRET: ${JWT_SECRET}
+     # JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+     # BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS}
+    restart: always
+    volumes: 
+      - server_conf_folder:/conf
+    ports:
+      - "1234:1234"
+    depends_on:
+      - db
+    networks:
+      - app_network
+
+volumes:
+  db_data:
+  server_conf_folder:
+networks:
+  app_network:
+    driver: bridge

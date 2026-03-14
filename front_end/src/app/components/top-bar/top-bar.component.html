@@ -1,0 +1,9 @@
+<div class="top-bar">
+  <div class="top-bar-left">
+    <h1>My Application</h1>
+  </div>
+  <div class="top-bar-right">
+    <span class="username">{{ authService.getCurrentUser()?.username }}</span>
+    <button class="logout-btn" (click)="logout()">Logout</button>
+  </div>
+</div>
