@@ -1,0 +1,495 @@
+<div class="page-container">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       LIST VIEW
+  ════════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="mode === 'list'">
+
+    <div class="page-header">
+      <h2>Households</h2>
+      <button class="btn-primary" (click)="showCreateForm()" [disabled]="showNewForm">
+        + New Household
+      </button>
+    </div>
+
+    <!-- New Household Form -->
+    <div class="form-card" *ngIf="showNewForm">
+      <h3>New Household</h3>
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" class="form-input" [(ngModel)]="newHousehold.name" placeholder="Household name" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" class="form-input" [(ngModel)]="newHousehold.description" placeholder="Optional description" />
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" (click)="createHousehold()">Create</button>
+        <button class="btn-secondary" (click)="cancelCreate()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-message" *ngIf="error">{{ error }}</div>
+
+    <!-- Loading -->
+    <div class="loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <p>Loading households...</p>
+    </div>
+
+    <!-- Household Cards -->
+    <div class="households-grid" *ngIf="!loading">
+      <div class="household-card" *ngFor="let h of households; trackBy: trackById">
+        <div class="household-card-body">
+          <div class="household-icon">
+            <i class="fa-solid fa-house-chimney"></i>
+          </div>
+          <div class="household-info">
+            <h3>{{ h.name }}</h3>
+            <p class="household-desc">{{ h.description || 'No description' }}</p>
+            <span class="member-badge">
+              <i class="fa-solid fa-users"></i>
+              {{ h.memberCount ?? 0 }} member{{ (h.memberCount ?? 0) !== 1 ? 's' : '' }}
+            </span>
+          </div>
+        </div>
+        <div class="household-card-actions">
+          <button class="btn-manage" (click)="openDetail(h)">
+            <i class="fa-solid fa-sliders"></i> Manage
+          </button>
+          <ng-container *ngIf="confirmDeleteId !== h.id">
+            <button class="btn-delete-outline" (click)="requestDelete(h.id)">
+              <i class="fa-solid fa-trash"></i> Delete
+            </button>
+          </ng-container>
+          <ng-container *ngIf="confirmDeleteId === h.id">
+            <span class="confirm-text">Are you sure?</span>
+            <button class="btn-danger" (click)="confirmDelete(h.id)">Yes, Delete</button>
+            <button class="btn-secondary" (click)="cancelDelete()">Cancel</button>
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="households.length === 0 && !loading">
+        <i class="fa-solid fa-house-circle-xmark"></i>
+        <p>No households yet. Create one to get started.</p>
+      </div>
+    </div>
+
+  </ng-container>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       DETAIL VIEW
+  ════════════════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="mode === 'detail' && selectedHousehold">
+
+    <!-- Breadcrumb + Back -->
+    <div class="breadcrumb">
+      <button class="btn-back" (click)="backToList()">
+        <i class="fa-solid fa-arrow-left"></i> Households
+      </button>
+      <span class="breadcrumb-sep">&rsaquo;</span>
+      <span class="breadcrumb-current">{{ selectedHousehold.name }}</span>
+    </div>
+
+    <!-- Household Name / Description (inline edit) -->
+    <div class="detail-header">
+      <div *ngIf="!editingHousehold" class="detail-title-row">
+        <div>
+          <h2>{{ selectedHousehold.name }}</h2>
+          <p class="detail-desc">{{ selectedHousehold.description || 'No description' }}</p>
+        </div>
+        <button class="btn-icon-text" (click)="startEditHousehold()" title="Edit household">
+          <i class="fa-solid fa-pencil"></i> Edit
+        </button>
+      </div>
+
+      <div *ngIf="editingHousehold" class="inline-edit-form">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" class="form-input" [(ngModel)]="editHouseholdForm.name" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" class="form-input" [(ngModel)]="editHouseholdForm.description" />
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" (click)="saveHousehold()">Save</button>
+          <button class="btn-secondary" (click)="cancelEditHousehold()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading / Error for detail -->
+    <div class="loading" *ngIf="detailLoading">
+      <div class="spinner"></div>
+    </div>
+    <div class="error-message" *ngIf="detailError">{{ detailError }}</div>
+
+    <!-- Tabs -->
+    <div class="tabs" *ngIf="!detailLoading">
+      <button class="tab-btn" [class.active]="currentTab === 'members'" (click)="switchTab('members')">
+        <i class="fa-solid fa-users"></i> Members
+      </button>
+      <button class="tab-btn" [class.active]="currentTab === 'expense-cats'" (click)="switchTab('expense-cats')">
+        <i class="fa-solid fa-arrow-trend-down"></i> Expense Categories
+      </button>
+      <button class="tab-btn" [class.active]="currentTab === 'income-cats'" (click)="switchTab('income-cats')">
+        <i class="fa-solid fa-arrow-trend-up"></i> Income Categories
+      </button>
+    </div>
+
+    <!-- ── MEMBERS TAB ────────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="currentTab === 'members' && !detailLoading">
+
+      <!-- Members List -->
+      <div class="section-card">
+        <h4 class="section-title">Current Members</h4>
+        <div class="members-list">
+          <div class="member-row" *ngFor="let member of selectedHousehold.members; trackBy: trackById">
+            <div class="avatar-circle" [style.background-color]="'#3F51B5'">
+              {{ getInitials(member.username) }}
+            </div>
+            <div class="member-info">
+              <span class="member-name">{{ member.username }}</span>
+              <span class="role-badge" [class.owner-badge]="member.role === 'owner'" *ngIf="!isEditingRole(member.appUserId)">
+                {{ member.role }}
+              </span>
+              <select *ngIf="isEditingRole(member.appUserId)"
+                      [(ngModel)]="memberRoleEditing[member.appUserId]"
+                      class="role-select">
+                <option value="owner">owner</option>
+                <option value="member">member</option>
+              </select>
+            </div>
+            <div class="member-actions">
+              <ng-container *ngIf="!isEditingRole(member.appUserId)">
+                <button class="btn-icon-sm" (click)="startEditRole(member)" title="Change role">
+                  <i class="fa-solid fa-pencil"></i>
+                </button>
+                <button class="btn-icon-sm btn-danger-sm" (click)="removeMember(member.appUserId)" title="Remove member">
+                  <i class="fa-solid fa-user-minus"></i>
+                </button>
+              </ng-container>
+              <ng-container *ngIf="isEditingRole(member.appUserId)">
+                <button class="btn-icon-sm btn-success-sm" (click)="saveRole(member)" title="Save role">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+                <button class="btn-icon-sm" (click)="cancelEditRole(member.appUserId)" title="Cancel">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </ng-container>
+            </div>
+          </div>
+          <p class="empty-inline" *ngIf="!selectedHousehold.members || selectedHousehold.members.length === 0">
+            No members yet.
+          </p>
+        </div>
+      </div>
+
+      <!-- Add Member -->
+      <div class="section-card">
+        <h4 class="section-title">Add Member</h4>
+        <div class="add-member-row">
+          <div class="user-search-wrapper">
+            <input
+              type="text"
+              class="form-input"
+              placeholder="Search users..."
+              [(ngModel)]="userSearchTerm"
+              (input)="onUserSearchInput()"
+              (focus)="focusUserSearch()"
+              autocomplete="off"
+            />
+            <div class="user-dropdown" *ngIf="showUserDropdown && filteredUsers.length > 0">
+              <div class="user-option" *ngFor="let u of filteredUsers; trackBy: trackById" (click)="selectUser(u)">
+                <div class="avatar-circle avatar-sm" [style.background-color]="'#607D8B'">{{ getInitials(u.username) }}</div>
+                <span>{{ u.username }}</span>
+                <span class="user-email" *ngIf="u.email">{{ u.email }}</span>
+              </div>
+            </div>
+            <div class="user-dropdown" *ngIf="showUserDropdown && filteredUsers.length === 0 && userSearchTerm">
+              <div class="user-option-empty">No users found</div>
+            </div>
+          </div>
+          <select class="role-select" [(ngModel)]="addMemberForm.role">
+            <option value="owner">Owner</option>
+            <option value="member">Member</option>
+          </select>
+          <button class="btn-primary" (click)="addMember()" [disabled]="!addMemberForm.appUserId">
+            <i class="fa-solid fa-user-plus"></i> Add
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── EXPENSE CATEGORIES TAB ─────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="currentTab === 'expense-cats' && !detailLoading">
+
+      <div class="section-card">
+        <div class="section-header">
+          <h4 class="section-title">Expense Categories</h4>
+          <button class="btn-primary" (click)="openExpenseNewForm()" [disabled]="showExpenseNewForm">
+            + New Category
+          </button>
+        </div>
+
+        <div class="loading-inline" *ngIf="expenseCatsLoading">
+          <div class="spinner-sm"></div>
+        </div>
+
+        <div class="categories-list" *ngIf="!expenseCatsLoading">
+
+          <!-- Category Row (view mode) -->
+          <ng-container *ngFor="let cat of expenseCategories; let i = index; trackBy: trackById">
+            <div class="category-row" *ngIf="editingExpenseCatId !== cat.id">
+              <div class="order-controls">
+                <button class="btn-order" (click)="moveExpenseCatUp(i)" [disabled]="i === 0" title="Move up">
+                  <i class="fa-solid fa-chevron-up"></i>
+                </button>
+                <button class="btn-order" (click)="moveExpenseCatDown(i)" [disabled]="i === expenseCategories.length - 1" title="Move down">
+                  <i class="fa-solid fa-chevron-down"></i>
+                </button>
+              </div>
+              <div class="cat-icon-circle" [style.background-color]="cat.color">
+                <span class="material-icons">{{ cat.icon }}</span>
+              </div>
+              <div class="cat-info">
+                <span class="cat-name">{{ cat.name }}</span>
+                <span class="cat-budget" *ngIf="cat.budget">&#8362;{{ cat.budget }}</span>
+                <span class="cat-budget no-budget" *ngIf="!cat.budget">No budget</span>
+              </div>
+              <div class="cat-actions">
+                <button class="btn-icon-sm" (click)="startEditExpenseCat(cat)" title="Edit">
+                  <i class="fa-solid fa-pencil"></i>
+                </button>
+                <button class="btn-icon-sm btn-danger-sm" (click)="deleteExpenseCat(cat.id)" title="Delete">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Category Row (edit mode) -->
+            <div class="category-edit-row" *ngIf="editingExpenseCatId === cat.id">
+              <div class="cat-edit-fields">
+                <input type="text" class="form-input" [(ngModel)]="editingExpenseCat.name" placeholder="Name" />
+                <div class="icon-picker-wrapper">
+                  <button class="btn-icon-preview" (click)="showExpenseEditIconPicker = !showExpenseEditIconPicker; $event.stopPropagation()"
+                          [style.background-color]="editingExpenseCat.color">
+                    <span class="material-icons">{{ editingExpenseCat.icon }}</span>
+                  </button>
+                  <div class="icon-picker-popup" *ngIf="showExpenseEditIconPicker" (click)="$event.stopPropagation()">
+                    <div class="icon-grid">
+                      <button class="icon-option" *ngFor="let ico of iconList; trackBy: trackByIndex"
+                              [class.selected]="editingExpenseCat.icon === ico"
+                              (click)="editingExpenseCat.icon = ico; showExpenseEditIconPicker = false"
+                              title="{{ ico }}">
+                        <span class="material-icons">{{ ico }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="color-picker-row">
+                  <button class="color-swatch"
+                          *ngFor="let c of presetColors; trackBy: trackByIndex"
+                          [style.background-color]="c"
+                          [class.selected]="editingExpenseCat.color === c"
+                          (click)="editingExpenseCat.color = c"
+                          title="{{ c }}">
+                    <i class="fa-solid fa-check" *ngIf="editingExpenseCat.color === c"></i>
+                  </button>
+                </div>
+                <input type="number" class="form-input budget-input" [(ngModel)]="editingExpenseCat.budget" placeholder="Budget (optional)" min="0" />
+              </div>
+              <div class="cat-edit-actions">
+                <button class="btn-icon-sm btn-success-sm" (click)="saveEditExpenseCat(cat)" title="Save">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+                <button class="btn-icon-sm" (click)="cancelEditExpenseCat()" title="Cancel">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            </div>
+          </ng-container>
+
+          <p class="empty-inline" *ngIf="expenseCategories.length === 0">No expense categories yet.</p>
+        </div>
+
+        <!-- New Expense Category Form -->
+        <div class="new-category-form" *ngIf="showExpenseNewForm">
+          <h5>New Expense Category</h5>
+          <div class="cat-edit-fields">
+            <input type="text" class="form-input" [(ngModel)]="newExpenseCat.name" placeholder="Category name *" />
+            <div class="icon-picker-wrapper">
+              <button class="btn-icon-preview" (click)="showExpenseIconPicker = !showExpenseIconPicker; $event.stopPropagation()"
+                      [style.background-color]="newExpenseCat.color">
+                <span class="material-icons">{{ newExpenseCat.icon }}</span>
+              </button>
+              <div class="icon-picker-popup" *ngIf="showExpenseIconPicker" (click)="$event.stopPropagation()">
+                <div class="icon-grid">
+                  <button class="icon-option" *ngFor="let ico of iconList; trackBy: trackByIndex"
+                          [class.selected]="newExpenseCat.icon === ico"
+                          (click)="newExpenseCat.icon = ico; showExpenseIconPicker = false"
+                          title="{{ ico }}">
+                    <span class="material-icons">{{ ico }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="color-picker-row">
+              <button class="color-swatch"
+                      *ngFor="let c of presetColors; trackBy: trackByIndex"
+                      [style.background-color]="c"
+                      [class.selected]="newExpenseCat.color === c"
+                      (click)="newExpenseCat.color = c"
+                      title="{{ c }}">
+                <i class="fa-solid fa-check" *ngIf="newExpenseCat.color === c"></i>
+              </button>
+            </div>
+            <input type="number" class="form-input budget-input" [(ngModel)]="newExpenseCat.budget" placeholder="Budget &#8362; (optional)" min="0" />
+          </div>
+          <div class="form-actions">
+            <button class="btn-primary" (click)="saveExpenseNew()">Save</button>
+            <button class="btn-secondary" (click)="cancelExpenseNew()">Cancel</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── INCOME CATEGORIES TAB ──────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="currentTab === 'income-cats' && !detailLoading">
+
+      <div class="section-card">
+        <div class="section-header">
+          <h4 class="section-title">Income Categories</h4>
+          <button class="btn-primary" (click)="openIncomeNewForm()" [disabled]="showIncomeNewForm">
+            + New Category
+          </button>
+        </div>
+
+        <div class="loading-inline" *ngIf="incomeCatsLoading">
+          <div class="spinner-sm"></div>
+        </div>
+
+        <div class="categories-list" *ngIf="!incomeCatsLoading">
+
+          <!-- Category Row (view mode) -->
+          <ng-container *ngFor="let cat of incomeCategories; let i = index; trackBy: trackById">
+            <div class="category-row" *ngIf="editingIncomeCatId !== cat.id">
+              <div class="order-controls">
+                <button class="btn-order" (click)="moveIncomeCatUp(i)" [disabled]="i === 0" title="Move up">
+                  <i class="fa-solid fa-chevron-up"></i>
+                </button>
+                <button class="btn-order" (click)="moveIncomeCatDown(i)" [disabled]="i === incomeCategories.length - 1" title="Move down">
+                  <i class="fa-solid fa-chevron-down"></i>
+                </button>
+              </div>
+              <div class="cat-icon-circle" [style.background-color]="cat.color">
+                <span class="material-icons">{{ cat.icon }}</span>
+              </div>
+              <div class="cat-info">
+                <span class="cat-name">{{ cat.name }}</span>
+              </div>
+              <div class="cat-actions">
+                <button class="btn-icon-sm" (click)="startEditIncomeCat(cat)" title="Edit">
+                  <i class="fa-solid fa-pencil"></i>
+                </button>
+                <button class="btn-icon-sm btn-danger-sm" (click)="deleteIncomeCat(cat.id)" title="Delete">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Category Row (edit mode) -->
+            <div class="category-edit-row" *ngIf="editingIncomeCatId === cat.id">
+              <div class="cat-edit-fields">
+                <input type="text" class="form-input" [(ngModel)]="editingIncomeCat.name" placeholder="Name" />
+                <div class="icon-picker-wrapper">
+                  <button class="btn-icon-preview" (click)="showIncomeEditIconPicker = !showIncomeEditIconPicker; $event.stopPropagation()"
+                          [style.background-color]="editingIncomeCat.color">
+                    <span class="material-icons">{{ editingIncomeCat.icon }}</span>
+                  </button>
+                  <div class="icon-picker-popup" *ngIf="showIncomeEditIconPicker" (click)="$event.stopPropagation()">
+                    <div class="icon-grid">
+                      <button class="icon-option" *ngFor="let ico of iconList; trackBy: trackByIndex"
+                              [class.selected]="editingIncomeCat.icon === ico"
+                              (click)="editingIncomeCat.icon = ico; showIncomeEditIconPicker = false"
+                              title="{{ ico }}">
+                        <span class="material-icons">{{ ico }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="color-picker-row">
+                  <button class="color-swatch"
+                          *ngFor="let c of presetColors; trackBy: trackByIndex"
+                          [style.background-color]="c"
+                          [class.selected]="editingIncomeCat.color === c"
+                          (click)="editingIncomeCat.color = c"
+                          title="{{ c }}">
+                    <i class="fa-solid fa-check" *ngIf="editingIncomeCat.color === c"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="cat-edit-actions">
+                <button class="btn-icon-sm btn-success-sm" (click)="saveEditIncomeCat(cat)" title="Save">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+                <button class="btn-icon-sm" (click)="cancelEditIncomeCat()" title="Cancel">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            </div>
+          </ng-container>
+
+          <p class="empty-inline" *ngIf="incomeCategories.length === 0">No income categories yet.</p>
+        </div>
+
+        <!-- New Income Category Form -->
+        <div class="new-category-form" *ngIf="showIncomeNewForm">
+          <h5>New Income Category</h5>
+          <div class="cat-edit-fields">
+            <input type="text" class="form-input" [(ngModel)]="newIncomeCat.name" placeholder="Category name *" />
+            <div class="icon-picker-wrapper">
+              <button class="btn-icon-preview" (click)="showIncomeIconPicker = !showIncomeIconPicker; $event.stopPropagation()"
+                      [style.background-color]="newIncomeCat.color">
+                <span class="material-icons">{{ newIncomeCat.icon }}</span>
+              </button>
+              <div class="icon-picker-popup" *ngIf="showIncomeIconPicker" (click)="$event.stopPropagation()">
+                <div class="icon-grid">
+                  <button class="icon-option" *ngFor="let ico of iconList; trackBy: trackByIndex"
+                          [class.selected]="newIncomeCat.icon === ico"
+                          (click)="newIncomeCat.icon = ico; showIncomeIconPicker = false"
+                          title="{{ ico }}">
+                    <span class="material-icons">{{ ico }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="color-picker-row">
+              <button class="color-swatch"
+                      *ngFor="let c of presetColors; trackBy: trackByIndex"
+                      [style.background-color]="c"
+                      [class.selected]="newIncomeCat.color === c"
+                      (click)="newIncomeCat.color = c"
+                      title="{{ c }}">
+                <i class="fa-solid fa-check" *ngIf="newIncomeCat.color === c"></i>
+              </button>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-primary" (click)="saveIncomeNew()">Save</button>
+            <button class="btn-secondary" (click)="cancelIncomeNew()">Cancel</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </ng-container>
+
+</div>

@@ -1,0 +1,244 @@
+<div class="timeline-root" (click)="closeMenu()">
+
+  <!-- ── View switcher ──────────────────────────────────────────────────────── -->
+  <div class="view-switcher">
+    <button
+      *ngFor="let v of views"
+      class="view-pill"
+      [class.active]="currentView === v.key"
+      (click)="selectView(v.key)"
+    >{{ v.label }}</button>
+  </div>
+
+  <!-- ── Period navigation ──────────────────────────────────────────────────── -->
+  <div class="period-nav">
+    <button class="nav-arrow" (click)="prev()" aria-label="Previous">&#8249;</button>
+    <span class="nav-label">{{ navLabel }}</span>
+    <button class="nav-arrow" (click)="next()" aria-label="Next">&#8250;</button>
+  </div>
+
+  <!-- ── Week row (weekly / daily / hourly views) ───────────────────────────── -->
+  <div
+    class="week-row"
+    *ngIf="currentView === 'weekly' || currentView === 'daily' || currentView === 'hourly'"
+  >
+    <button
+      *ngFor="let w of weeks; trackBy: trackByWeek"
+      class="week-pill"
+      [class.active]="activeWeekNumber === w.weekNumber"
+      [class.disabled]="!w.start"
+      [disabled]="!w.start"
+      (click)="selectWeek(w)"
+    >Wk {{ w.weekNumber }}</button>
+  </div>
+
+  <!-- ── Total bar ──────────────────────────────────────────────────────────── -->
+  <div class="total-bar" *ngIf="!loading">
+    <span class="total-pill">Total: {{ formatNIS(grandTotal) }}</span>
+  </div>
+
+  <!-- ── Loading state ──────────────────────────────────────────────────────── -->
+  <div class="skeleton-list" *ngIf="loading">
+    <div class="skeleton-card" *ngFor="let s of skeletonItems">
+      <div class="skeleton-icon shimmer"></div>
+      <div class="skeleton-body">
+        <div class="skeleton-line shimmer" style="width: 55%"></div>
+        <div class="skeleton-line shimmer" style="width: 35%; margin-top: 6px"></div>
+      </div>
+      <div class="skeleton-amount shimmer"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- MONTHLY VIEW                                                            -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="content-area" *ngIf="!loading && currentView === 'monthly'">
+
+    <ng-container *ngFor="let wg of weekGroups; trackBy: trackByKey">
+      <!-- Week section header -->
+      <div
+        class="section-header week-header"
+        [class.collapsed]="wg.collapsed"
+        (click)="toggleWeek(wg)"
+      >
+        <span class="section-chevron">{{ wg.collapsed ? '▶' : '▼' }}</span>
+        <span class="section-title">{{ wg.label }}</span>
+      </div>
+
+      <div class="section-body" *ngIf="!wg.collapsed">
+        <ng-container *ngFor="let dg of wg.dayGroups; trackBy: trackByKey">
+
+          <!-- Day sub-header -->
+          <div
+            class="section-header day-header"
+            [class.collapsed]="dg.collapsed"
+            (click)="toggleDay(dg)"
+          >
+            <span class="section-chevron small">{{ dg.collapsed ? '▶' : '▼' }}</span>
+            <span class="section-title small">{{ dg.label }}</span>
+          </div>
+
+          <div class="day-body" *ngIf="!dg.collapsed">
+            <ng-container
+              *ngFor="let tx of dg.transactions; trackBy: trackById"
+              [ngTemplateOutlet]="txCard"
+              [ngTemplateOutletContext]="{ $implicit: tx }"
+            ></ng-container>
+          </div>
+
+        </ng-container>
+
+        <!-- Empty week -->
+        <div class="empty-week" *ngIf="wg.dayGroups.length === 0">
+          <span class="empty-week-text">No transactions in this week</span>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Global empty state -->
+    <div class="empty-state" *ngIf="transactions.length === 0">
+      <span class="empty-icon">🗒️</span>
+      <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} here yet</p>
+      <p class="empty-sub">Transactions you add will appear here</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- WEEKLY VIEW                                                             -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="content-area" *ngIf="!loading && currentView === 'weekly'">
+
+    <ng-container *ngFor="let dg of dayGroups; trackBy: trackByKey">
+      <div
+        class="section-header day-header"
+        [class.collapsed]="dg.collapsed"
+        (click)="toggleDay(dg)"
+      >
+        <span class="section-chevron small">{{ dg.collapsed ? '▶' : '▼' }}</span>
+        <span class="section-title small">{{ dg.label }}</span>
+      </div>
+
+      <div class="day-body" *ngIf="!dg.collapsed">
+        <ng-container
+          *ngFor="let tx of dg.transactions; trackBy: trackById"
+          [ngTemplateOutlet]="txCard"
+          [ngTemplateOutletContext]="{ $implicit: tx }"
+        ></ng-container>
+      </div>
+    </ng-container>
+
+    <div class="empty-state" *ngIf="dayGroups.length === 0">
+      <span class="empty-icon">🗒️</span>
+      <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} this week</p>
+      <p class="empty-sub">Transactions you add will appear here</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- DAILY VIEW                                                              -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="content-area" *ngIf="!loading && currentView === 'daily'">
+
+    <ng-container *ngFor="let dg of dayGroups">
+      <!-- Hour blocks -->
+      <ng-container *ngFor="let hg of dg.hourGroups; trackBy: trackByHour">
+        <div class="section-header hour-header">
+          <span class="hour-label">{{ hg.label }}</span>
+        </div>
+        <div class="day-body">
+          <ng-container
+            *ngFor="let tx of hg.transactions; trackBy: trackById"
+            [ngTemplateOutlet]="txCard"
+            [ngTemplateOutletContext]="{ $implicit: tx }"
+          ></ng-container>
+        </div>
+      </ng-container>
+
+      <!-- No transactions this day -->
+      <div class="empty-state" *ngIf="dg.transactions.length === 0">
+        <span class="empty-icon">🗒️</span>
+        <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} on this day</p>
+        <p class="empty-sub">Transactions you add will appear here</p>
+      </div>
+    </ng-container>
+
+    <div class="empty-state" *ngIf="dayGroups.length === 0">
+      <span class="empty-icon">🗒️</span>
+      <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} on this day</p>
+      <p class="empty-sub">Transactions you add will appear here</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- HOURLY VIEW                                                             -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="content-area" *ngIf="!loading && currentView === 'hourly'">
+
+    <ng-container
+      *ngFor="let tx of hourTransactions; trackBy: trackById"
+      [ngTemplateOutlet]="txCard"
+      [ngTemplateOutletContext]="{ $implicit: tx }"
+    ></ng-container>
+
+    <div class="empty-state" *ngIf="hourTransactions.length === 0">
+      <span class="empty-icon">⏱️</span>
+      <p class="empty-title">Nothing at this hour</p>
+      <p class="empty-sub">No transactions recorded here</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Transaction card template ─────────────────────────────────────────────── -->
+<ng-template #txCard let-tx>
+  <div class="tx-card" [class.menu-open]="openMenuId === tx.id">
+
+    <!-- Category icon circle -->
+    <div
+      class="cat-circle"
+      [style.background-color]="getBgColor(tx.category.color)"
+      [style.border-color]="tx.category.color"
+    >
+      <span class="material-icons cat-icon" [style.color]="tx.category.color">
+        {{ tx.category.icon }}
+      </span>
+    </div>
+
+    <!-- Main content -->
+    <div class="tx-body">
+      <span class="tx-description">
+        {{ tx.description || tx.category.name }}
+      </span>
+      <span class="tx-note" *ngIf="tx.note">{{ tx.note }}</span>
+      <span class="tx-meta">
+        <span class="material-icons meta-icon">{{ getPaymentIcon(tx.paymentMethod) }}</span>
+        {{ formatPayment(tx.paymentMethod) }} · @{{ tx.appUser.username }}
+      </span>
+    </div>
+
+    <!-- Amount -->
+    <div class="tx-right">
+      <span class="tx-amount" [class.income]="tx.type === 'income'">
+        {{ formatNIS(tx.amount) }}
+      </span>
+
+      <!-- Action menu trigger -->
+      <button
+        class="menu-trigger"
+        (click)="toggleMenu(tx, $event)"
+        aria-label="Actions"
+      >&#8943;</button>
+
+      <!-- Dropdown menu -->
+      <div class="action-menu" *ngIf="openMenuId === tx.id" (click)="$event.stopPropagation()">
+        <button class="action-btn edit-btn" (click)="onEdit(tx)">
+          <span class="material-icons">edit</span> Edit
+        </button>
+        <button class="action-btn delete-btn" (click)="onDelete(tx)">
+          <span class="material-icons">delete</span> Delete
+        </button>
+      </div>
+    </div>
+
+  </div>
+</ng-template>

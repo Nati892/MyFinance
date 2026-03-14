@@ -1,0 +1,173 @@
+<!-- ── No household selected ──────────────────────────────────────────────── -->
+<ng-container *ngIf="!householdId">
+  <div class="state-screen">
+    <span class="material-icons state-icon">home</span>
+    <p class="state-title">No Household Selected</p>
+    <p class="state-sub">Please select a household from the header to view incomes.</p>
+  </div>
+</ng-container>
+
+<!-- ── Main layout ────────────────────────────────────────────────────────── -->
+<ng-container *ngIf="householdId">
+  <div class="page-layout">
+
+    <!-- Sidebar -->
+    <app-category-sidebar
+      [categories]="categories"
+      [selectedCategoryId]="selectedCategoryId"
+      type="income"
+      (categorySelected)="onCategorySelected($event)">
+    </app-category-sidebar>
+
+    <!-- Timeline area -->
+    <div class="timeline-area">
+
+      <!-- Load error banner -->
+      <div class="error-banner" *ngIf="loadError">
+        <span class="material-icons">error_outline</span>
+        Failed to load incomes.
+        <button class="retry-btn" (click)="loadIncomes()">Retry</button>
+      </div>
+
+      <app-timeline
+        [transactions]="transactions"
+        type="income"
+        [loading]="loadingTransactions"
+        (viewChanged)="onViewChanged($event)"
+        (transactionEdit)="onTransactionEdit($event)"
+        (transactionDelete)="onTransactionDelete($event)">
+      </app-timeline>
+
+    </div><!-- /timeline-area -->
+  </div><!-- /page-layout -->
+
+  <!-- FAB -->
+  <button class="fab" (click)="openAddModal()" aria-label="Add income">
+    <span class="material-icons">add</span>
+  </button>
+</ng-container>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     Add / Edit Income Modal (bottom sheet)
+  ═════════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()"></div>
+
+<div class="modal-sheet" *ngIf="showModal" role="dialog" aria-modal="true">
+
+  <!-- Handle -->
+  <div class="sheet-handle"></div>
+
+  <!-- Header -->
+  <div class="sheet-header">
+    <h2 class="sheet-title">{{ isEditMode ? 'Edit Income' : 'New Income' }}</h2>
+    <button class="sheet-close" (click)="closeModal()" aria-label="Close">
+      <span class="material-icons">close</span>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="sheet-body">
+
+    <!-- Amount -->
+    <div class="field-group">
+      <label class="field-label">Amount</label>
+      <div class="amount-input-wrap">
+        <span class="currency-prefix">₪</span>
+        <input
+          class="amount-input"
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="0.00"
+          [(ngModel)]="form.amount"
+          name="amount"
+        />
+      </div>
+    </div>
+
+    <!-- Category chips -->
+    <div class="field-group">
+      <label class="field-label">Category</label>
+      <div class="chip-row">
+        <button
+          *ngFor="let cat of categories"
+          class="cat-chip"
+          [class.selected]="form.incomeCategoryId === cat.id"
+          [style.--cat-color]="cat.color"
+          (click)="selectChipCategory(cat.id)"
+          type="button">
+          <span class="chip-icon">{{ cat.icon }}</span>
+          <span class="chip-label">{{ cat.name }}</span>
+        </button>
+        <span class="chip-empty" *ngIf="categories.length === 0">No categories</span>
+      </div>
+    </div>
+
+    <!-- Date & Time -->
+    <div class="field-group">
+      <label class="field-label">Date &amp; Time</label>
+      <input
+        class="text-input"
+        type="datetime-local"
+        [(ngModel)]="form.dateTime"
+        name="dateTime"
+      />
+    </div>
+
+    <!-- Payment method -->
+    <div class="field-group">
+      <label class="field-label">Payment Method</label>
+      <div class="method-row">
+        <button
+          *ngFor="let pm of paymentMethods"
+          class="method-chip"
+          [class.selected]="form.paymentMethod === pm.value"
+          (click)="form.paymentMethod = pm.value"
+          type="button">
+          {{ pm.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="field-group">
+      <label class="field-label">Description <span class="optional">(optional)</span></label>
+      <input
+        class="text-input"
+        type="text"
+        placeholder="e.g. Monthly salary"
+        [(ngModel)]="form.description"
+        name="description"
+      />
+    </div>
+
+    <!-- Note -->
+    <div class="field-group">
+      <label class="field-label">Note <span class="optional">(optional)</span></label>
+      <textarea
+        class="text-input textarea"
+        rows="3"
+        placeholder="Any additional notes…"
+        [(ngModel)]="form.note"
+        name="note">
+      </textarea>
+    </div>
+
+    <!-- Error message -->
+    <p class="save-error" *ngIf="saveError">{{ saveError }}</p>
+
+    <!-- Actions -->
+    <div class="sheet-actions">
+      <button class="btn-cancel" (click)="closeModal()" type="button">Cancel</button>
+      <button
+        class="btn-save"
+        (click)="saveIncome()"
+        type="button"
+        [disabled]="saving">
+        <span *ngIf="!saving">{{ isEditMode ? 'Save Changes' : 'Add Income' }}</span>
+        <span *ngIf="saving">Saving…</span>
+      </button>
+    </div>
+
+  </div><!-- /sheet-body -->
+</div><!-- /modal-sheet -->

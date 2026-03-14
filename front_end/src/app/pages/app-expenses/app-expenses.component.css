@@ -1,0 +1,511 @@
+/* ── Page layout ──────────────────────────────────────────────────────────── */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.expenses-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Sidebar column ───────────────────────────────────────────────────────── */
+
+.sidebar-col {
+  width: 64px;
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sidebar-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #f44336;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* ── Timeline column ──────────────────────────────────────────────────────── */
+
+.timeline-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.timeline-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: #888;
+  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.retry-btn {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1.5px solid #667eea;
+  background: transparent;
+  color: #667eea;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.retry-btn:hover {
+  background: #667eea;
+  color: #fff;
+}
+
+/* ── No household ─────────────────────────────────────────────────────────── */
+
+.no-household {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  text-align: center;
+  padding: 32px 24px;
+  color: #555;
+}
+
+.no-household-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.no-household-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.no-household-sub {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+}
+
+/* ── FAB ──────────────────────────────────────────────────────────────────── */
+
+.fab {
+  position: fixed;
+  bottom: calc(60px + 16px + env(safe-area-inset-bottom));
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5);
+  z-index: 90;
+  transition: transform 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fab:active {
+  transform: scale(0.93);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.fab-icon {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 300;
+  margin-top: -2px;
+}
+
+/* ── Modal backdrop ───────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 200;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Bottom sheet modal ───────────────────────────────────────────────────── */
+
+.modal-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  z-index: 201;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+
+  /* Slide up animation */
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  /* Ensure safe area at bottom */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.modal-sheet--open {
+  transform: translateY(0);
+}
+
+.modal-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: #ddd;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #f0f0f0;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.modal-close:hover {
+  background: #e0e0e0;
+}
+
+/* ── Error banner ─────────────────────────────────────────────────────────── */
+
+.modal-error-banner {
+  background: #fdecea;
+  color: #c62828;
+  font-size: 13px;
+  padding: 8px 20px;
+  flex-shrink: 0;
+}
+
+/* ── Modal body (scrollable) ──────────────────────────────────────────────── */
+
+.modal-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Amount field ─────────────────────────────────────────────────────────── */
+
+.field-group--amount {
+  display: flex;
+  align-items: center;
+  background: #f7f8fc;
+  border-radius: 14px;
+  padding: 12px 16px;
+  gap: 8px;
+  margin-bottom: 12px;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.field-group--amount:focus-within {
+  border-color: #667eea;
+  background: #fff;
+}
+
+.amount-prefix {
+  font-size: 28px;
+  font-weight: 700;
+  color: #667eea;
+  line-height: 1;
+}
+
+.amount-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a2e;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.amount-input::placeholder {
+  color: #ccc;
+}
+
+/* Remove number input spinners */
+.amount-input::-webkit-inner-spin-button,
+.amount-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.amount-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* ── Field label ──────────────────────────────────────────────────────────── */
+
+.field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.field-optional {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #bbb;
+}
+
+/* ── Category chip row ────────────────────────────────────────────────────── */
+
+.chip-row {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px 8px;
+  /* Hide scrollbar but keep scrollable */
+  scrollbar-width: none;
+}
+
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: transform 0.1s, opacity 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chip:active {
+  transform: scale(0.95);
+}
+
+.chip--selected {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.chip-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.chip-name {
+  line-height: 1;
+}
+
+/* ── Generic field group ──────────────────────────────────────────────────── */
+
+.field-group {
+  background: #f7f8fc;
+  border-radius: 12px;
+  padding: 0;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+  overflow: hidden;
+}
+
+.field-group:focus-within {
+  border-color: #667eea;
+  background: #fff;
+}
+
+.field-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  color: #1a1a2e;
+  outline: none;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.field-input::placeholder {
+  color: #bbb;
+}
+
+.field-textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  color: #1a1a2e;
+  outline: none;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  font-family: inherit;
+  resize: none;
+  line-height: 1.5;
+}
+
+.field-textarea::placeholder {
+  color: #bbb;
+}
+
+/* ── Payment method segmented control ────────────────────────────────────── */
+
+.payment-segment {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.segment-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 4px;
+  border-radius: 10px;
+  border: 2px solid #e8e8e8;
+  background: #f7f8fc;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.segment-btn--active {
+  border-color: #667eea;
+  background: #f0f2ff;
+}
+
+.segment-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.segment-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #555;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.segment-btn--active .segment-label {
+  color: #667eea;
+}
+
+/* ── Save button ──────────────────────────────────────────────────────────── */
+
+.save-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.save-btn:active {
+  transform: scale(0.98);
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (min-width: 480px) {
+  .modal-sheet {
+    max-width: 480px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    border-radius: 20px 20px 0 0;
+  }
+
+  .modal-sheet--open {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .fab {
+    right: 24px;
+  }
+}

@@ -1,0 +1,52 @@
+<div class="app-shell">
+  <!-- Fixed header -->
+  <header class="app-header">
+    <span class="header-brand">MyFinance</span>
+
+    <div class="header-household" [class.has-dropdown]="hasMultipleHouseholds" (click)="hasMultipleHouseholds && toggleDropdown()">
+      <span class="household-name">{{ selectedHousehold?.householdName || '...' }}</span>
+      <i *ngIf="hasMultipleHouseholds" class="fa fa-chevron-down dropdown-arrow" [class.open]="showHouseholdDropdown"></i>
+
+      <div class="household-dropdown" *ngIf="showHouseholdDropdown && hasMultipleHouseholds">
+        <button
+          *ngFor="let h of currentUser?.households"
+          class="dropdown-item"
+          [class.active]="h.householdId === selectedHousehold?.householdId"
+          (click)="selectHousehold(h)"
+        >
+          {{ h.householdName }}
+          <span class="role-badge">{{ h.role }}</span>
+        </button>
+      </div>
+    </div>
+
+    <button class="header-signout" (click)="signOut()" title="Sign out">
+      <i class="fa fa-sign-out"></i>
+    </button>
+  </header>
+
+  <!-- Scrollable main content -->
+  <main class="app-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <!-- Fixed bottom navigation -->
+  <nav class="app-bottom-nav">
+    <a
+      routerLink="/app/expenses"
+      routerLinkActive="active"
+      class="nav-tab"
+    >
+      <span class="nav-icon">💸</span>
+      <span class="nav-label">Expenses</span>
+    </a>
+    <a
+      routerLink="/app/incomes"
+      routerLinkActive="active"
+      class="nav-tab"
+    >
+      <span class="nav-icon">💰</span>
+      <span class="nav-label">Incomes</span>
+    </a>
+  </nav>
+</div>

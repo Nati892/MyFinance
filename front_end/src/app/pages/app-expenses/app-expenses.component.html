@@ -1,0 +1,168 @@
+<!-- No household selected -->
+<div *ngIf="noHousehold" class="no-household">
+  <span class="no-household-icon">🏠</span>
+  <p class="no-household-title">No household selected</p>
+  <p class="no-household-sub">Please contact your admin to be added to a household.</p>
+</div>
+
+<!-- Main layout -->
+<div *ngIf="!noHousehold" class="expenses-layout">
+
+  <!-- Category sidebar (64 px wide) -->
+  <div class="sidebar-col">
+    <div *ngIf="categoriesError" class="sidebar-error">
+      <span>!</span>
+    </div>
+    <app-category-sidebar
+      *ngIf="!categoriesError"
+      [categories]="categories"
+      [selectedCategoryId]="selectedCategoryId"
+      type="expense"
+      (categorySelected)="onCategorySelected($event)"
+    ></app-category-sidebar>
+  </div>
+
+  <!-- Timeline area -->
+  <div class="timeline-col">
+    <div *ngIf="transactionsError" class="timeline-error">
+      <p>Failed to load expenses. Please try again.</p>
+      <button class="retry-btn" (click)="loadExpenses()">Retry</button>
+    </div>
+    <app-timeline
+      *ngIf="!transactionsError"
+      [transactions]="transactions"
+      [loading]="transactionsLoading"
+      type="expense"
+      (viewChanged)="onViewChanged($event)"
+      (transactionEdit)="onTransactionEdit($event)"
+      (transactionDelete)="onTransactionDelete($event)"
+    ></app-timeline>
+  </div>
+</div>
+
+<!-- FAB -->
+<button *ngIf="!noHousehold" class="fab" (click)="openAddModal()" aria-label="Add expense">
+  <span class="fab-icon">+</span>
+</button>
+
+<!-- Modal backdrop -->
+<div
+  *ngIf="modalOpen"
+  class="modal-backdrop"
+  (click)="closeModal()"
+></div>
+
+<!-- Bottom sheet modal -->
+<div class="modal-sheet" [class.modal-sheet--open]="modalOpen" role="dialog" aria-modal="true">
+
+  <!-- Handle bar -->
+  <div class="modal-handle"></div>
+
+  <!-- Header -->
+  <div class="modal-header">
+    <h2 class="modal-title">{{ modalMode === 'add' ? 'New Expense' : 'Edit Expense' }}</h2>
+    <button class="modal-close" (click)="closeModal()" aria-label="Close">&#x2715;</button>
+  </div>
+
+  <!-- Error banner -->
+  <div *ngIf="modalError" class="modal-error-banner">{{ modalError }}</div>
+
+  <!-- Form body -->
+  <div class="modal-body">
+
+    <!-- Amount -->
+    <div class="field-group field-group--amount">
+      <span class="amount-prefix">&#x20AA;</span>
+      <input
+        class="amount-input"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="0.00"
+        [(ngModel)]="form.amount"
+        name="amount"
+      />
+    </div>
+
+    <!-- Category chips -->
+    <div class="field-label">Category</div>
+    <div class="chip-row">
+      <button
+        *ngFor="let cat of categories"
+        class="chip"
+        [class.chip--selected]="form.categoryId === cat.id"
+        [style.background]="form.categoryId === cat.id ? cat.color : getBgColor(cat.color)"
+        [style.color]="form.categoryId === cat.id ? '#fff' : '#333'"
+        (click)="selectCategory(cat.id)"
+        type="button"
+      >
+        <span class="chip-icon">{{ cat.icon }}</span>
+        <span class="chip-name">{{ cat.name }}</span>
+      </button>
+    </div>
+
+    <!-- Date & Time -->
+    <div class="field-label">Date &amp; Time</div>
+    <div class="field-group">
+      <input
+        class="field-input"
+        type="datetime-local"
+        [(ngModel)]="form.dateTime"
+        name="dateTime"
+      />
+    </div>
+
+    <!-- Payment method -->
+    <div class="field-label">Payment Method</div>
+    <div class="payment-segment">
+      <button
+        *ngFor="let pm of paymentMethods"
+        class="segment-btn"
+        [class.segment-btn--active]="form.paymentMethod === pm.key"
+        (click)="selectPayment(pm.key)"
+        type="button"
+      >
+        <span class="segment-emoji">{{ pm.emoji }}</span>
+        <span class="segment-label">{{ pm.label }}</span>
+      </button>
+    </div>
+
+    <!-- Description -->
+    <div class="field-label">Description <span class="field-optional">(optional)</span></div>
+    <div class="field-group">
+      <input
+        class="field-input"
+        type="text"
+        placeholder="What was this for?"
+        [(ngModel)]="form.description"
+        name="description"
+        maxlength="200"
+      />
+    </div>
+
+    <!-- Note -->
+    <div class="field-label">Note <span class="field-optional">(optional)</span></div>
+    <div class="field-group">
+      <textarea
+        class="field-textarea"
+        placeholder="Add a note..."
+        [(ngModel)]="form.note"
+        name="note"
+        rows="3"
+        maxlength="500"
+      ></textarea>
+    </div>
+
+    <!-- Save button -->
+    <button
+      class="save-btn"
+      (click)="saveExpense()"
+      [disabled]="modalSaving"
+      type="button"
+    >
+      <span *ngIf="!modalSaving">{{ modalMode === 'add' ? 'Add Expense' : 'Save Changes' }}</span>
+      <span *ngIf="modalSaving">Saving...</span>
+    </button>
+
+  </div>
+</div>

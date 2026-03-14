@@ -1,0 +1,180 @@
+/* ── Sidebar scroll container ───────────────────────── */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  width: 64px;
+  flex-shrink: 0;
+}
+
+.sidebar-scroll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Each category slot ─────────────────────────────── */
+
+.cat-item {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Wrapper holds the button + SVG ring + tooltip together */
+.cat-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+}
+
+/* ── Circle button ──────────────────────────────────── */
+
+.cat-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.18s, box-shadow 0.18s, transform 0.12s;
+  position: relative;
+  z-index: 1;
+  /* Remove default button appearance */
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+
+.cat-btn:active {
+  transform: scale(0.92);
+}
+
+.cat-btn.selected {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+  transform: scale(1.05);
+}
+
+.cat-btn .material-icons {
+  font-size: 22px;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Budget SVG ring ────────────────────────────────── */
+
+.budget-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 56px;
+  height: 56px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Rotate so progress starts at the top */
+.progress-arc {
+  transform-origin: 28px 28px;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+/* ── CSS-only tooltip ───────────────────────────────── */
+
+.cat-wrapper {
+  /* required for tooltip positioning context */
+}
+
+.tooltip-text {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+
+  background: rgba(30, 30, 50, 0.92);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+
+  transition: opacity 0.15s, visibility 0.15s;
+}
+
+/* Arrow pointing left toward the button */
+.tooltip-text::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: rgba(30, 30, 50, 0.92);
+}
+
+.cat-wrapper:hover .tooltip-text,
+.cat-wrapper:focus-within .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* ── Tablet+ sizing ─────────────────────────────────── */
+
+@media (min-width: 480px) {
+  :host {
+    width: 72px;
+  }
+
+  .cat-btn {
+    width: 52px;
+    height: 52px;
+  }
+
+  .cat-wrapper {
+    width: 60px;
+    height: 60px;
+  }
+
+  .budget-ring {
+    width: 60px;
+    height: 60px;
+  }
+
+  /* Adjust SVG viewBox scaling — keep SVG at 56x56, center in 60x60 box */
+  .budget-ring {
+    top: 2px;
+    left: 2px;
+  }
+
+  .cat-btn .material-icons {
+    font-size: 24px;
+  }
+}

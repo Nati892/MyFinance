@@ -23,10 +23,20 @@ export class SideBarComponent {
       label: 'Logs', 
       icon: 'fa-solid fa-clipboard-list'
     },
-    { 
-      path: '/settings', 
-      label: 'Settings', 
+    {
+      path: '/settings',
+      label: 'Settings',
       icon: 'fa-solid fa-gear'
+    },
+    {
+      path: '/app-users',
+      label: 'App Users',
+      icon: 'fa-solid fa-users'
+    },
+    {
+      path: '/households',
+      label: 'Households',
+      icon: 'fa-solid fa-house-chimney'
     }
   ];
 

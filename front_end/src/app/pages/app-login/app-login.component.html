@@ -1,0 +1,64 @@
+<div class="login-wrapper">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo-icon">₪</span>
+      <h1 class="logo-title">MyFinance</h1>
+      <p class="logo-subtitle">Manage your household finances</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input
+          id="username"
+          type="text"
+          [(ngModel)]="username"
+          name="username"
+          class="form-control"
+          placeholder="Enter your username"
+          [disabled]="loading"
+          autocomplete="username"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-wrapper">
+          <input
+            id="password"
+            [type]="showPassword ? 'text' : 'password'"
+            [(ngModel)]="password"
+            name="password"
+            class="form-control"
+            placeholder="Enter your password"
+            [disabled]="loading"
+            autocomplete="current-password"
+          />
+          <button
+            type="button"
+            class="password-toggle"
+            (click)="togglePassword()"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          >
+            <i class="fa" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="error-message" *ngIf="error">
+        <i class="fa fa-exclamation-circle"></i> {{ error }}
+      </div>
+
+      <div class="info-message" *ngIf="noHousehold">
+        <i class="fa fa-info-circle"></i> No household assigned yet. Contact your admin.
+      </div>
+
+      <button type="submit" class="btn-signin" [disabled]="loading">
+        <span *ngIf="!loading">Sign In</span>
+        <span *ngIf="loading" class="loading-spinner">
+          <i class="fa fa-circle-o-notch fa-spin"></i> Signing in...
+        </span>
+      </button>
+    </form>
+  </div>
+</div>

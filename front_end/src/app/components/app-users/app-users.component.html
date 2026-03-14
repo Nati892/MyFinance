@@ -1,0 +1,268 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h2>App Users</h2>
+    <button class="btn-primary" (click)="openCreateModal()">
+      <i class="fa-solid fa-plus"></i> New User
+    </button>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="filters-container">
+    <div class="filters-row">
+      <div class="filter-group">
+        <label>Search</label>
+        <input
+          type="text"
+          placeholder="Search by username..."
+          [value]="searchTerm"
+          #searchInput
+          (input)="onSearchChange(searchInput.value)"
+          class="filter-input"
+        />
+      </div>
+      <button class="btn-clear" (click)="clearSearch()" *ngIf="searchTerm">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="error-message" *ngIf="error">
+    <i class="fa-solid fa-triangle-exclamation"></i> {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading users...</p>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-container" *ngIf="!loading">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Status</th>
+          <th>Last Login</th>
+          <th>Households</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users; trackBy: trackByUserId">
+          <td class="username-cell">
+            <i class="fa-solid fa-user user-icon"></i>
+            {{ user.username }}
+          </td>
+          <td class="status-cell">
+            <span class="status-badge" [class.active]="user.isActive" [class.inactive]="!user.isActive">
+              <span class="status-dot"></span>
+              {{ user.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td class="lastlogin-cell">{{ formatLastLogin(user.lastLogin) }}</td>
+          <td class="households-cell">{{ formatHouseholds(user.households) }}</td>
+          <td class="actions-cell">
+            <!-- Normal action buttons -->
+            <div class="action-buttons" *ngIf="deletingId !== user.id">
+              <button class="btn-icon" title="Edit" (click)="openEditModal(user)">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button class="btn-icon" title="Reset Password" (click)="openResetModal(user)">
+                <i class="fa-solid fa-key"></i>
+              </button>
+              <button class="btn-icon danger" title="Delete" (click)="confirmDelete(user.id)">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+            <!-- Inline delete confirmation -->
+            <div class="delete-confirm" *ngIf="deletingId === user.id">
+              <span class="confirm-text">Are you sure?</span>
+              <button class="btn-confirm-yes" (click)="executeDelete(user)" [disabled]="deleteLoading">
+                Yes
+              </button>
+              <button class="btn-confirm-no" (click)="cancelDelete()" [disabled]="deleteLoading">
+                No
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="users.length === 0">
+          <td colspan="5" class="no-data">No users found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="!loading && totalPages > 1">
+    <button (click)="prevPage()" [disabled]="currentPage === 1">
+      <i class="fa-solid fa-chevron-left"></i> Previous
+    </button>
+    <div class="page-info">
+      <span>Page</span>
+      <input
+        type="number"
+        [value]="currentPage"
+        #pageInput
+        (change)="goToPage(+pageInput.value)"
+        min="1"
+        [max]="totalPages"
+        class="page-input"
+      />
+      <span>of {{ totalPages }}</span>
+    </div>
+    <button (click)="nextPage()" [disabled]="currentPage === totalPages">
+      Next <i class="fa-solid fa-chevron-right"></i>
+    </button>
+  </div>
+
+</div>
+
+<!-- ============================================================ -->
+<!-- CREATE USER MODAL                                            -->
+<!-- ============================================================ -->
+<div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>New User</h3>
+      <button class="modal-close" (click)="closeCreateModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Username <span class="required">*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="createForm.username"
+          placeholder="Enter username"
+          class="form-input"
+          (keyup.enter)="submitCreate()"
+        />
+      </div>
+      <div class="form-group">
+        <label>Password <span class="required">*</span></label>
+        <input
+          type="password"
+          [(ngModel)]="createForm.password"
+          placeholder="Enter password"
+          class="form-input"
+          (keyup.enter)="submitCreate()"
+        />
+      </div>
+      <div class="modal-error" *ngIf="createError">
+        <i class="fa-solid fa-triangle-exclamation"></i> {{ createError }}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" (click)="submitCreate()" [disabled]="createLoading">
+        <i class="fa-solid fa-floppy-disk"></i>
+        {{ createLoading ? 'Saving...' : 'Save' }}
+      </button>
+      <button class="btn-secondary" (click)="closeCreateModal()" [disabled]="createLoading">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- EDIT USER MODAL                                              -->
+<!-- ============================================================ -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Edit User</h3>
+      <button class="modal-close" (click)="closeEditModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Username <span class="required">*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="editForm.username"
+          placeholder="Enter username"
+          class="form-input"
+          (keyup.enter)="submitEdit()"
+        />
+      </div>
+      <div class="form-group">
+        <label class="toggle-label">
+          <span>Active</span>
+          <div class="toggle-switch" [class.on]="editForm.isActive" (click)="editForm.isActive = !editForm.isActive">
+            <div class="toggle-thumb"></div>
+          </div>
+          <span class="toggle-state">{{ editForm.isActive ? 'Yes' : 'No' }}</span>
+        </label>
+      </div>
+      <div class="modal-error" *ngIf="editError">
+        <i class="fa-solid fa-triangle-exclamation"></i> {{ editError }}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" (click)="submitEdit()" [disabled]="editLoading">
+        <i class="fa-solid fa-floppy-disk"></i>
+        {{ editLoading ? 'Saving...' : 'Save' }}
+      </button>
+      <button class="btn-secondary" (click)="closeEditModal()" [disabled]="editLoading">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- RESET PASSWORD MODAL                                         -->
+<!-- ============================================================ -->
+<div class="modal-overlay" *ngIf="showResetModal" (click)="closeResetModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Reset Password</h3>
+      <button class="modal-close" (click)="closeResetModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-subtitle">
+        Resetting password for <strong>{{ resetUsername }}</strong>
+      </p>
+      <div class="form-group">
+        <label>New Password <span class="required">*</span></label>
+        <input
+          type="password"
+          [(ngModel)]="resetForm.newPassword"
+          placeholder="Enter new password"
+          class="form-input"
+        />
+      </div>
+      <div class="form-group">
+        <label>Confirm Password <span class="required">*</span></label>
+        <input
+          type="password"
+          [(ngModel)]="resetForm.confirmPassword"
+          placeholder="Confirm new password"
+          class="form-input"
+          (keyup.enter)="submitResetPassword()"
+        />
+      </div>
+      <div class="modal-error" *ngIf="resetError">
+        <i class="fa-solid fa-triangle-exclamation"></i> {{ resetError }}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" (click)="submitResetPassword()" [disabled]="resetLoading">
+        <i class="fa-solid fa-key"></i>
+        {{ resetLoading ? 'Resetting...' : 'Reset Password' }}
+      </button>
+      <button class="btn-secondary" (click)="closeResetModal()" [disabled]="resetLoading">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
