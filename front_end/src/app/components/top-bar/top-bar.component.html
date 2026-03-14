@@ -4,6 +4,8 @@
   </div>
   <div class="top-bar-right">
     <span class="username">{{ authService.getCurrentUser()?.username }}</span>
-    <button class="logout-btn" (click)="logout()">Logout</button>
+    <button class="logout-btn" (click)="logout()" title="Logout">
+      <span class="material-symbols-outlined">logout</span>
+    </button>
   </div>
 </div>

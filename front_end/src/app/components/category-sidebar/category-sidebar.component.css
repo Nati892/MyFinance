@@ -73,7 +73,7 @@
   transform: scale(1.05);
 }
 
-.cat-btn .material-icons {
+.cat-btn .material-symbols-outlined {
   font-size: 22px;
   line-height: 1;
   user-select: none;
@@ -174,7 +174,7 @@
     left: 2px;
   }
 
-  .cat-btn .material-icons {
+  .cat-btn .material-symbols-outlined {
     font-size: 24px;
   }
 }

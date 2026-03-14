@@ -159,7 +159,8 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
           this.transactions = (res.expenses ?? []).map((e: any) => ({
             ...e,
             type: 'expense',
-            category: e.expenseCategory,
+            category: e.ExpenseCategory ?? e.expenseCategory,
+            appUser:  e.AppUser ?? e.appUser,
           }));
           this.transactionsLoading = false;
           this.cdr.markForCheck();
@@ -177,6 +178,9 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
   onCategorySelected(categoryId: number | null): void {
     this.selectedCategoryId = categoryId;
     this.loadExpenses();
+    if (categoryId !== null) {
+      this.openAddModal();
+    }
   }
 
   onViewChanged(config: TimelineViewConfig): void {

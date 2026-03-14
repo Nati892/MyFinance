@@ -62,20 +62,8 @@ class IncomesController {
       let slots     = null;
 
       if (view === 'weekly') {
-        const wn = parseInt(weekNumber, 10);
-        if (!wn || wn < 1 || wn > 5) {
-          ctx.status = 400;
-          ctx.body   = { error: 'weekNumber (1-5) is required for weekly view' };
-          return;
-        }
-        const week = weeks.find(w => w.weekNumber === wn);
-        if (!week || !week.start) {
-          ctx.status = 400;
-          ctx.body   = { error: `Week ${wn} does not exist in this period` };
-          return;
-        }
-        dateStart = week.start;
-        dateEnd   = week.end;
+        // Use the full financial period; no weekNumber required for this view
+        // dateStart and dateEnd already set to period.start / period.end
 
       } else if (view === 'daily') {
         const wn = parseInt(weekNumber, 10);

@@ -40,10 +40,6 @@
   </div>
 </div>
 
-<!-- FAB -->
-<button *ngIf="!noHousehold" class="fab" (click)="openAddModal()" aria-label="Add expense">
-  <span class="fab-icon">+</span>
-</button>
 
 <!-- Modal backdrop -->
 <div
@@ -96,7 +92,7 @@
         (click)="selectCategory(cat.id)"
         type="button"
       >
-        <span class="chip-icon">{{ cat.icon }}</span>
+        <span class="material-symbols-outlined chip-icon">{{ cat.icon }}</span>
         <span class="chip-name">{{ cat.name }}</span>
       </button>
     </div>

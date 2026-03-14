@@ -255,7 +255,7 @@
                 </button>
               </div>
               <div class="cat-icon-circle" [style.background-color]="cat.color">
-                <span class="material-icons">{{ cat.icon }}</span>
+                <span class="material-symbols-outlined">{{ cat.icon }}</span>
               </div>
               <div class="cat-info">
                 <span class="cat-name">{{ cat.name }}</span>
@@ -279,15 +279,16 @@
                 <div class="icon-picker-wrapper">
                   <button class="btn-icon-preview" (click)="showExpenseEditIconPicker = !showExpenseEditIconPicker; $event.stopPropagation()"
                           [style.background-color]="editingExpenseCat.color">
-                    <span class="material-icons">{{ editingExpenseCat.icon }}</span>
+                    <span class="material-symbols-outlined">{{ editingExpenseCat.icon }}</span>
                   </button>
                   <div class="icon-picker-popup" *ngIf="showExpenseEditIconPicker" (click)="$event.stopPropagation()">
+                    <input class="icon-search" type="text" placeholder="Search icons..." [(ngModel)]="iconSearch" (click)="$event.stopPropagation()" />
                     <div class="icon-grid">
-                      <button class="icon-option" *ngFor="let ico of iconList; trackBy: trackByIndex"
+                      <button class="icon-option" *ngFor="let ico of filteredIcons; trackBy: trackByIndex"
                               [class.selected]="editingExpenseCat.icon === ico"
-                              (click)="editingExpenseCat.icon = ico; showExpenseEditIconPicker = false"
+                              (click)="editingExpenseCat.icon = ico; showExpenseEditIconPicker = false; iconSearch = ''"
                               title="{{ ico }}">
-                        <span class="material-icons">{{ ico }}</span>
+                        <span class="material-symbols-outlined">{{ ico }}</span>
                       </button>
                     </div>
                   </div>
@@ -326,15 +327,16 @@
             <div class="icon-picker-wrapper">
               <button class="btn-icon-preview" (click)="showExpenseIconPicker = !showExpenseIconPicker; $event.stopPropagation()"
                       [style.background-color]="newExpenseCat.color">
-                <span class="material-icons">{{ newExpenseCat.icon }}</span>
+                <span class="material-symbols-outlined">{{ newExpenseCat.icon }}</span>
               </button>
               <div class="icon-picker-popup" *ngIf="showExpenseIconPicker" (click)="$event.stopPropagation()">
+                <input class="icon-search" type="text" placeholder="Search icons..." [(ngModel)]="iconSearch" (click)="$event.stopPropagation()" />
                 <div class="icon-grid">
-                  <button class="icon-option" *ngFor="let ico of iconList; trackBy: trackByIndex"
+                  <button class="icon-option" *ngFor="let ico of filteredIcons; trackBy: trackByIndex"
                           [class.selected]="newExpenseCat.icon === ico"
-                          (click)="newExpenseCat.icon = ico; showExpenseIconPicker = false"
+                          (click)="newExpenseCat.icon = ico; showExpenseIconPicker = false; iconSearch = ''"
                           title="{{ ico }}">
-                    <span class="material-icons">{{ ico }}</span>
+                    <span class="material-symbols-outlined">{{ ico }}</span>
                   </button>
                 </div>
               </div>
@@ -389,7 +391,7 @@
                 </button>
               </div>
               <div class="cat-icon-circle" [style.background-color]="cat.color">
-                <span class="material-icons">{{ cat.icon }}</span>
+                <span class="material-symbols-outlined">{{ cat.icon }}</span>
               </div>
               <div class="cat-info">
                 <span class="cat-name">{{ cat.name }}</span>
@@ -411,15 +413,16 @@
                 <div class="icon-picker-wrapper">
                   <button class="btn-icon-preview" (click)="showIncomeEditIconPicker = !showIncomeEditIconPicker; $event.stopPropagation()"
                           [style.background-color]="editingIncomeCat.color">
-                    <span class="material-icons">{{ editingIncomeCat.icon }}</span>
+                    <span class="material-symbols-outlined">{{ editingIncomeCat.icon }}</span>
                   </button>
                   <div class="icon-picker-popup" *ngIf="showIncomeEditIconPicker" (click)="$event.stopPropagation()">
+                    <input class="icon-search" type="text" placeholder="Search icons..." [(ngModel)]="iconSearch" (click)="$event.stopPropagation()" />
                     <div class="icon-grid">
-                      <button class="icon-option" *ngFor="let ico of iconList; trackBy: trackByIndex"
+                      <button class="icon-option" *ngFor="let ico of filteredIcons; trackBy: trackByIndex"
                               [class.selected]="editingIncomeCat.icon === ico"
-                              (click)="editingIncomeCat.icon = ico; showIncomeEditIconPicker = false"
+                              (click)="editingIncomeCat.icon = ico; showIncomeEditIconPicker = false; iconSearch = ''"
                               title="{{ ico }}">
-                        <span class="material-icons">{{ ico }}</span>
+                        <span class="material-symbols-outlined">{{ ico }}</span>
                       </button>
                     </div>
                   </div>
@@ -457,15 +460,16 @@
             <div class="icon-picker-wrapper">
               <button class="btn-icon-preview" (click)="showIncomeIconPicker = !showIncomeIconPicker; $event.stopPropagation()"
                       [style.background-color]="newIncomeCat.color">
-                <span class="material-icons">{{ newIncomeCat.icon }}</span>
+                <span class="material-symbols-outlined">{{ newIncomeCat.icon }}</span>
               </button>
               <div class="icon-picker-popup" *ngIf="showIncomeIconPicker" (click)="$event.stopPropagation()">
+                <input class="icon-search" type="text" placeholder="Search icons..." [(ngModel)]="iconSearch" (click)="$event.stopPropagation()" />
                 <div class="icon-grid">
-                  <button class="icon-option" *ngFor="let ico of iconList; trackBy: trackByIndex"
+                  <button class="icon-option" *ngFor="let ico of filteredIcons; trackBy: trackByIndex"
                           [class.selected]="newIncomeCat.icon === ico"
-                          (click)="newIncomeCat.icon = ico; showIncomeIconPicker = false"
+                          (click)="newIncomeCat.icon = ico; showIncomeIconPicker = false; iconSearch = ''"
                           title="{{ ico }}">
-                    <span class="material-icons">{{ ico }}</span>
+                    <span class="material-symbols-outlined">{{ ico }}</span>
                   </button>
                 </div>
               </div>

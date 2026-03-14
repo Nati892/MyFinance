@@ -11,7 +11,7 @@
       title="All"
       aria-label="Show all categories"
     >
-      <span class="material-icons"
+      <span class="material-symbols-outlined"
         [style.color]="selectedCategoryId === null ? '#fff' : '#667eea'"
       >apps</span>
     </button>
@@ -64,7 +64,7 @@
         [attr.aria-label]="cat.name"
       >
         <span
-          class="material-icons"
+          class="material-symbols-outlined"
           [style.color]="selectedCategoryId === cat.id ? '#fff' : cat.color"
         >{{ cat.icon }}</span>
       </button>

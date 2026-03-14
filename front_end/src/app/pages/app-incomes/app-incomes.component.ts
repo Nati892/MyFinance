@@ -147,7 +147,8 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
           this.transactions = (res.incomes ?? []).map((i: any) => ({
             ...i,
             type: 'income' as const,
-            category: i.incomeCategory,
+            category: i.IncomeCategory ?? i.incomeCategory,
+            appUser:  i.AppUser ?? i.appUser,
           }));
           this.loadingTransactions = false;
           this.cdr.markForCheck();
@@ -165,6 +166,9 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
   onCategorySelected(categoryId: number | null): void {
     this.selectedCategoryId = categoryId;
     this.loadIncomes();
+    if (categoryId !== null) {
+      this.openAddModal(categoryId);
+    }
   }
 
   // ── Timeline events ──────────────────────────────────────────────────────────
@@ -208,7 +212,7 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
 
   // ── Modal ────────────────────────────────────────────────────────────────────
 
-  openAddModal(): void {
+  openAddModal(categoryId?: number): void {
     this.isEditMode  = false;
     this.editingId   = null;
     this.saveError   = '';
@@ -221,7 +225,7 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
 
     this.form = {
       amount:           null,
-      incomeCategoryId: this.categories[0]?.id ?? null,
+      incomeCategoryId: categoryId ?? this.selectedCategoryId ?? this.categories[0]?.id ?? null,
       dateTime:         localDT,
       paymentMethod:    'credit_card',
       description:      '',

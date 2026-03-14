@@ -1,7 +1,7 @@
 <!-- ── No household selected ──────────────────────────────────────────────── -->
 <ng-container *ngIf="!householdId">
   <div class="state-screen">
-    <span class="material-icons state-icon">home</span>
+    <span class="material-symbols-outlined state-icon">home</span>
     <p class="state-title">No Household Selected</p>
     <p class="state-sub">Please select a household from the header to view incomes.</p>
   </div>
@@ -24,7 +24,7 @@
 
       <!-- Load error banner -->
       <div class="error-banner" *ngIf="loadError">
-        <span class="material-icons">error_outline</span>
+        <span class="material-symbols-outlined">error_outline</span>
         Failed to load incomes.
         <button class="retry-btn" (click)="loadIncomes()">Retry</button>
       </div>
@@ -41,10 +41,6 @@
     </div><!-- /timeline-area -->
   </div><!-- /page-layout -->
 
-  <!-- FAB -->
-  <button class="fab" (click)="openAddModal()" aria-label="Add income">
-    <span class="material-icons">add</span>
-  </button>
 </ng-container>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
@@ -61,7 +57,7 @@
   <div class="sheet-header">
     <h2 class="sheet-title">{{ isEditMode ? 'Edit Income' : 'New Income' }}</h2>
     <button class="sheet-close" (click)="closeModal()" aria-label="Close">
-      <span class="material-icons">close</span>
+      <span class="material-symbols-outlined">close</span>
     </button>
   </div>
 
@@ -96,7 +92,7 @@
           [style.--cat-color]="cat.color"
           (click)="selectChipCategory(cat.id)"
           type="button">
-          <span class="chip-icon">{{ cat.icon }}</span>
+          <span class="material-symbols-outlined chip-icon">{{ cat.icon }}</span>
           <span class="chip-label">{{ cat.name }}</span>
         </button>
         <span class="chip-empty" *ngIf="categories.length === 0">No categories</span>

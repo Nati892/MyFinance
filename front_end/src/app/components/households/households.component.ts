@@ -46,16 +46,63 @@ interface CategoryForm {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 export const ICON_LIST = [
-  'restaurant', 'local_cafe', 'shopping_cart', 'local_grocery_store',
-  'directions_car', 'local_gas_station', 'home', 'electrical_services',
-  'water_drop', 'child_care', 'child_friendly', 'school',
-  'local_hospital', 'fitness_center', 'sports_soccer', 'movie',
-  'music_note', 'flight', 'hotel', 'beach_access',
-  'work', 'business_center', 'attach_money', 'savings',
-  'account_balance', 'credit_card', 'phone_android', 'computer',
-  'wifi', 'pets', 'celebration', 'card_giftcard',
-  'local_laundry_service', 'build', 'brush', 'agriculture',
-  'local_shipping', 'two_wheeler', 'train', 'subway'
+  // Food & Drink
+  'restaurant', 'local_cafe', 'local_bar', 'local_pizza', 'fastfood',
+  'bakery_dining', 'brunch_dining', 'dinner_dining', 'lunch_dining',
+  'ramen_dining', 'set_meal', 'tapas', 'wine_bar', 'coffee',
+  'emoji_food_beverage', 'kitchen', 'blender', 'rice_bowl',
+  // Shopping & Retail
+  'shopping_cart', 'local_grocery_store', 'shopping_bag', 'storefront',
+  'store', 'local_mall', 'loyalty', 'redeem', 'card_giftcard',
+  'checkroom', 'dry_cleaning', 'local_laundry_service',
+  // Transport
+  'directions_car', 'local_gas_station', 'directions_bus', 'directions_bike',
+  'electric_car', 'local_taxi', 'two_wheeler', 'train', 'subway',
+  'flight', 'local_shipping', 'directions_boat', 'airport_shuttle',
+  'pedal_bike', 'electric_scooter', 'commute',
+  // Home & Utilities
+  'home', 'house', 'apartment', 'electrical_services', 'water_drop',
+  'plumbing', 'build', 'construction', 'handyman', 'roofing',
+  'cleaning_services', 'grass', 'yard', 'chair', 'bed',
+  'countertops', 'bathtub', 'door_front', 'garage',
+  // Health & Fitness
+  'local_hospital', 'medical_services', 'health_and_safety', 'medication',
+  'fitness_center', 'sports_gymnastics', 'sports_tennis', 'sports_soccer',
+  'sports_basketball', 'sports_golf', 'pool', 'spa', 'self_improvement',
+  'psychology', 'face', 'accessibility',
+  // Kids & Education
+  'child_care', 'child_friendly', 'school', 'menu_book', 'auto_stories',
+  'science', 'calculate', 'edit', 'backpack', 'toys',
+  'sports_esports', 'videogame_asset',
+  // Entertainment & Leisure
+  'movie', 'theaters', 'music_note', 'headphones', 'tv', 'gamepad',
+  'beach_access', 'park', 'hiking', 'camping', 'kayaking',
+  'event', 'celebration', 'cake', 'nightlife', 'casino',
+  'sports_bar', 'festival',
+  // Finance & Money
+  'attach_money', 'savings', 'account_balance', 'credit_card',
+  'payments', 'price_check', 'receipt', 'wallet', 'currency_exchange',
+  'trending_up', 'trending_down', 'bar_chart', 'pie_chart',
+  'request_quote', 'monetization_on', 'money',
+  // Work & Business
+  'work', 'business_center', 'corporate_fare', 'badge', 'laptop',
+  'computer', 'phone_android', 'tablet', 'keyboard', 'print',
+  'fax', 'scanner', 'cable', 'cloud', 'storage',
+  'wifi', 'router', 'devices',
+  // Travel & Accommodation
+  'hotel', 'luggage', 'travel_explore', 'map', 'place',
+  'explore', 'language', 'public', 'flag',
+  // Pets & Animals
+  'pets', 'cruelty_free',
+  // Nature & Environment
+  'eco', 'energy_savings_leaf', 'wb_sunny', 'ac_unit', 'water',
+  'agriculture', 'forest', 'terrain',
+  // Misc & Services
+  'brush', 'palette', 'design_services', 'photo_camera', 'videocam',
+  'auto_fix_high', 'support', 'star', 'favorite', 'thumb_up',
+  'emoji_events', 'volunteer_activism', 'diversity_3',
+  'more_horiz', 'category', 'label', 'sell',
+  'local_offer', 'discount', 'new_releases', 'bolt'
 ];
 
 export const PRESET_COLORS = [
@@ -128,6 +175,13 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
   // ── Shared constants exposed to template ──────────────────────────────────
   readonly iconList = ICON_LIST;
   readonly presetColors = PRESET_COLORS;
+  iconSearch = '';
+
+  get filteredIcons(): string[] {
+    const term = this.iconSearch.trim().toLowerCase();
+    if (!term) return this.iconList;
+    return this.iconList.filter(ico => ico.includes(term));
+  }
 
   private destroy$ = new Subject<void>();
 

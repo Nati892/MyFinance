@@ -691,7 +691,7 @@
   flex-shrink: 0;
 }
 
-.cat-icon-circle .material-icons {
+.cat-icon-circle .material-symbols-outlined {
   color: white;
   font-size: 18px;
 }
@@ -801,7 +801,7 @@
   opacity: 0.85;
 }
 
-.btn-icon-preview .material-icons {
+.btn-icon-preview .material-symbols-outlined {
   color: white;
   font-size: 20px;
 }
@@ -817,6 +817,21 @@
   z-index: 200;
   padding: 10px;
   width: 280px;
+}
+
+.icon-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  outline: none;
+}
+
+.icon-search:focus {
+  border-color: #3F51B5;
 }
 
 .icon-grid {
@@ -849,11 +864,11 @@
   border-color: #2980b9;
 }
 
-.icon-option.selected .material-icons {
+.icon-option.selected .material-symbols-outlined {
   color: white;
 }
 
-.icon-option .material-icons {
+.icon-option .material-symbols-outlined {
   font-size: 20px;
   color: #34495e;
 }

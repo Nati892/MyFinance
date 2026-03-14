@@ -199,7 +199,7 @@
       [style.background-color]="getBgColor(tx.category.color)"
       [style.border-color]="tx.category.color"
     >
-      <span class="material-icons cat-icon" [style.color]="tx.category.color">
+      <span class="material-symbols-outlined cat-icon" [style.color]="tx.category.color">
         {{ tx.category.icon }}
       </span>
     </div>
@@ -211,7 +211,7 @@
       </span>
       <span class="tx-note" *ngIf="tx.note">{{ tx.note }}</span>
       <span class="tx-meta">
-        <span class="material-icons meta-icon">{{ getPaymentIcon(tx.paymentMethod) }}</span>
+        <span class="material-symbols-outlined meta-icon">{{ getPaymentIcon(tx.paymentMethod) }}</span>
         {{ formatPayment(tx.paymentMethod) }} · {{ tx.appUser.username }}
       </span>
     </div>
@@ -232,10 +232,10 @@
       <!-- Dropdown menu -->
       <div class="action-menu" *ngIf="openMenuId === tx.id" (click)="$event.stopPropagation()">
         <button class="action-btn edit-btn" (click)="onEdit(tx)">
-          <span class="material-icons">edit</span> Edit
+          <span class="material-symbols-outlined">edit</span> Edit
         </button>
         <button class="action-btn delete-btn" (click)="onDelete(tx)">
-          <span class="material-icons">delete</span> Delete
+          <span class="material-symbols-outlined">delete</span> Delete
         </button>
       </div>
     </div>
