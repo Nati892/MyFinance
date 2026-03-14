@@ -141,6 +141,7 @@
           [(ngModel)]="createForm.username"
           placeholder="Enter username"
           class="form-input"
+          autocomplete="off"
           (keyup.enter)="submitCreate()"
         />
       </div>
@@ -151,6 +152,7 @@
           [(ngModel)]="createForm.password"
           placeholder="Enter password"
           class="form-input"
+          autocomplete="new-password"
           (keyup.enter)="submitCreate()"
         />
       </div>
@@ -160,8 +162,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn-primary" (click)="submitCreate()" [disabled]="createLoading">
-        <i class="fa-solid fa-floppy-disk"></i>
-        {{ createLoading ? 'Saving...' : 'Save' }}
+        {{ createLoading ? 'Creating...' : 'Create User' }}
       </button>
       <button class="btn-secondary" (click)="closeCreateModal()" [disabled]="createLoading">
         Cancel

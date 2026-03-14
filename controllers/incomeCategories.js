@@ -1,4 +1,4 @@
-const { IncomeCategory, Household, HouseholdMember } = require('../models');
+const { IncomeCategory, Household, HouseholdMember, sequelize } = require('../models');
 
 class IncomeCategoriesController {
   /**
@@ -145,7 +145,7 @@ class IncomeCategoriesController {
         return;
       }
 
-      await global.db.sequelize.transaction(async (t) => {
+      await sequelize.transaction(async (t) => {
         for (const item of items) {
           await IncomeCategory.update(
             { sortOrder: item.sortOrder },

@@ -169,7 +169,7 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     this.error = '';
     this.householdsService.getHouseholds().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
-        this.households = Array.isArray(res) ? res : (res.data ?? []);
+        this.households = Array.isArray(res) ? res : (res.households ?? []);
         this.loading = false;
         this.logger.info('HOUSEHOLDS_LOADED', `Loaded ${this.households.length} households`);
       },
@@ -254,7 +254,15 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     this.detailError = '';
     this.householdsService.getHousehold(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
-        this.selectedHousehold = res.data ?? res;
+        const h = res.household ?? res;
+        this.selectedHousehold = {
+          ...h,
+          members: (h.HouseholdMembers ?? []).map((m: any) => ({
+            appUserId: m.appUserId,
+            username: m.AppUser?.username ?? '',
+            role: m.role
+          }))
+        };
         this.detailLoading = false;
         this.logger.info('HOUSEHOLD_DETAIL_LOADED', `Loaded detail for household id=${id}`);
       },
@@ -331,7 +339,7 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
   loadAppUsers(): void {
     this.householdsService.getAppUsers().pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
-        this.allAppUsers = Array.isArray(res) ? res : (res.data ?? []);
+        this.allAppUsers = Array.isArray(res) ? res : (res.users ?? []);
         this.filterUsers();
       },
       error: (err) => {
@@ -445,7 +453,7 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     this.expenseCatsLoading = true;
     this.householdsService.getExpenseCategories(this.selectedHousehold.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
-        this.expenseCategories = (Array.isArray(res) ? res : (res.data ?? [])).sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
+        this.expenseCategories = (Array.isArray(res) ? res : (res.categories ?? [])).sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
         this.expenseCatsLoading = false;
       },
       error: (err) => {
@@ -571,7 +579,7 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     this.incomeCatsLoading = true;
     this.householdsService.getIncomeCategories(this.selectedHousehold.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (res) => {
-        this.incomeCategories = (Array.isArray(res) ? res : (res.data ?? [])).sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
+        this.incomeCategories = (Array.isArray(res) ? res : (res.categories ?? [])).sort((a: Category, b: Category) => a.sortOrder - b.sortOrder);
         this.incomeCatsLoading = false;
       },
       error: (err) => {
@@ -698,6 +706,10 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
 
   trackById(index: number, item: { id: number }): number {
     return item.id;
+  }
+
+  trackByMember(index: number, item: HouseholdMember): number {
+    return item.appUserId;
   }
 
   trackByIndex(index: number): number {

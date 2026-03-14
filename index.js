@@ -15,7 +15,8 @@ const bodyParser = require('koa-bodyparser');
 const cors = require('@koa/cors');
 const router = require('./router');
 const db = require('./models');
-const logger = require('./utils/logger'); 
+const logger = require('./utils/logger');
+const { seedAdmin } = require('./utils/seed');
 const serve = require('koa-static');
 const path = require('path');
 const send = require('koa-send');
@@ -69,7 +70,10 @@ async function startServer() {
     await db.sequelize.sync({ force: false });
     console.log('Database synced successfully.');
 
-    // Third: NOW initialize the logger for database writes
+    // Third: Seed default admin user if none exists
+    await seedAdmin(db.User);
+
+    // Fourth: NOW initialize the logger for database writes
     await global.log.initialize();
     global.log.log('info', 'SERVER_START', 'Logger initialized and ready');
 

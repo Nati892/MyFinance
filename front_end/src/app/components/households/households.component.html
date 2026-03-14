@@ -148,7 +148,7 @@
       <div class="section-card">
         <h4 class="section-title">Current Members</h4>
         <div class="members-list">
-          <div class="member-row" *ngFor="let member of selectedHousehold.members; trackBy: trackById">
+          <div class="member-row" *ngFor="let member of selectedHousehold.members; trackBy: trackByMember">
             <div class="avatar-circle" [style.background-color]="'#3F51B5'">
               {{ getInitials(member.username) }}
             </div>

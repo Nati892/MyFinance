@@ -212,7 +212,7 @@
       <span class="tx-note" *ngIf="tx.note">{{ tx.note }}</span>
       <span class="tx-meta">
         <span class="material-icons meta-icon">{{ getPaymentIcon(tx.paymentMethod) }}</span>
-        {{ formatPayment(tx.paymentMethod) }} · @{{ tx.appUser.username }}
+        {{ formatPayment(tx.paymentMethod) }} · {{ tx.appUser.username }}
       </span>
     </div>
 

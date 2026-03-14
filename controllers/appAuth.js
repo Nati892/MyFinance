@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { AppUser, AppUserToken, HouseholdMember, Household } = require('../models');
+const { Op } = require('sequelize');
 
 class AppAuthController {
   /**
@@ -105,11 +106,22 @@ class AppAuthController {
         userAgent: ctx.headers['user-agent']
       });
 
+      const memberships = await HouseholdMember.findAll({
+        where: { appUserId: appUser.id },
+        include: [{ model: Household, attributes: ['id', 'name'] }]
+      });
+
+      const households = memberships.map(m => ({
+        householdId: m.householdId,
+        householdName: m.Household?.name ?? '',
+        role: m.role
+      }));
+
       ctx.body = {
         success: true,
         accessToken,
         refreshToken,
-        user: appUser.toJSON(),
+        user: { ...appUser.toJSON(), households },
         expiresIn: 3600
       };
     } catch (error) {
@@ -137,7 +149,7 @@ class AppAuthController {
       const tokens = await AppUserToken.findAll({
         where: {
           appUserId: userId,
-          expiresAt: { [global.db.Sequelize.Op.gt]: new Date() }
+          expiresAt: { [Op.gt]: new Date() }
         }
       });
 

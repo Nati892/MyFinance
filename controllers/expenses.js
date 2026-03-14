@@ -1,4 +1,5 @@
-const { Expense, Income, ExpenseCategory, IncomeCategory, HouseholdMember } = require('../models');
+const { Expense, ExpenseCategory, AppUser, HouseholdMember, sequelize } = require('../models');
+const { Op } = require('sequelize');
 const {
   getCurrentFinancialPeriod,
   getFinancialPeriod,
@@ -114,7 +115,7 @@ class ExpensesController {
       const where = {
         householdId: Number(householdId),
         dateTime: {
-          [global.db.Sequelize.Op.between]: [dateStart, dateEnd]
+          [Op.between]: [dateStart, dateEnd]
         }
       };
 
@@ -127,11 +128,11 @@ class ExpensesController {
         where,
         include: [
           {
-            model:      global.db.models.ExpenseCategory,
+            model:      ExpenseCategory,
             attributes: ['id', 'name', 'icon', 'color']
           },
           {
-            model:      global.db.models.AppUser,
+            model:      AppUser,
             attributes: ['id', 'username']
           }
         ],
@@ -204,7 +205,7 @@ class ExpensesController {
       }
 
       // --- Validate category belongs to household ---
-      const category = await global.db.models.ExpenseCategory.findOne({
+      const category = await ExpenseCategory.findOne({
         where: { id: Number(expenseCategoryId), householdId: Number(householdId) }
       });
 
@@ -230,11 +231,11 @@ class ExpensesController {
       const created = await Expense.findByPk(expense.id, {
         include: [
           {
-            model:      global.db.models.ExpenseCategory,
+            model:      ExpenseCategory,
             attributes: ['id', 'name', 'icon', 'color']
           },
           {
-            model:      global.db.models.AppUser,
+            model:      AppUser,
             attributes: ['id', 'username']
           }
         ]
@@ -286,7 +287,7 @@ class ExpensesController {
 
       // --- Validate new category if provided ---
       if (expenseCategoryId) {
-        const category = await global.db.models.ExpenseCategory.findOne({
+        const category = await ExpenseCategory.findOne({
           where: { id: Number(expenseCategoryId), householdId: expense.householdId }
         });
 
@@ -311,11 +312,11 @@ class ExpensesController {
       const updated = await Expense.findByPk(expense.id, {
         include: [
           {
-            model:      global.db.models.ExpenseCategory,
+            model:      ExpenseCategory,
             attributes: ['id', 'name', 'icon', 'color']
           },
           {
-            model:      global.db.models.AppUser,
+            model:      AppUser,
             attributes: ['id', 'username']
           }
         ]

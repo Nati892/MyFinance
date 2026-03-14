@@ -112,7 +112,7 @@ export class AppUsersComponent implements OnInit, OnDestroy {
 
         this.appUsersService.getAppUsers(this.currentPage, this.itemsPerPage, this.searchTerm).subscribe({
             next: (response) => {
-                this.users = response.data;
+                this.users = response.users;
                 this.totalPages = response.pagination.pages;
                 this.totalItems = response.pagination.total;
                 this.loading = false;

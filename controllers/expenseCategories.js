@@ -1,4 +1,5 @@
-const { ExpenseCategory, IncomeCategory, Expense, Income, Household, HouseholdMember } = require('../models');
+const { ExpenseCategory, Expense, Household, HouseholdMember, sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 /**
  * Returns the start and end Date objects for the current financial month.
@@ -175,7 +176,7 @@ class ExpenseCategoriesController {
         return;
       }
 
-      await global.db.sequelize.transaction(async (t) => {
+      await sequelize.transaction(async (t) => {
         for (const item of items) {
           await ExpenseCategory.update(
             { sortOrder: item.sortOrder },
@@ -231,12 +232,12 @@ class ExpenseCategoriesController {
         categories.map(async (category) => {
           const result = await Expense.findOne({
             attributes: [
-              [global.db.sequelize.fn('SUM', global.db.sequelize.col('amount')), 'totalSpend']
+              [sequelize.fn('SUM', sequelize.col('amount')), 'totalSpend']
             ],
             where: {
               expenseCategoryId: category.id,
               dateTime: {
-                [global.db.Sequelize.Op.between]: [start, end]
+                [Op.between]: [start, end]
               }
             },
             raw: true

@@ -27,9 +27,4 @@ router.get('/health', (ctx) => {
   ctx.body = { status: 'ok', timestamp: new Date() };
 });
 
-
-router.get('/(.*)', async (ctx) => {
-  await send(ctx, ctx.path, { root: path.join(__dirname, './public/front') });
-});
-
 module.exports = router;

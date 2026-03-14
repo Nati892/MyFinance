@@ -6,7 +6,7 @@ services:
     container_name: app_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 12345678 
+      MYSQL_ROOT_PASSWORD: 12345678
       MYSQL_DATABASE: app_db
       MYSQL_USER: user
       MYSQL_PASSWORD: 12345678
@@ -16,6 +16,12 @@ services:
       - "3309:3306"
     networks:
       - app_network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   app:
     build:
@@ -23,24 +29,22 @@ services:
       dockerfile: Dockerfile
     container_name: app_backend
     environment:
-     # ENV: ${ENV}
-      DB_HOST: 172.29.80.1
-     # DB_NAME: ${DB_NAME}
-     # DB_USER: ${DB_USER}
-     # DB_PASSWORD: ${DB_PASSWORD}
-     # DB_PORT: 3306
-     # BASE_ADDRESS: ${BASE_ADDRESS}
-     # PORT: 13244
-     # JWT_SECRET: ${JWT_SECRET}
-     # JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-     # BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS}
+      ENV: production
+      DB_HOST: db
+      DB_NAME: app_db
+      DB_USER: user
+      DB_PASSWORD: 12345678
+      DB_PORT: 3306
+      PORT: 1234
+      JWT_SECRET: change-me-in-production
+      JWT_EXPIRES_IN: 1h
+      BCRYPT_SALT_ROUNDS: 10
     restart: always
-    volumes: 
-      - server_conf_folder:/conf
     ports:
       - "1234:1234"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app_network
 
