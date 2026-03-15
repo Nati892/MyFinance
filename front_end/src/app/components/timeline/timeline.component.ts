@@ -175,7 +175,11 @@ export class TimelineComponent implements OnChanges {
     if (!week.start) return;
     this.activeWeekNumber = week.weekNumber;
     this.activeDate = new Date(week.start);
-    this.currentView = 'daily';
+    // In weekly view: stay in weekly, just change the active week.
+    // In daily/hourly: drill down into that week's daily view.
+    if (this.currentView !== 'weekly') {
+      this.currentView = 'daily';
+    }
     this.rebuild();
     this.emitViewChanged();
   }
@@ -372,10 +376,34 @@ export class TimelineComponent implements OnChanges {
     }];
   }
 
-  private sameLocalDate(a: Date, b: Date): boolean {
+  sameLocalDate(a: Date, b: Date): boolean {
     return a.getFullYear() === b.getFullYear() &&
            a.getMonth()    === b.getMonth()    &&
            a.getDate()     === b.getDate();
+  }
+
+  get periodDays(): Date[] {
+    if (!this.period?.start || !this.period?.end) return [];
+    const days: Date[] = [];
+    const cur = new Date(this.period.start);
+    cur.setHours(0, 0, 0, 0);
+    const end = new Date(this.period.end);
+    end.setHours(0, 0, 0, 0);
+    while (cur <= end) {
+      days.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return days;
+  }
+
+  selectDay(date: Date): void {
+    this.activeDate = date;
+    this.rebuild();
+    this.emitViewChanged();
+  }
+
+  trackByDate(_: number, d: Date): number {
+    return d.getTime();
   }
 
   // ── Nav label ───────────────────────────────────────────────────────────────

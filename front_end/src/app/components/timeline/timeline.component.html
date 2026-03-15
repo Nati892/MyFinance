@@ -17,10 +17,10 @@
     <button class="nav-arrow" (click)="next()" aria-label="Next">&#8250;</button>
   </div>
 
-  <!-- ── Week row (weekly / daily / hourly views) ───────────────────────────── -->
+  <!-- ── Week row (weekly / hourly views) ──────────────────────────────────── -->
   <div
     class="week-row"
-    *ngIf="currentView === 'weekly' || currentView === 'daily' || currentView === 'hourly'"
+    *ngIf="currentView === 'weekly' || currentView === 'hourly'"
   >
     <button
       *ngFor="let w of weeks; trackBy: trackByWeek"
@@ -30,6 +30,16 @@
       [disabled]="!w.start"
       (click)="selectWeek(w)"
     >Wk {{ w.weekNumber }}</button>
+  </div>
+
+  <!-- ── Day row (daily view) ───────────────────────────────────────────────── -->
+  <div class="week-row" *ngIf="currentView === 'daily'">
+    <button
+      *ngFor="let d of periodDays; trackBy: trackByDate"
+      class="week-pill"
+      [class.active]="sameLocalDate(d, activeDate)"
+      (click)="selectDay(d)"
+    >{{ d.getDate() }}</button>
   </div>
 
   <!-- ── Total bar ──────────────────────────────────────────────────────────── -->
