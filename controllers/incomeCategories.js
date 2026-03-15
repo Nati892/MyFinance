@@ -163,6 +163,50 @@ class IncomeCategoriesController {
   }
 
   /**
+   * App: POST create an income category from within the app
+   * Body: { name, icon, color, householdId }
+   */
+  async appCreate(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { name, icon, color, householdId } = ctx.request.body;
+
+      if (!name || !icon || !householdId) {
+        ctx.status = 400;
+        ctx.body = { error: 'name, icon, and householdId are required' };
+        return;
+      }
+
+      const membership = await HouseholdMember.findOne({
+        where: { householdId, appUserId: appUser.id }
+      });
+      if (!membership) {
+        ctx.status = 403;
+        ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      const maxOrder = await IncomeCategory.max('sortOrder', { where: { householdId } });
+      const sortOrder = (maxOrder ?? 0) + 1;
+
+      const category = await IncomeCategory.create({
+        name,
+        icon: icon || 'label',
+        color: color || '#4CAF50',
+        sortOrder,
+        householdId
+      });
+
+      ctx.status = 201;
+      ctx.body = { success: true, category };
+    } catch (error) {
+      console.error('App create income category error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to create income category' };
+    }
+  }
+
+  /**
    * App: GET income categories for a household
    * Query: householdId
    * Validates that the current app user is a member of the household

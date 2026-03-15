@@ -1,82 +1,202 @@
-<div class="sidebar-scroll">
+<!-- Wrapper: scrollable list on top, favorites fixed at bottom -->
+<div class="sidebar-inner">
 
-  <!-- "All" button -->
-  <div class="cat-item">
-    <button
-      class="cat-btn"
-      [class.selected]="selectedCategoryId === null"
-      [style.background-color]="selectedCategoryId === null ? '#667eea' : '#667eea33'"
-      [style.border-color]="'#667eea'"
-      (click)="selectAll()"
-      title="All"
-      aria-label="Show all categories"
-    >
-      <span class="material-symbols-outlined"
-        [style.color]="selectedCategoryId === null ? '#fff' : '#667eea'"
-      >apps</span>
-    </button>
-  </div>
+  <!-- ── Scrollable category list ─────────────────────────── -->
+  <div class="sidebar-scroll">
 
-  <!-- Category buttons -->
-  <div
-    class="cat-item"
-    *ngFor="let cat of categories"
-  >
-    <div
-      class="cat-wrapper"
-      [attr.title]="type === 'expense' ? getBudgetTooltip(cat) : cat.name"
-    >
-      <!-- Budget SVG ring (expense only, when budget exists) -->
-      <svg
-        *ngIf="type === 'expense' && getBudgetRatio(cat) >= 0"
-        class="budget-ring"
-        viewBox="0 0 56 56"
-        width="56"
-        height="56"
-        aria-hidden="true"
-      >
-        <!-- Track circle -->
-        <circle
-          cx="28" cy="28" r="26"
-          fill="none"
-          stroke="#e0e0e0"
-          stroke-width="3"
-        />
-        <!-- Progress arc -->
-        <circle
-          cx="28" cy="28" r="26"
-          fill="none"
-          [attr.stroke]="getBudgetColor(getBudgetRatio(cat))"
-          stroke-width="3"
-          stroke-linecap="round"
-          [attr.stroke-dasharray]="CIRCUMFERENCE"
-          [attr.stroke-dashoffset]="getDashOffset(getBudgetRatio(cat))"
-          class="progress-arc"
-        />
-      </svg>
-
+    <!-- "All" button -->
+    <div class="cat-item">
       <button
         class="cat-btn"
-        [class.selected]="selectedCategoryId === cat.id"
-        [style.background-color]="selectedCategoryId === cat.id ? cat.color : getBgColor(cat.color)"
-        [style.border-color]="cat.color"
-        (click)="selectCategory(cat.id)"
-        [attr.aria-label]="cat.name"
+        [class.selected]="selectedCategoryId === null"
+        [style.background-color]="selectedCategoryId === null ? '#667eea' : '#667eea33'"
+        [style.border-color]="'#667eea'"
+        (click)="selectAll()"
+        title="All"
+        aria-label="Show all categories"
       >
-        <span
-          class="material-symbols-outlined"
-          [style.color]="selectedCategoryId === cat.id ? '#fff' : cat.color"
-        >{{ cat.icon }}</span>
+        <span class="material-symbols-outlined"
+          [style.color]="selectedCategoryId === null ? '#fff' : '#667eea'"
+        >apps</span>
       </button>
+    </div>
 
-      <!-- CSS tooltip (name + budget info) -->
-      <span class="tooltip-text">
-        {{ cat.name }}
-        <ng-container *ngIf="type === 'expense' && cat.monthlyBudget != null">
-          <br>{{ getBudgetTooltip(cat) }}
-        </ng-container>
-      </span>
+    <!-- Category buttons -->
+    <div class="cat-item" *ngFor="let cat of categories">
+      <div class="cat-wrapper" [attr.title]="getBudgetTooltip(cat)">
+        <svg
+          *ngIf="type === 'expense' && getBudgetRatio(cat) >= 0"
+          class="budget-ring" viewBox="0 0 56 56" width="56" height="56" aria-hidden="true"
+        >
+          <circle cx="28" cy="28" r="26" fill="none" stroke="#e0e0e0" stroke-width="3"/>
+          <circle
+            cx="28" cy="28" r="26" fill="none"
+            [attr.stroke]="getBudgetColor(getBudgetRatio(cat))"
+            stroke-width="3" stroke-linecap="round"
+            [attr.stroke-dasharray]="CIRCUMFERENCE"
+            [attr.stroke-dashoffset]="getDashOffset(getBudgetRatio(cat))"
+            class="progress-arc"
+          />
+        </svg>
+        <button
+          class="cat-btn"
+          [class.selected]="selectedCategoryId === cat.id"
+          [style.background-color]="selectedCategoryId === cat.id ? cat.color : getBgColor(cat.color)"
+          [style.border-color]="cat.color"
+          (click)="selectCategory(cat.id)"
+          [attr.aria-label]="cat.name"
+        >
+          <span class="material-symbols-outlined"
+            [style.color]="selectedCategoryId === cat.id ? '#fff' : cat.color"
+          >{{ cat.icon }}</span>
+        </button>
+        <span class="tooltip-text">{{ getBudgetTooltip(cat) }}</span>
+      </div>
+    </div>
+
+    <!-- ── Add category button (at bottom of scroll) ── -->
+    <div class="cat-item">
+      <div class="cat-wrapper" title="Add category">
+        <button class="cat-btn add-btn" (click)="openDrawer()" aria-label="Add category">
+          <span class="material-symbols-outlined">add</span>
+        </button>
+        <span class="tooltip-text">Add category</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Favorites strip (fixed at bottom, always visible) ── -->
+  <div class="favorites-strip" *ngIf="favoriteCategories.length > 0">
+    <div class="favorites-divider"></div>
+    <div class="cat-item" *ngFor="let cat of favoriteCategories">
+      <div class="cat-wrapper fav-wrapper" [attr.title]="getBudgetTooltip(cat)">
+        <svg
+          *ngIf="type === 'expense' && getBudgetRatio(cat) >= 0"
+          class="budget-ring" viewBox="0 0 56 56" width="56" height="56" aria-hidden="true"
+        >
+          <circle cx="28" cy="28" r="26" fill="none" stroke="#e0e0e0" stroke-width="3"/>
+          <circle
+            cx="28" cy="28" r="26" fill="none"
+            [attr.stroke]="getBudgetColor(getBudgetRatio(cat))"
+            stroke-width="3" stroke-linecap="round"
+            [attr.stroke-dasharray]="CIRCUMFERENCE"
+            [attr.stroke-dashoffset]="getDashOffset(getBudgetRatio(cat))"
+            class="progress-arc"
+          />
+        </svg>
+        <button
+          class="cat-btn fav-cat-btn"
+          [class.selected]="selectedCategoryId === cat.id"
+          [style.background-color]="selectedCategoryId === cat.id ? cat.color : getBgColor(cat.color)"
+          [style.border-color]="cat.color"
+          (click)="selectCategory(cat.id)"
+          [attr.aria-label]="cat.name + ' (favorite)'"
+        >
+          <span class="material-symbols-outlined"
+            [style.color]="selectedCategoryId === cat.id ? '#fff' : cat.color"
+          >{{ cat.icon }}</span>
+        </button>
+        <span class="tooltip-text">{{ getBudgetTooltip(cat) }}</span>
+        <!-- Star badge -->
+        <span class="fav-star">★</span>
+      </div>
     </div>
   </div>
 
+</div>
+
+<!-- ── Create Category Bottom Drawer ──────────────────────── -->
+<div class="drawer-backdrop" *ngIf="drawerOpen" (click)="closeDrawer()"></div>
+<div class="drawer" [class.drawer-open]="drawerOpen">
+  <div class="drawer-handle"></div>
+  <h3 class="drawer-title">New {{ type === 'expense' ? 'Expense' : 'Income' }} Category</h3>
+
+  <!-- Name -->
+  <div class="drawer-field">
+    <label>Name</label>
+    <input
+      class="drawer-input"
+      type="text"
+      placeholder="Category name"
+      [(ngModel)]="newCategory.name"
+      maxlength="40"
+    />
+  </div>
+
+  <!-- Color picker -->
+  <div class="drawer-field">
+    <label>Color</label>
+    <div class="color-grid">
+      <button
+        *ngFor="let c of presetColors"
+        class="color-swatch"
+        [class.color-selected]="newCategory.color === c"
+        [style.background]="c"
+        (click)="selectColor(c)"
+        type="button"
+      ></button>
+    </div>
+  </div>
+
+  <!-- Icon picker -->
+  <div class="drawer-field">
+    <label>Icon</label>
+    <input
+      class="drawer-input icon-search"
+      type="text"
+      placeholder="Search icons..."
+      [(ngModel)]="iconSearch"
+    />
+    <div class="icon-grid">
+      <button
+        *ngFor="let icon of filteredIcons"
+        class="icon-option"
+        [class.icon-selected]="newCategory.icon === icon"
+        [style.color]="newCategory.icon === icon ? newCategory.color : ''"
+        [style.border-color]="newCategory.icon === icon ? newCategory.color : ''"
+        (click)="selectIcon(icon)"
+        type="button"
+        [title]="icon"
+      >
+        <span class="material-symbols-outlined">{{ icon }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Budget (expense only) -->
+  <div class="drawer-field" *ngIf="type === 'expense'">
+    <label>Monthly Budget (optional)</label>
+    <input
+      class="drawer-input"
+      type="number"
+      placeholder="₪ 0"
+      [(ngModel)]="newCategory.monthlyBudget"
+      min="0"
+    />
+  </div>
+
+  <!-- Preview -->
+  <div class="drawer-preview" *ngIf="newCategory.name || newCategory.icon">
+    <button
+      class="cat-btn"
+      [style.background-color]="newCategory.color"
+      [style.border-color]="newCategory.color"
+      style="cursor: default;"
+    >
+      <span class="material-symbols-outlined" style="color:#fff">{{ newCategory.icon }}</span>
+    </button>
+    <span class="preview-name">{{ newCategory.name || 'Category name' }}</span>
+  </div>
+
+  <!-- Actions -->
+  <div class="drawer-actions">
+    <button class="drawer-cancel" (click)="closeDrawer()">Cancel</button>
+    <button
+      class="drawer-save"
+      [style.background]="newCategory.color"
+      [disabled]="!newCategory.name.trim()"
+      (click)="submitNewCategory()"
+    >Save</button>
+  </div>
 </div>

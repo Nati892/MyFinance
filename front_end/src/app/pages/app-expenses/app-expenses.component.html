@@ -16,9 +16,11 @@
     <app-category-sidebar
       *ngIf="!categoriesError"
       [categories]="categories"
+      [favoriteCategories]="favoriteCategories"
       [selectedCategoryId]="selectedCategoryId"
       type="expense"
       (categorySelected)="onCategorySelected($event)"
+      (createCategory)="onCreateCategory($event)"
     ></app-category-sidebar>
   </div>
 

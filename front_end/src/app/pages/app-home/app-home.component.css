@@ -1,0 +1,169 @@
+/* ── Board container (fills app-content area) ──────────── */
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.board-container {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+.board-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #667eea;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 1s linear infinite;
+  font-size: 36px;
+}
+
+/* ── Infinite board (scrollable canvas) ─────────────────── */
+
+.board {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background:
+    radial-gradient(circle, #dde1ff 1px, transparent 1px) 0 0 / 28px 28px;
+  background-color: #f4f5ff;
+  cursor: default;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+/* Inner scrollable space */
+.board::after {
+  content: '';
+  display: block;
+  width: 2400px;
+  height: 1800px;
+  pointer-events: none;
+}
+
+/* ── Sticky note ─────────────────────────────────────────── */
+
+.sticky-note {
+  position: absolute;
+  width: 200px;
+  border-radius: 4px 4px 4px 20px;
+  box-shadow: 3px 4px 12px rgba(0, 0, 0, 0.14), 1px 1px 2px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  transition: box-shadow 0.15s;
+}
+
+.sticky-note:hover {
+  box-shadow: 5px 7px 18px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Note header (drag zone) ─────────────────────────────── */
+
+.note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 4px;
+  cursor: grab;
+  border-radius: 4px 4px 0 0;
+  background: rgba(0,0,0,0.06);
+}
+
+.note-header:active {
+  cursor: grabbing;
+}
+
+.note-author {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.note-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: rgba(0,0,0,0.3);
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.note-delete:hover {
+  color: #f44336;
+}
+
+.note-delete .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* ── Note textarea ───────────────────────────────────────── */
+
+.note-content {
+  flex: 1;
+  width: 100%;
+  min-height: 120px;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  color: #333;
+  outline: none;
+  box-sizing: border-box;
+  cursor: text;
+}
+
+/* ── Floating add button ─────────────────────────────────── */
+
+.fab-add {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.45);
+  transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
+  z-index: 9000;
+}
+
+.fab-add:hover {
+  background: #5a6fd8;
+  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.55);
+}
+
+.fab-add:active {
+  transform: scale(0.92);
+}
+
+.fab-add .material-symbols-outlined {
+  font-size: 28px;
+}

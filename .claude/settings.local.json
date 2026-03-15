@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(cd:*)",
+      "Bash(wc:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)"
+    ]
+  }
+}

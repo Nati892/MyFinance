@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import {
   CategorySidebarComponent,
   Category,
+  NewCategoryData,
 } from '../../components/category-sidebar/category-sidebar.component';
 import {
   TimelineComponent,
@@ -48,6 +49,7 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
 
   // ── Categories ─────────────────────────────────────────────────────────────
   categories: Category[] = [];
+  favoriteCategories: Category[] = [];
   categoriesError = false;
   selectedCategoryId: number | null = null;
 
@@ -137,6 +139,21 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
         this.categoriesError = true;
         this.cdr.markForCheck();
       },
+    });
+    this.categoryService.getExpenseFavorites(this.householdId).subscribe({
+      next: res => {
+        this.favoriteCategories = res.favorites ?? [];
+        this.cdr.markForCheck();
+      },
+      error: () => {}
+    });
+  }
+
+  onCreateCategory(data: NewCategoryData): void {
+    if (this.householdId == null) return;
+    this.categoryService.createExpenseCategory({ ...data, householdId: this.householdId }).subscribe({
+      next: () => this.loadCategories(),
+      error: () => alert('Failed to create category. Please try again.'),
     });
   }
 

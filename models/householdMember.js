@@ -24,6 +24,15 @@ module.exports = (sequelize, DataTypes) => {
     role: {
       type: DataTypes.ENUM('owner', 'member'),
       defaultValue: 'member'
+    },
+    favoriteExpenseCategoryIds: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: []
+    },
+    favoritesLastCalculatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   }, {
     timestamps: true,

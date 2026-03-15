@@ -27,6 +27,7 @@ const ExpenseCategory = require('./expenseCategory')(sequelize, Sequelize.DataTy
 const IncomeCategory = require('./incomeCategory')(sequelize, Sequelize.DataTypes);
 const Expense = require('./expense')(sequelize, Sequelize.DataTypes);
 const Income = require('./income')(sequelize, Sequelize.DataTypes);
+const Note = require('./note')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 User.hasMany(Log, {
@@ -83,6 +84,14 @@ Expense.belongsTo(Household, { foreignKey: 'householdId' });
 Household.hasMany(Income, { foreignKey: 'householdId', onDelete: 'CASCADE' });
 Income.belongsTo(Household, { foreignKey: 'householdId' });
 
+// Household <-> Note
+Household.hasMany(Note, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+Note.belongsTo(Household, { foreignKey: 'householdId' });
+
+// AppUser <-> Note
+AppUser.hasMany(Note, { foreignKey: 'appUserId' });
+Note.belongsTo(AppUser, { foreignKey: 'appUserId' });
+
 // AppUser <-> Household (many-to-many through HouseholdMember)
 AppUser.belongsToMany(Household, { through: HouseholdMember, foreignKey: 'appUserId' });
 Household.belongsToMany(AppUser, { through: HouseholdMember, foreignKey: 'householdId' });
@@ -100,7 +109,8 @@ const db = {
   ExpenseCategory,
   IncomeCategory,
   Expense,
-  Income
+  Income,
+  Note
 };
 
 module.exports = db;

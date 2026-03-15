@@ -7,6 +7,7 @@ const appUsersRoutes = require('./routers/appUsers');
 const householdsRoutes = require('./routers/households');
 const categoriesRoutes = require('./routers/categories');
 const transactionsRoutes = require('./routers/transactions');
+const notesRoutes = require('./routers/notes');
 
 const router = new Router();
 
@@ -21,6 +22,7 @@ router.use('/api', categoriesRoutes.routes());
 // App API routes
 router.use('/api', appAuthRoutes.routes());
 router.use('/api', transactionsRoutes.routes());
+router.use('/api', notesRoutes.routes());
 
 // Health check
 router.get('/health', (ctx) => {

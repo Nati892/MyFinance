@@ -14,9 +14,11 @@
     <!-- Sidebar -->
     <app-category-sidebar
       [categories]="categories"
+      [favoriteCategories]="favoriteCategories"
       [selectedCategoryId]="selectedCategoryId"
       type="income"
-      (categorySelected)="onCategorySelected($event)">
+      (categorySelected)="onCategorySelected($event)"
+      (createCategory)="onCreateCategory($event)">
     </app-category-sidebar>
 
     <!-- Timeline area -->

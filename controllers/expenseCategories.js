@@ -194,6 +194,104 @@ class ExpenseCategoriesController {
   }
 
   /**
+   * App: POST create an expense category from within the app
+   * Body: { name, icon, color, monthlyBudget, householdId }
+   */
+  async appCreate(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { name, icon, color, monthlyBudget, householdId } = ctx.request.body;
+
+      if (!name || !icon || !householdId) {
+        ctx.status = 400;
+        ctx.body = { error: 'name, icon, and householdId are required' };
+        return;
+      }
+
+      const membership = await HouseholdMember.findOne({
+        where: { householdId, appUserId: appUser.id }
+      });
+      if (!membership) {
+        ctx.status = 403;
+        ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      // Assign sortOrder after last existing
+      const maxOrder = await ExpenseCategory.max('sortOrder', { where: { householdId } });
+      const sortOrder = (maxOrder ?? 0) + 1;
+
+      const category = await ExpenseCategory.create({
+        name,
+        icon: icon || 'label',
+        color: color || '#667eea',
+        sortOrder,
+        monthlyBudget: monthlyBudget ?? null,
+        householdId
+      });
+
+      ctx.status = 201;
+      ctx.body = { success: true, category };
+    } catch (error) {
+      console.error('App create expense category error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to create expense category' };
+    }
+  }
+
+  /**
+   * App: GET /app/expense-categories/favorites?householdId=X
+   * Returns the current user's favorite expense category IDs for this household.
+   */
+  async appGetFavorites(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { householdId } = ctx.query;
+
+      if (!householdId) {
+        ctx.status = 400;
+        ctx.body = { error: 'householdId is required' };
+        return;
+      }
+
+      const membership = await HouseholdMember.findOne({
+        where: { householdId, appUserId: appUser.id }
+      });
+      if (!membership) {
+        ctx.status = 403;
+        ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      const favoriteIds = membership.favoriteExpenseCategoryIds || [];
+
+      let favorites = [];
+      if (favoriteIds.length > 0) {
+        const { start, end } = getCurrentFinancialPeriod();
+        const cats = await ExpenseCategory.findAll({ where: { id: favoriteIds, householdId } });
+
+        favorites = await Promise.all(cats.map(async (category) => {
+          const result = await Expense.findOne({
+            attributes: [[sequelize.fn('SUM', sequelize.col('amount')), 'totalSpend']],
+            where: { expenseCategoryId: category.id, dateTime: { [Op.between]: [start, end] } },
+            raw: true
+          });
+          return { ...category.toJSON(), currentSpend: parseFloat(result.totalSpend) || 0 };
+        }));
+
+        // Preserve the order of favoriteIds
+        favorites.sort((a, b) => favoriteIds.indexOf(a.id) - favoriteIds.indexOf(b.id));
+      }
+
+      ctx.body = { success: true, favorites };
+    } catch (error) {
+      console.error('App get favorites error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to retrieve favorites' };
+    }
+  }
+
+  /**
    * App: GET expense categories for a household with budget progress
    * Query: householdId
    * Validates that the current app user is a member of the household

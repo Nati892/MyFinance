@@ -10,6 +10,7 @@ try {
   global.cfg = require('./conf/example.js');
 }
 
+const http = require('http');
 const Koa = require('koa');
 const bodyParser = require('koa-bodyparser');
 const cors = require('@koa/cors');
@@ -20,6 +21,9 @@ const { seedAdmin } = require('./utils/seed');
 const serve = require('koa-static');
 const path = require('path');
 const send = require('koa-send');
+const socketUtil = require('./utils/socket');
+const { startCron } = require('./utils/cron');
+const { runMigrations } = require('./utils/runMigrations');
 
 const app = new Koa();
 const config = global.cfg;
@@ -66,7 +70,10 @@ async function startServer() {
     await db.sequelize.authenticate();
     console.log('Database connection established successfully.');
 
-    // Second: Sync models
+    // Second: Run pending migrations (ALTER TABLE etc. that sync won't do)
+    await runMigrations(db.sequelize);
+
+    // Third: Sync models (creates new tables, no-ops on existing)
     await db.sequelize.sync({ force: false });
     console.log('Database synced successfully.');
 
@@ -77,10 +84,14 @@ async function startServer() {
     await global.log.initialize();
     global.log.log('info', 'SERVER_START', 'Logger initialized and ready');
 
-    // Fourth: Start server
-    app.listen(config.port, config.baseAddress, () => {
+    // Fourth: Start server with Socket.IO
+    const httpServer = http.createServer(app.callback());
+    socketUtil.init(httpServer);
+
+    httpServer.listen(config.port, config.baseAddress, () => {
       console.log(`Server running on ${config.baseAddress}:${config.port}`);
       global.log.log('info', 'SERVER_START', `Server listening on ${config.baseAddress}:${config.port}`);
+      startCron();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

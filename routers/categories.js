@@ -23,10 +23,14 @@ router.put('/admin/income-categories/:id', authenticate, incomeCategoriesControl
 router.delete('/admin/income-categories/:id', authenticate, incomeCategoriesController.adminDelete);
 
 // ─── App: Expense Categories ──────────────────────────────────────────────────
+// /favorites and /budget must be before /:id to avoid conflict
+router.get('/app/expense-categories/favorites', authenticateApp, expenseCategoriesController.appGetFavorites);
 router.get('/app/expense-categories', authenticateApp, expenseCategoriesController.appList);
+router.post('/app/expense-categories', authenticateApp, expenseCategoriesController.appCreate);
 router.put('/app/expense-categories/:id/budget', authenticateApp, expenseCategoriesController.appUpdateBudget);
 
 // ─── App: Income Categories ───────────────────────────────────────────────────
 router.get('/app/income-categories', authenticateApp, incomeCategoriesController.appList);
+router.post('/app/income-categories', authenticateApp, incomeCategoriesController.appCreate);
 
 module.exports = router;
