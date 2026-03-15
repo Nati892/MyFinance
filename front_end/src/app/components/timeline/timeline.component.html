@@ -206,18 +206,12 @@
 
     <!-- Main content -->
     <div class="tx-body">
-      <span class="tx-description">
-        {{ tx.description || tx.category.name }}
-      </span>
-      <span class="tx-note" *ngIf="tx.note">{{ tx.note }}</span>
-      <span class="tx-meta">
-        <span class="material-symbols-outlined meta-icon">{{ getPaymentIcon(tx.paymentMethod) }}</span>
-        {{ formatPayment(tx.paymentMethod) }} · {{ tx.appUser.username }}
-      </span>
+      <span class="tx-description">{{ tx.description || tx.category.name }}</span>
     </div>
 
-    <!-- Amount -->
+    <!-- Amount + payment + menu -->
     <div class="tx-right">
+      <span class="tx-payment-inline">{{ formatPayment(tx.paymentMethod) }}</span>
       <span class="tx-amount" [class.income]="tx.type === 'income'">
         {{ formatNIS(tx.amount) }}
       </span>

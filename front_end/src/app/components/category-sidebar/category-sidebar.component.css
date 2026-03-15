@@ -5,6 +5,7 @@
   flex-direction: column;
   width: 64px;
   flex-shrink: 0;
+  height: 100%;
 }
 
 .sidebar-scroll {
@@ -13,6 +14,8 @@
   align-items: center;
   gap: 12px;
   padding: 12px 0;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;

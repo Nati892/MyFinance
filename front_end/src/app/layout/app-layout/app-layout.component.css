@@ -148,7 +148,6 @@
   height: calc(100vh - 56px - 60px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 16px;
   box-sizing: border-box;
 }
 
@@ -204,6 +203,6 @@
   }
 
   .app-content {
-    padding: 20px 24px;
+    padding: 0;
   }
 }

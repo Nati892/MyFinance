@@ -149,9 +149,7 @@ export class TimelineComponent implements OnChanges {
       this.rebuild();
       this.emitViewChanged();
     } else if (this.currentView === 'weekly') {
-      this.periodOffset -= 1;
-      this.rebuild();
-      this.emitViewChanged();
+      this.stepWeek(-1);
     } else if (this.currentView === 'daily') {
       this.stepDay(-1);
     } else if (this.currentView === 'hourly') {
@@ -165,9 +163,7 @@ export class TimelineComponent implements OnChanges {
       this.rebuild();
       this.emitViewChanged();
     } else if (this.currentView === 'weekly') {
-      this.periodOffset += 1;
-      this.rebuild();
-      this.emitViewChanged();
+      this.stepWeek(1);
     } else if (this.currentView === 'daily') {
       this.stepDay(1);
     } else if (this.currentView === 'hourly') {
@@ -180,6 +176,27 @@ export class TimelineComponent implements OnChanges {
     this.activeWeekNumber = week.weekNumber;
     this.activeDate = new Date(week.start);
     this.currentView = 'daily';
+    this.rebuild();
+    this.emitViewChanged();
+  }
+
+  private stepWeek(delta: number): void {
+    const validWeeks = this.weeks.filter(w => !!w.start && !!w.end);
+    const maxWeekNum = validWeeks.length > 0 ? validWeeks[validWeeks.length - 1].weekNumber : 1;
+    const next = this.activeWeekNumber + delta;
+
+    if (next < 1) {
+      this.periodOffset -= 1;
+      const newWeeks = getFinancialWeeks(getFinancialPeriod(this.periodOffset));
+      const newValid = newWeeks.filter(w => !!w.start && !!w.end);
+      this.activeWeekNumber = newValid.length > 0 ? newValid[newValid.length - 1].weekNumber : 1;
+    } else if (next > maxWeekNum) {
+      this.periodOffset += 1;
+      this.activeWeekNumber = 1;
+    } else {
+      this.activeWeekNumber = next;
+    }
+
     this.rebuild();
     this.emitViewChanged();
   }
@@ -246,17 +263,30 @@ export class TimelineComponent implements OnChanges {
     });
   }
 
-  // Weekly: group by day
+  // Weekly: group by day (filtered to the active week)
   private buildWeekly(): void {
-    const activeWeek = this.weeks.find(w => w.weekNumber === this.activeWeekNumber)
+    let activeWeek = this.weeks.find(w => w.weekNumber === this.activeWeekNumber)
       ?? this.weeks[0];
+
+    // If the stored week has no dates (e.g. navigated to a shorter period), fall back
+    // to the first valid week rather than showing an empty state.
+    if (!activeWeek.start || !activeWeek.end) {
+      activeWeek = this.weeks.find(w => !!w.start && !!w.end) ?? activeWeek;
+      this.activeWeekNumber = activeWeek.weekNumber;
+    }
 
     if (!activeWeek.start || !activeWeek.end) {
       this.dayGroups = [];
       return;
     }
 
-    this.dayGroups = this.groupByDay(this.transactions);
+    const weekStart = activeWeek.start;
+    const weekEnd   = activeWeek.end;
+    const weekTx = this.transactions.filter(t => {
+      const d = new Date(t.dateTime);
+      return d >= weekStart && d <= weekEnd;
+    });
+    this.dayGroups = this.groupByDay(weekTx);
   }
 
   // Daily: group by hour
@@ -376,7 +406,7 @@ export class TimelineComponent implements OnChanges {
       periodOffset: this.periodOffset,
     };
 
-    if (this.currentView === 'daily' || this.currentView === 'hourly') {
+    if (this.currentView === 'weekly' || this.currentView === 'daily' || this.currentView === 'hourly') {
       config.weekNumber = this.activeWeekNumber;
     }
 
