@@ -28,6 +28,8 @@ const IncomeCategory = require('./incomeCategory')(sequelize, Sequelize.DataType
 const Expense = require('./expense')(sequelize, Sequelize.DataTypes);
 const Income = require('./income')(sequelize, Sequelize.DataTypes);
 const Note = require('./note')(sequelize, Sequelize.DataTypes);
+const Asset = require('./asset')(sequelize, Sequelize.DataTypes);
+const CategoryBudgetOverride = require('./categoryBudgetOverride')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 User.hasMany(Log, {
@@ -92,6 +94,18 @@ Note.belongsTo(Household, { foreignKey: 'householdId' });
 AppUser.hasMany(Note, { foreignKey: 'appUserId' });
 Note.belongsTo(AppUser, { foreignKey: 'appUserId' });
 
+// Household <-> Asset
+Household.hasMany(Asset, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+Asset.belongsTo(Household, { foreignKey: 'householdId' });
+
+// Household <-> CategoryBudgetOverride
+Household.hasMany(CategoryBudgetOverride, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+CategoryBudgetOverride.belongsTo(Household, { foreignKey: 'householdId' });
+
+// ExpenseCategory <-> CategoryBudgetOverride
+ExpenseCategory.hasMany(CategoryBudgetOverride, { foreignKey: 'expenseCategoryId', onDelete: 'CASCADE' });
+CategoryBudgetOverride.belongsTo(ExpenseCategory, { foreignKey: 'expenseCategoryId' });
+
 // AppUser <-> Household (many-to-many through HouseholdMember)
 AppUser.belongsToMany(Household, { through: HouseholdMember, foreignKey: 'appUserId' });
 Household.belongsToMany(AppUser, { through: HouseholdMember, foreignKey: 'householdId' });
@@ -110,7 +124,9 @@ const db = {
   IncomeCategory,
   Expense,
   Income,
-  Note
+  Note,
+  Asset,
+  CategoryBudgetOverride
 };
 
 module.exports = db;

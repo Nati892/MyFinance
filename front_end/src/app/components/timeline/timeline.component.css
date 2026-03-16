@@ -168,17 +168,6 @@
   padding: 8px 16px 8px 24px;
 }
 
-.section-header.hour-header {
-  background: transparent;
-  border-left: none;
-  padding: 6px 16px 4px;
-  cursor: default;
-}
-
-.section-header.hour-header:hover {
-  background: transparent;
-}
-
 .section-chevron {
   font-size: 12px;
   color: #667eea;
@@ -201,13 +190,6 @@
 .section-title.small {
   font-size: 12px;
   color: #444;
-}
-
-.hour-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #888;
-  padding-left: 8px;
 }
 
 .section-body {

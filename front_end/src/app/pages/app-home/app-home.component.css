@@ -1,4 +1,4 @@
-/* ── Board container (fills app-content area) ──────────── */
+/* ── Host & container ───────────────────────────────────── */
 
 :host {
   display: block;
@@ -11,6 +11,8 @@
   overflow: hidden;
 }
 
+/* ── Loading ─────────────────────────────────────────────── */
+
 .board-loading {
   display: flex;
   align-items: center;
@@ -22,41 +24,36 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
 .spin {
   animation: spin 1s linear infinite;
   font-size: 36px;
 }
 
-/* ── Infinite board (scrollable canvas) ─────────────────── */
+/* ── Board (vertical-only, no horizontal scroll) ────────── */
 
 .board {
   position: absolute;
-  inset: 0;
-  overflow: auto;
+  top: 0;
+  left: 0;
+  right: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     radial-gradient(circle, #dde1ff 1px, transparent 1px) 0 0 / 28px 28px;
   background-color: #f4f5ff;
   cursor: default;
-  min-width: 100%;
-  min-height: 100%;
-}
-
-/* Inner scrollable space */
-.board::after {
-  content: '';
-  display: block;
-  width: 2400px;
-  height: 1800px;
-  pointer-events: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Sticky note ─────────────────────────────────────────── */
 
 .sticky-note {
   position: absolute;
-  width: 200px;
-  border-radius: 4px 4px 4px 20px;
-  box-shadow: 3px 4px 12px rgba(0, 0, 0, 0.14), 1px 1px 2px rgba(0,0,0,0.08);
+  width: 160px;
+  border-radius: 4px 4px 4px 16px;
+  box-shadow: 3px 4px 12px rgba(0, 0, 0, 0.14), 1px 1px 2px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   user-select: none;
@@ -73,10 +70,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px 4px;
+  padding: 5px 6px 4px;
   cursor: grab;
   border-radius: 4px 4px 0 0;
-  background: rgba(0,0,0,0.06);
+  gap: 4px;
 }
 
 .note-header:active {
@@ -84,16 +81,47 @@
 }
 
 .note-author {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  color: rgba(0,0,0,0.45);
+  color: rgba(0, 0, 0, 0.45);
   text-transform: uppercase;
   letter-spacing: 0.3px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 120px;
+  flex: 1;
+  min-width: 0;
 }
+
+.note-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Options (3-dot) button ──────────────────────────────── */
+
+.note-options-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 3px;
+  font-size: 15px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.35);
+  border-radius: 3px;
+  transition: background 0.12s, color 0.12s;
+  display: flex;
+  align-items: center;
+}
+
+.note-options-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.65);
+}
+
+/* ── Delete button ───────────────────────────────────────── */
 
 .note-delete {
   background: none;
@@ -102,7 +130,7 @@
   padding: 0;
   display: flex;
   align-items: center;
-  color: rgba(0,0,0,0.3);
+  color: rgba(0, 0, 0, 0.3);
   transition: color 0.15s;
   flex-shrink: 0;
 }
@@ -112,7 +140,7 @@
 }
 
 .note-delete .material-symbols-outlined {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 /* ── Note textarea ───────────────────────────────────────── */
@@ -120,24 +148,150 @@
 .note-content {
   flex: 1;
   width: 100%;
-  min-height: 120px;
-  padding: 10px;
+  min-height: 110px;
+  padding: 8px;
   border: none;
   background: transparent;
   resize: none;
-  font-size: 14px;
   font-family: inherit;
   line-height: 1.5;
-  color: #333;
   outline: none;
   box-sizing: border-box;
   cursor: text;
+  user-select: text;
+}
+
+.note-content.bold {
+  font-weight: bold;
+}
+
+.note-content.underline {
+  text-decoration: underline;
+}
+
+/* ── 3-dot popover menu (position: fixed) ────────────────── */
+
+.note-menu {
+  position: fixed;
+  z-index: 99999;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  padding: 10px;
+  min-width: 180px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  transform: translateY(-100%) translateY(-6px);
+}
+
+.note-menu--open {
+  display: flex;
+}
+
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.menu-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ── Color picker ────────────────────────────────────────── */
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.color-picker-input {
+  flex: 1;
+  height: 28px;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 2px;
+  background: none;
+}
+
+/* ── Direction buttons ───────────────────────────────────── */
+
+.btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.dir-btn {
+  flex: 1;
+  padding: 3px 0;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: #f5f5f5;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.dir-btn:hover {
+  background: #e8e8e8;
+}
+
+.dir-btn--active {
+  background: #667eea;
+  color: #fff;
+  border-color: #667eea;
+}
+
+/* ── Formatting row ──────────────────────────────────────── */
+
+.format-row {
+  display: flex;
+  gap: 4px;
+}
+
+.fmt-btn {
+  flex: 1;
+  padding: 3px 0;
+  font-size: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: #f5f5f5;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  min-width: 28px;
+}
+
+.fmt-btn:hover {
+  background: #e8e8e8;
+}
+
+.fmt-btn--active {
+  background: #667eea;
+  color: #fff;
+  border-color: #667eea;
 }
 
 /* ── Floating add button ─────────────────────────────────── */
 
 .fab-add {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   right: 20px;
   width: 52px;

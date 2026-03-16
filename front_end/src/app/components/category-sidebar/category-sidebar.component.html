@@ -24,25 +24,12 @@
     <!-- Category buttons -->
     <div class="cat-item" *ngFor="let cat of categories">
       <div class="cat-wrapper" [attr.title]="getBudgetTooltip(cat)">
-        <svg
-          *ngIf="type === 'expense' && getBudgetRatio(cat) >= 0"
-          class="budget-ring" viewBox="0 0 56 56" width="56" height="56" aria-hidden="true"
-        >
-          <circle cx="28" cy="28" r="26" fill="none" stroke="#e0e0e0" stroke-width="3"/>
-          <circle
-            cx="28" cy="28" r="26" fill="none"
-            [attr.stroke]="getBudgetColor(getBudgetRatio(cat))"
-            stroke-width="3" stroke-linecap="round"
-            [attr.stroke-dasharray]="CIRCUMFERENCE"
-            [attr.stroke-dashoffset]="getDashOffset(getBudgetRatio(cat))"
-            class="progress-arc"
-          />
-        </svg>
         <button
           class="cat-btn"
           [class.selected]="selectedCategoryId === cat.id"
           [style.background-color]="selectedCategoryId === cat.id ? cat.color : getBgColor(cat.color)"
-          [style.border-color]="cat.color"
+          [style.border-color]="getBudgetBorderColor(cat)"
+          [style.border-width]="getBudgetBorderWidth(cat)"
           (click)="selectCategory(cat.id)"
           [attr.aria-label]="cat.name"
         >
@@ -71,25 +58,12 @@
     <div class="favorites-divider"></div>
     <div class="cat-item" *ngFor="let cat of favoriteCategories">
       <div class="cat-wrapper fav-wrapper" [attr.title]="getBudgetTooltip(cat)">
-        <svg
-          *ngIf="type === 'expense' && getBudgetRatio(cat) >= 0"
-          class="budget-ring" viewBox="0 0 56 56" width="56" height="56" aria-hidden="true"
-        >
-          <circle cx="28" cy="28" r="26" fill="none" stroke="#e0e0e0" stroke-width="3"/>
-          <circle
-            cx="28" cy="28" r="26" fill="none"
-            [attr.stroke]="getBudgetColor(getBudgetRatio(cat))"
-            stroke-width="3" stroke-linecap="round"
-            [attr.stroke-dasharray]="CIRCUMFERENCE"
-            [attr.stroke-dashoffset]="getDashOffset(getBudgetRatio(cat))"
-            class="progress-arc"
-          />
-        </svg>
         <button
           class="cat-btn fav-cat-btn"
           [class.selected]="selectedCategoryId === cat.id"
           [style.background-color]="selectedCategoryId === cat.id ? cat.color : getBgColor(cat.color)"
-          [style.border-color]="cat.color"
+          [style.border-color]="getBudgetBorderColor(cat)"
+          [style.border-width]="getBudgetBorderWidth(cat)"
           (click)="selectCategory(cat.id)"
           [attr.aria-label]="cat.name + ' (favorite)'"
         >

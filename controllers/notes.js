@@ -99,7 +99,7 @@ class NotesController {
     try {
       const appUser = ctx.state.appUser;
       const { id } = ctx.params;
-      const { content, posX, posY, zIndex } = ctx.request.body;
+      const { content, posX, posY, zIndex, noteColor, textDirection, textSize, isBold, isUnderline, textColor, headerColor } = ctx.request.body;
 
       const note = await Note.findByPk(id);
       if (!note) {
@@ -122,6 +122,13 @@ class NotesController {
       if (posX !== undefined) updates.posX = posX;
       if (posY !== undefined) updates.posY = posY;
       if (zIndex !== undefined) updates.zIndex = zIndex;
+      if (noteColor !== undefined) updates.noteColor = noteColor;
+      if (textDirection !== undefined) updates.textDirection = textDirection;
+      if (textSize !== undefined) updates.textSize = textSize;
+      if (isBold !== undefined) updates.isBold = isBold;
+      if (isUnderline !== undefined) updates.isUnderline = isUnderline;
+      if (textColor !== undefined) updates.textColor = textColor;
+      if (headerColor !== undefined) updates.headerColor = headerColor;
 
       await note.update(updates);
 

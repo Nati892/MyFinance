@@ -148,24 +148,6 @@
   z-index: 2;
 }
 
-/* ── Budget SVG ring ─────────────────────────────────── */
-
-.budget-ring {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 56px;
-  height: 56px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.progress-arc {
-  transform-origin: 28px 28px;
-  transform: rotate(-90deg);
-  transition: stroke-dashoffset 0.4s ease;
-}
-
 /* ── CSS tooltip ─────────────────────────────────────── */
 
 .tooltip-text {
@@ -422,13 +404,6 @@
   .fav-cat-btn {
     width: 46px;
     height: 46px;
-  }
-
-  .budget-ring {
-    width: 60px;
-    height: 60px;
-    top: 2px;
-    left: 2px;
   }
 
   .cat-btn .material-symbols-outlined {

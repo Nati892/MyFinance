@@ -1,0 +1,450 @@
+/* ── Page shell ──────────────────────────────────────────────────────────── */
+.budget-page {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px 12px 32px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.no-household {
+  text-align: center;
+  color: #888;
+  padding: 40px 16px;
+}
+
+/* ── Mode tabs ───────────────────────────────────────────────────────────── */
+.mode-tabs {
+  display: flex;
+  background: #f0f0f5;
+  border-radius: 50px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+
+.mode-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 50px;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #666;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mode-tab.active {
+  background: #667eea;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.35);
+}
+
+/* ── Month navigation ────────────────────────────────────────────────────── */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.nav-arrow {
+  background: none;
+  border: 1.5px solid #d0d0d8;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  color: #667eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.nav-arrow:hover:not(.disabled) {
+  background: #667eea10;
+}
+
+.nav-arrow.disabled,
+.nav-arrow:disabled {
+  color: #ccc;
+  border-color: #e0e0e0;
+  cursor: default;
+}
+
+.month-label {
+  font-size: 17px;
+  font-weight: 600;
+  color: #222;
+  min-width: 140px;
+  text-align: center;
+}
+
+/* ── Budget table ────────────────────────────────────────────────────────── */
+.budget-table {
+  width: 100%;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1fr 80px 72px 72px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  border-bottom: 1.5px solid #eee;
+  margin-bottom: 4px;
+}
+
+.table-row {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #f4f4f8;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.row-grid {
+  display: grid;
+  grid-template-columns: 1fr 80px 72px 72px;
+  align-items: center;
+  padding: 10px 8px;
+  min-height: 52px;
+}
+
+.table-row--editing {
+  background: #fafaff;
+  border-radius: 10px;
+  border: 1.5px solid #667eea33;
+  margin-bottom: 4px;
+}
+
+/* ── Category cell ───────────────────────────────────────────────────────── */
+.category-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.cat-name {
+  font-size: 14px;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Budget hint ─────────────────────────────────────────────────────────── */
+.budget-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #888;
+  background: #f5f5ff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.hint-icon {
+  font-size: 14px;
+  color: #667eea;
+}
+
+/* ── Budget cell ─────────────────────────────────────────────────────────── */
+.budget-display {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: #444;
+  cursor: pointer;
+  padding: 4px 5px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.budget-display:hover {
+  background: #f0f0f8;
+  color: #667eea;
+}
+
+.budget-value {
+  font-size: 13px;
+}
+
+.budget-edit-icon {
+  font-size: 13px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.budget-display:hover .budget-edit-icon {
+  opacity: 0.9;
+}
+
+/* ── Budget editor (expanded panel) ─────────────────────────────────────── */
+.budget-editor {
+  padding: 10px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.budget-mode-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.budget-mode-tab {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid #e0e0e8;
+  border-radius: 8px;
+  background: #f5f5f5;
+  color: #666;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.budget-mode-tab.active {
+  border-color: #667eea;
+  background: #f0f2ff;
+  color: #667eea;
+}
+
+.budget-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.budget-currency {
+  font-size: 18px;
+  font-weight: 700;
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+.budget-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1.5px solid #667eea;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+  color: #222;
+  background: #fff;
+}
+
+.budget-save-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #667eea;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.budget-save-btn:hover {
+  background: #5a6fd8;
+}
+
+.budget-cancel-btn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #e0e0e0;
+  background: #fff;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.budget-cancel-btn:hover {
+  background: #f5f5f5;
+}
+
+/* ── Spent / result cells ────────────────────────────────────────────────── */
+.col-spent {
+  font-size: 14px;
+  color: #444;
+  text-align: right;
+}
+
+.result-cell {
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.result-cell.over-budget {
+  color: #e53935;
+}
+
+.result-cell.under-budget {
+  color: #4CAF50;
+}
+
+/* ── Skeleton loading ────────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-row {
+  gap: 12px;
+}
+
+.skeleton-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-name {
+  width: 80px;
+  height: 16px;
+}
+
+.skeleton-cell {
+  width: 52px;
+  height: 16px;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  color: #aaa;
+  padding: 32px 16px;
+  font-size: 14px;
+}
+
+/* ── Graph section ───────────────────────────────────────────────────────── */
+.graph-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.category-selector {
+  width: 100%;
+}
+
+.cat-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #e0e0e8;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.cat-select:focus {
+  border-color: #667eea;
+}
+
+/* ── Graph sub-tabs ──────────────────────────────────────────────────────── */
+.graph-tabs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.graph-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: 1.5px solid #e0e0e8;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.graph-tab.active {
+  border-color: #667eea;
+  color: #667eea;
+  background: #667eea0d;
+}
+
+/* ── SVG bar chart ───────────────────────────────────────────────────────── */
+.chart-wrapper {
+  width: 100%;
+}
+
+.bar-chart {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.bar-value-label {
+  font-size: 7px;
+  fill: #555;
+  font-weight: 600;
+}
+
+.bar-x-label {
+  font-size: 7px;
+  fill: #888;
+}
+
+/* ── Graph loading skeleton ──────────────────────────────────────────────── */
+.graph-loading {
+  width: 100%;
+}
+
+.skeleton-chart {
+  width: 100%;
+  height: 200px;
+}

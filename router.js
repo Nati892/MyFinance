@@ -8,6 +8,8 @@ const householdsRoutes = require('./routers/households');
 const categoriesRoutes = require('./routers/categories');
 const transactionsRoutes = require('./routers/transactions');
 const notesRoutes = require('./routers/notes');
+const assetsRoutes = require('./routers/assets');
+const budgetsRoutes = require('./routers/budgets');
 
 const router = new Router();
 
@@ -23,6 +25,8 @@ router.use('/api', categoriesRoutes.routes());
 router.use('/api', appAuthRoutes.routes());
 router.use('/api', transactionsRoutes.routes());
 router.use('/api', notesRoutes.routes());
+router.use('/api', assetsRoutes.routes());
+router.use('/api', budgetsRoutes.routes());
 
 // Health check
 router.get('/health', (ctx) => {

@@ -17,10 +17,10 @@
     <button class="nav-arrow" (click)="next()" aria-label="Next">&#8250;</button>
   </div>
 
-  <!-- ── Week row (weekly / hourly views) ──────────────────────────────────── -->
+  <!-- ── Week row (weekly view only) ───────────────────────────────────────── -->
   <div
     class="week-row"
-    *ngIf="currentView === 'weekly' || currentView === 'hourly'"
+    *ngIf="currentView === 'weekly'"
   >
     <button
       *ngFor="let w of weeks; trackBy: trackByWeek"
@@ -149,51 +149,16 @@
   <!-- ════════════════════════════════════════════════════════════════════════ -->
   <div class="content-area" *ngIf="!loading && currentView === 'daily'">
 
-    <ng-container *ngFor="let dg of dayGroups">
-      <!-- Hour blocks -->
-      <ng-container *ngFor="let hg of dg.hourGroups; trackBy: trackByHour">
-        <div class="section-header hour-header">
-          <span class="hour-label">{{ hg.label }}</span>
-        </div>
-        <div class="day-body">
-          <ng-container
-            *ngFor="let tx of hg.transactions; trackBy: trackById"
-            [ngTemplateOutlet]="txCard"
-            [ngTemplateOutletContext]="{ $implicit: tx }"
-          ></ng-container>
-        </div>
-      </ng-container>
-
-      <!-- No transactions this day -->
-      <div class="empty-state" *ngIf="dg.transactions.length === 0">
-        <span class="empty-icon">🗒️</span>
-        <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} on this day</p>
-        <p class="empty-sub">Transactions you add will appear here</p>
-      </div>
-    </ng-container>
-
-    <div class="empty-state" *ngIf="dayGroups.length === 0">
-      <span class="empty-icon">🗒️</span>
-      <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} on this day</p>
-      <p class="empty-sub">Transactions you add will appear here</p>
-    </div>
-  </div>
-
-  <!-- ════════════════════════════════════════════════════════════════════════ -->
-  <!-- HOURLY VIEW                                                             -->
-  <!-- ════════════════════════════════════════════════════════════════════════ -->
-  <div class="content-area" *ngIf="!loading && currentView === 'hourly'">
-
     <ng-container
-      *ngFor="let tx of hourTransactions; trackBy: trackById"
+      *ngFor="let tx of dailyTransactions; trackBy: trackById"
       [ngTemplateOutlet]="txCard"
       [ngTemplateOutletContext]="{ $implicit: tx }"
     ></ng-container>
 
-    <div class="empty-state" *ngIf="hourTransactions.length === 0">
-      <span class="empty-icon">⏱️</span>
-      <p class="empty-title">Nothing at this hour</p>
-      <p class="empty-sub">No transactions recorded here</p>
+    <div class="empty-state" *ngIf="dailyTransactions.length === 0">
+      <span class="empty-icon">🗒️</span>
+      <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} on this day</p>
+      <p class="empty-sub">Transactions you add will appear here</p>
     </div>
   </div>
 

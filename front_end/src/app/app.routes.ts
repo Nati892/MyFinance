@@ -14,6 +14,8 @@ import { AppAuthGuard } from './guards/app-auth.guard';
 import { AppExpensesComponent } from './pages/app-expenses/app-expenses.component';
 import { AppIncomesComponent } from './pages/app-incomes/app-incomes.component';
 import { AppHomeComponent } from './pages/app-home/app-home.component';
+import { AppBudgetComponent } from './pages/app-budget/app-budget.component';
+import { AppAssetsComponent } from './pages/app-assets/app-assets.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -42,6 +44,8 @@ export const routes: Routes = [
           { path: 'expenses', component: AppExpensesComponent },
           { path: 'incomes', component: AppIncomesComponent },
           { path: 'home', component: AppHomeComponent },
+          { path: 'budget', component: AppBudgetComponent },
+          { path: 'assets', component: AppAssetsComponent },
           { path: '', redirectTo: 'expenses', pathMatch: 'full' }
         ]
       },

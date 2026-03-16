@@ -14,6 +14,13 @@ export interface NotePayload {
   AppUser?: { id: number; username: string };
   createdAt: string;
   updatedAt: string;
+  noteColor?: string;
+  headerColor?: string | null;
+  textDirection?: 'ltr' | 'rtl' | 'auto';
+  textSize?: number;
+  isBold?: boolean;
+  isUnderline?: boolean;
+  textColor?: string;
 }
 
 @Injectable({ providedIn: 'root' })

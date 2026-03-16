@@ -66,21 +66,19 @@ class IncomesController {
         // dateStart and dateEnd already set to period.start / period.end
 
       } else if (view === 'daily') {
-        const wn = parseInt(weekNumber, 10);
-        if (!wn || wn < 1 || wn > 5) {
+        if (!date) {
           ctx.status = 400;
-          ctx.body   = { error: 'weekNumber (1-5) is required for daily view' };
+          ctx.body   = { error: 'date is required for daily view' };
           return;
         }
-        const week = weeks.find(w => w.weekNumber === wn);
-        if (!week || !week.start) {
+        const targetDate = new Date(date);
+        if (isNaN(targetDate.getTime())) {
           ctx.status = 400;
-          ctx.body   = { error: `Week ${wn} does not exist in this period` };
+          ctx.body   = { error: 'date is not a valid ISO date string' };
           return;
         }
-        dateStart = week.start;
-        dateEnd   = week.end;
-        slots     = getDailySlots(week);
+        dateStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
+        dateEnd   = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
 
       } else if (view === 'hourly') {
         if (!date) {

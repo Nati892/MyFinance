@@ -1,0 +1,171 @@
+<!-- No-household state -->
+<div *ngIf="noHousehold" class="no-household">
+  <p>No household selected. Please select a household to view assets.</p>
+</div>
+
+<div *ngIf="!noHousehold" class="assets-page">
+
+  <!-- ── Summary bar ──────────────────────────────────────────────────────── -->
+  <div class="summary-bar">
+    <div class="summary-card total">
+      <span class="summary-label">Total Assets</span>
+      <span class="summary-value">{{ formatCurrency(totalValue) }}</span>
+    </div>
+    <div class="summary-card liquid">
+      <span class="summary-label">🟢 Liquid</span>
+      <span class="summary-value">{{ formatCurrency(liquidValue) }}</span>
+    </div>
+    <div class="summary-card semi">
+      <span class="summary-label">🟡 Semi-Liquid</span>
+      <span class="summary-value">{{ formatCurrency(semiLiquidValue) }}</span>
+    </div>
+    <div class="summary-card illiquid">
+      <span class="summary-label">🔴 Illiquid</span>
+      <span class="summary-value">{{ formatCurrency(illiquidValue) }}</span>
+    </div>
+  </div>
+
+  <!-- ── Table ───────────────────────────────────────────────────────────── -->
+  <div class="table-wrapper">
+    <table class="assets-table">
+      <thead>
+        <tr>
+          <th class="col-name">Name</th>
+          <th class="col-value">Value</th>
+          <th class="col-liquidity">Liquidity</th>
+          <th class="col-description">Description</th>
+          <th class="col-actions"></th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- Loading skeletons -->
+        <ng-container *ngIf="loading">
+          <tr *ngFor="let s of skeletonRows" class="skeleton-row">
+            <td><div class="skeleton-cell"></div></td>
+            <td><div class="skeleton-cell short"></div></td>
+            <td><div class="skeleton-cell badge"></div></td>
+            <td><div class="skeleton-cell long"></div></td>
+            <td><div class="skeleton-cell icon"></div></td>
+          </tr>
+        </ng-container>
+
+        <!-- Asset rows -->
+        <ng-container *ngIf="!loading">
+          <tr
+            *ngFor="let asset of assets; trackBy: trackById; let even = even"
+            class="asset-row"
+            [class.row-even]="even"
+            [class.row-odd]="!even"
+          >
+            <!-- Name -->
+            <td class="cell-name" (click)="startEdit(asset.id, 'name')">
+              <input
+                *ngIf="isEditing(asset.id, 'name'); else nameTpl"
+                class="cell-input"
+                type="text"
+                [value]="asset.name"
+                (input)="onCellChange(asset, 'name', $any($event.target).value)"
+                (blur)="onCellBlur(asset, 'name')"
+                (keydown)="onCellKeydown($event, asset, 'name')"
+                autofocus
+              />
+              <ng-template #nameTpl>
+                <span class="cell-display">{{ asset.name }}</span>
+              </ng-template>
+            </td>
+
+            <!-- Value -->
+            <td class="cell-value" (click)="startEdit(asset.id, 'value')">
+              <input
+                *ngIf="isEditing(asset.id, 'value'); else valueTpl"
+                class="cell-input"
+                type="number"
+                [value]="asset.value"
+                (input)="onCellChange(asset, 'value', +$any($event.target).value)"
+                (blur)="onCellBlur(asset, 'value')"
+                (keydown)="onCellKeydown($event, asset, 'value')"
+                autofocus
+              />
+              <ng-template #valueTpl>
+                <span class="cell-display value-display">{{ formatCurrency(asset.value) }}</span>
+              </ng-template>
+            </td>
+
+            <!-- Liquidity -->
+            <td class="cell-liquidity" (click)="startEdit(asset.id, 'liquidity')">
+              <select
+                *ngIf="isEditing(asset.id, 'liquidity'); else liquidityTpl"
+                class="cell-input liquidity-select"
+                [value]="asset.liquidity"
+                (change)="onLiquidityChange(asset, $any($event.target).value)"
+                (blur)="cancelEdit()"
+                autofocus
+              >
+                <option value="high">🟢 High</option>
+                <option value="medium">🟡 Medium</option>
+                <option value="low">🔴 Low</option>
+              </select>
+              <ng-template #liquidityTpl>
+                <span class="liquidity-badge" [class]="'liquidity-' + asset.liquidity">
+                  {{ liquidityDot(asset.liquidity) }} {{ liquidityLabel(asset.liquidity) }}
+                </span>
+              </ng-template>
+            </td>
+
+            <!-- Description -->
+            <td class="cell-description" (click)="startEdit(asset.id, 'description')">
+              <input
+                *ngIf="isEditing(asset.id, 'description'); else descTpl"
+                class="cell-input"
+                type="text"
+                [value]="asset.description"
+                (input)="onCellChange(asset, 'description', $any($event.target).value)"
+                (blur)="onCellBlur(asset, 'description')"
+                (keydown)="onCellKeydown($event, asset, 'description')"
+                autofocus
+              />
+              <ng-template #descTpl>
+                <span class="cell-display desc-display">{{ asset.description || '—' }}</span>
+              </ng-template>
+            </td>
+
+            <!-- Actions -->
+            <td class="cell-actions">
+              <button class="btn-delete" (click)="deleteAsset(asset)" title="Delete asset">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-1 14H6L5 6"></path>
+                  <path d="M10 11v6"></path>
+                  <path d="M14 11v6"></path>
+                  <path d="M9 6V4h6v2"></path>
+                </svg>
+              </button>
+            </td>
+          </tr>
+
+          <!-- Empty state -->
+          <tr *ngIf="assets.length === 0" class="empty-row">
+            <td colspan="5">
+              <div class="empty-state">
+                <span>No assets yet. Click + to add your first asset.</span>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Floating add button ─────────────────────────────────────────────── -->
+  <button class="fab-add" (click)="addAsset()" title="Add asset">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+      fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
+
+</div>

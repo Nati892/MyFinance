@@ -67,7 +67,6 @@ export class CategorySidebarComponent {
   @Output() categorySelected = new EventEmitter<number | null>();
   @Output() createCategory = new EventEmitter<NewCategoryData>();
 
-  readonly CIRCUMFERENCE = 2 * Math.PI * 26;
   readonly iconOptions = ICON_OPTIONS;
   readonly presetColors = PRESET_COLORS;
 
@@ -145,8 +144,14 @@ export class CategorySidebarComponent {
     return '#F44336';
   }
 
-  getDashOffset(ratio: number): number {
-    return this.CIRCUMFERENCE * (1 - Math.min(ratio, 1));
+  getBudgetBorderColor(cat: Category): string {
+    const ratio = this.getBudgetRatio(cat);
+    if (ratio < 0) return cat.color;
+    return this.getBudgetColor(ratio);
+  }
+
+  getBudgetBorderWidth(cat: Category): string {
+    return this.getBudgetRatio(cat) >= 0 ? '3px' : '2px';
   }
 
   getBudgetTooltip(cat: Category): string {

@@ -494,17 +494,6 @@
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 
 @media (min-width: 480px) {
-  .modal-sheet {
-    max-width: 640px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    border-radius: 20px 20px 0 0;
-  }
-
-  .modal-sheet--open {
-    transform: translateX(-50%) translateY(0);
-  }
-
   .fab {
     right: 24px;
   }

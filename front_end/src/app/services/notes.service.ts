@@ -15,6 +15,14 @@ export interface Note {
   AppUser?: { id: number; username: string };
   createdAt: string;
   updatedAt: string;
+  // Styling fields
+  noteColor: string;
+  headerColor: string | null;
+  textDirection: 'ltr' | 'rtl' | 'auto';
+  textSize: number;
+  isBold: boolean;
+  isUnderline: boolean;
+  textColor: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -37,7 +45,19 @@ export class NotesService {
     return this.http.post<any>(`${this.apiUrl}/app/notes`, data, { headers: this.getHeaders() });
   }
 
-  update(id: number, data: Partial<{ content: string; posX: number; posY: number; zIndex: number }>): Observable<{ success: boolean; note: Note }> {
+  update(id: number, data: Partial<{
+    content: string;
+    posX: number;
+    posY: number;
+    zIndex: number;
+    noteColor: string;
+    headerColor: string | null;
+    textDirection: 'ltr' | 'rtl' | 'auto';
+    textSize: number;
+    isBold: boolean;
+    isUnderline: boolean;
+    textColor: string;
+  }>): Observable<{ success: boolean; note: Note }> {
     return this.http.put<any>(`${this.apiUrl}/app/notes/${id}`, data, { headers: this.getHeaders() });
   }
 

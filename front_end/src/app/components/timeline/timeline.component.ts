@@ -15,7 +15,6 @@ import {
   FinancialPeriod,
   buildWeekLabel,
   buildDayLabel,
-  buildHourLabel,
   formatNIS,
   formatPaymentMethod,
   sumAmounts,
@@ -44,7 +43,7 @@ export interface TransactionItem {
 }
 
 export interface TimelineViewConfig {
-  view: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  view: 'daily' | 'weekly' | 'monthly';
   periodOffset: number;
   weekNumber?: number;
   date?: string;
@@ -52,19 +51,11 @@ export interface TimelineViewConfig {
 
 // ─── Internal grouping types ──────────────────────────────────────────────────
 
-interface HourGroup {
-  label: string;
-  hour: number;
-  total: number;
-  transactions: TransactionItem[];
-}
-
 interface DayGroup {
   label: string;
   dateKey: string;
   total: number;
   transactions: TransactionItem[];
-  hourGroups?: HourGroup[];
   collapsed: boolean;
 }
 
@@ -96,11 +87,10 @@ export class TimelineComponent implements OnChanges {
   @Output() transactionDelete = new EventEmitter<TransactionItem>();
 
   // ── View state ──────────────────────────────────────────────────────────────
-  currentView: 'hourly' | 'daily' | 'weekly' | 'monthly' = 'monthly';
+  currentView: 'daily' | 'weekly' | 'monthly' = 'monthly';
   periodOffset = 0;
   activeWeekNumber = 1;
   activeDate: Date = new Date();
-  activeHour = 9;
 
   // ── Derived display data ────────────────────────────────────────────────────
   period!: FinancialPeriod;
@@ -112,17 +102,16 @@ export class TimelineComponent implements OnChanges {
   // Grouped data per view
   weekGroups:  WeekGroup[]  = [];
   dayGroups:   DayGroup[]   = [];
-  hourGroups:  HourGroup[]  = [];
-  hourTransactions: TransactionItem[] = [];
+  // Daily view: flat transaction list for the active day
+  dailyTransactions: TransactionItem[] = [];
 
   // Action menu
   openMenuId: number | null = null;
 
-  readonly views: Array<{ key: 'monthly' | 'weekly' | 'daily' | 'hourly'; label: string }> = [
+  readonly views: Array<{ key: 'monthly' | 'weekly' | 'daily'; label: string }> = [
     { key: 'monthly', label: 'Monthly' },
     { key: 'weekly',  label: 'Weekly'  },
     { key: 'daily',   label: 'Daily'   },
-    { key: 'hourly',  label: 'Hourly'  },
   ];
 
   constructor() {
@@ -137,7 +126,12 @@ export class TimelineComponent implements OnChanges {
 
   // ── Navigation ──────────────────────────────────────────────────────────────
 
-  selectView(view: 'hourly' | 'daily' | 'weekly' | 'monthly'): void {
+  selectView(view: 'daily' | 'weekly' | 'monthly'): void {
+    if (view === 'daily') {
+      // Always reset to today when entering daily view so the displayed date
+      // matches what the backend fetches.
+      this.activeDate = new Date();
+    }
     this.currentView = view;
     this.rebuild();
     this.emitViewChanged();
@@ -152,8 +146,6 @@ export class TimelineComponent implements OnChanges {
       this.stepWeek(-1);
     } else if (this.currentView === 'daily') {
       this.stepDay(-1);
-    } else if (this.currentView === 'hourly') {
-      this.stepHour(-1);
     }
   }
 
@@ -166,8 +158,6 @@ export class TimelineComponent implements OnChanges {
       this.stepWeek(1);
     } else if (this.currentView === 'daily') {
       this.stepDay(1);
-    } else if (this.currentView === 'hourly') {
-      this.stepHour(1);
     }
   }
 
@@ -176,7 +166,7 @@ export class TimelineComponent implements OnChanges {
     this.activeWeekNumber = week.weekNumber;
     this.activeDate = new Date(week.start);
     // In weekly view: stay in weekly, just change the active week.
-    // In daily/hourly: drill down into that week's daily view.
+    // In daily: drill down into that week's daily view.
     if (this.currentView !== 'weekly') {
       this.currentView = 'daily';
     }
@@ -213,12 +203,6 @@ export class TimelineComponent implements OnChanges {
     this.emitViewChanged();
   }
 
-  private stepHour(delta: number): void {
-    this.activeHour = (this.activeHour + delta + 24) % 24;
-    this.rebuild();
-    this.emitViewChanged();
-  }
-
   // ── Rebuild grouped data ────────────────────────────────────────────────────
 
   private rebuild(): void {
@@ -227,10 +211,9 @@ export class TimelineComponent implements OnChanges {
     this.grandTotal = sumAmounts(this.transactions);
 
     switch (this.currentView) {
-      case 'monthly': this.buildMonthly();  break;
-      case 'weekly':  this.buildWeekly();   break;
-      case 'daily':   this.buildDaily();    break;
-      case 'hourly':  this.buildHourly();   break;
+      case 'monthly': this.buildMonthly(); break;
+      case 'weekly':  this.buildWeekly();  break;
+      case 'daily':   this.buildDaily();   break;
     }
 
     this.navLabel = this.buildNavLabel();
@@ -293,18 +276,14 @@ export class TimelineComponent implements OnChanges {
     this.dayGroups = this.groupByDay(weekTx);
   }
 
-  // Daily: group by hour
+  // Daily: flat list for the active day (transactions are already pre-filtered by
+  // the backend to that specific day via the `date` param).
   private buildDaily(): void {
-    this.dayGroups = this.groupByHour(this.transactions, this.activeDate);
-  }
-
-  // Hourly: flat list for active hour
-  private buildHourly(): void {
-    this.hourTransactions = this.transactions.filter(t => {
-      const d = new Date(t.dateTime);
-      return d.getHours() === this.activeHour &&
-             this.sameLocalDate(d, this.activeDate);
-    });
+    // The backend scopes the response to the requested date, so `this.transactions`
+    // already contains only that day's transactions. Display them as a flat list.
+    this.dailyTransactions = [...this.transactions].sort(
+      (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+    );
   }
 
   // ── Grouping helpers ────────────────────────────────────────────────────────
@@ -339,41 +318,6 @@ export class TimelineComponent implements OnChanges {
         collapsed: false,
       };
     });
-  }
-
-  private groupByHour(txList: TransactionItem[], forDate: Date): DayGroup[] {
-    const dayDate = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate());
-    const dayTx   = txList.filter(t => this.sameLocalDate(new Date(t.dateTime), forDate));
-
-    const map = new Map<number, TransactionItem[]>();
-    for (const tx of dayTx) {
-      const h = new Date(tx.dateTime).getHours();
-      if (!map.has(h)) map.set(h, []);
-      map.get(h)!.push(tx);
-    }
-
-    const sortedHours = Array.from(map.keys()).sort((a, b) => a - b);
-    const hourGroupsArr: HourGroup[] = sortedHours.map(h => {
-      const txs   = map.get(h)!;
-      const hh    = String(h).padStart(2, '0');
-      const total = sumAmounts(txs);
-      return {
-        label: `${hh}:00 · ${formatNIS(total)}`,
-        hour: h,
-        total,
-        transactions: txs,
-      };
-    });
-
-    const dayTotal = sumAmounts(dayTx);
-    return [{
-      label: `${buildDayLabel(dayDate)} · ${formatNIS(dayTotal)}`,
-      dateKey: `${dayDate.getFullYear()}-${dayDate.getMonth()}-${dayDate.getDate()}`,
-      total: dayTotal,
-      transactions: dayTx,
-      hourGroups: hourGroupsArr,
-      collapsed: false,
-    }];
   }
 
   sameLocalDate(a: Date, b: Date): boolean {
@@ -420,9 +364,6 @@ export class TimelineComponent implements OnChanges {
 
       case 'daily':
         return buildDayLabel(this.activeDate);
-
-      case 'hourly':
-        return buildHourLabel(this.activeDate, this.activeHour);
     }
   }
 
@@ -434,11 +375,12 @@ export class TimelineComponent implements OnChanges {
       periodOffset: this.periodOffset,
     };
 
-    if (this.currentView === 'weekly' || this.currentView === 'daily' || this.currentView === 'hourly') {
+    if (this.currentView === 'weekly') {
       config.weekNumber = this.activeWeekNumber;
     }
 
-    if (this.currentView === 'hourly') {
+    if (this.currentView === 'daily') {
+      // Send the ISO date so the backend can scope the query to this specific day.
       config.date = this.activeDate.toISOString();
     }
 
@@ -508,10 +450,6 @@ export class TimelineComponent implements OnChanges {
 
   trackByKey(_: number, item: DayGroup | WeekGroup): string {
     return 'weekNumber' in item ? String((item as WeekGroup).weekNumber) : (item as DayGroup).dateKey;
-  }
-
-  trackByHour(_: number, item: HourGroup): number {
-    return item.hour;
   }
 
   trackByWeek(_: number, week: FinancialWeek): number {

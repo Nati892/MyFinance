@@ -32,6 +32,35 @@ module.exports = (sequelize, DataTypes) => {
     appUserId: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+    noteColor: {
+      type: DataTypes.STRING(20),
+      defaultValue: '#fff9c4'
+    },
+    textDirection: {
+      type: DataTypes.ENUM('ltr', 'rtl', 'auto'),
+      defaultValue: 'auto'
+    },
+    textSize: {
+      type: DataTypes.INTEGER,
+      defaultValue: 14
+    },
+    isBold: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    isUnderline: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    textColor: {
+      type: DataTypes.STRING(20),
+      defaultValue: '#333333'
+    },
+    headerColor: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: null
     }
   }, {
     timestamps: true,

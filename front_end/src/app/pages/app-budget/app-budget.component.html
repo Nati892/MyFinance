@@ -1,0 +1,228 @@
+<div class="budget-page">
+
+  <!-- No household -->
+  <div *ngIf="noHousehold" class="no-household">
+    <p>No household selected. Please select or create a household to view budget.</p>
+  </div>
+
+  <ng-container *ngIf="!noHousehold">
+
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button
+        class="mode-tab"
+        [class.active]="viewMode === 'table'"
+        (click)="setViewMode('table')"
+      >Table</button>
+      <button
+        class="mode-tab"
+        [class.active]="viewMode === 'graph'"
+        (click)="setViewMode('graph')"
+      >Graph</button>
+    </div>
+
+    <!-- Month navigation -->
+    <div class="month-nav">
+      <button class="nav-arrow" (click)="prevMonth()" aria-label="Previous month">&#8592;</button>
+      <span class="month-label">{{ monthLabel }}</span>
+      <button
+        class="nav-arrow"
+        (click)="nextMonth()"
+        [disabled]="isCurrentMonth"
+        [class.disabled]="isCurrentMonth"
+        aria-label="Next month"
+      >&#8594;</button>
+    </div>
+
+    <!-- ══ TABLE MODE ══ -->
+    <div *ngIf="viewMode === 'table'" class="table-section">
+
+      <!-- Skeleton loading -->
+      <div *ngIf="loading" class="budget-table">
+        <div *ngFor="let s of skeletonRows" class="table-row skeleton-row">
+          <div class="skeleton skeleton-icon"></div>
+          <div class="skeleton skeleton-name"></div>
+          <div class="skeleton skeleton-cell"></div>
+          <div class="skeleton skeleton-cell"></div>
+          <div class="skeleton skeleton-cell"></div>
+        </div>
+      </div>
+
+      <!-- Table header -->
+      <div *ngIf="!loading" class="budget-table">
+        <div class="budget-hint">
+          <span class="material-symbols-outlined hint-icon">edit</span>
+          Tap a budget value to set or change it for this month
+        </div>
+        <div class="table-header">
+          <span class="col-category">Category</span>
+          <span class="col-budget">Budget</span>
+          <span class="col-spent">Spent</span>
+          <span class="col-result">Result</span>
+        </div>
+
+        <!-- Rows -->
+        <div
+          *ngFor="let row of budgetRows; trackBy: trackById"
+          class="table-row"
+          [class.table-row--editing]="editingBudgetCategoryId === row.id"
+        >
+          <!-- Normal grid row -->
+          <div class="row-grid">
+            <!-- Category icon + name -->
+            <div class="col-category category-cell">
+              <span
+                class="cat-icon"
+                [style.background-color]="row.color + '33'"
+                [style.color]="row.color"
+              >{{ getCategoryLetter(row.name) }}</span>
+              <span class="cat-name">{{ row.name }}</span>
+            </div>
+
+            <!-- Budget display -->
+            <div class="col-budget budget-cell">
+              <button class="budget-display" (click)="startEditBudget(row, 'base')" title="Set budget">
+                <span class="budget-value">{{ row.effectiveBudget != null ? ('&#8361;' + (row.effectiveBudget | number:'1.0-0')) : 'Set' }}</span>
+                <span class="material-symbols-outlined budget-edit-icon">edit</span>
+              </button>
+            </div>
+
+            <!-- Spent -->
+            <div class="col-spent">
+              &#8361;{{ row.spent | number:'1.0-0' }}
+            </div>
+
+            <!-- Result -->
+            <div
+              class="col-result result-cell"
+              [class.over-budget]="isOverBudget(row)"
+              [class.under-budget]="!isOverBudget(row) && row.result != null"
+            >
+              <ng-container *ngIf="row.result != null; else noResult">
+                {{ row.result > 0 ? '+' : '' }}{{ row.result | number:'1.0-0' }}
+              </ng-container>
+              <ng-template #noResult>—</ng-template>
+            </div>
+          </div>
+
+          <!-- Expanded editor panel (spans full width) -->
+          <div class="budget-editor" *ngIf="editingBudgetCategoryId === row.id">
+            <div class="budget-mode-tabs">
+              <button
+                class="budget-mode-tab"
+                [class.active]="editingBudgetMode === 'base'"
+                (click)="setEditMode('base', row)"
+              >Every month</button>
+              <button
+                class="budget-mode-tab"
+                [class.active]="editingBudgetMode === 'month'"
+                (click)="setEditMode('month', row)"
+              >{{ monthLabel }} only</button>
+            </div>
+            <div class="budget-input-row">
+              <span class="budget-currency">&#8361;</span>
+              <input
+                class="budget-input"
+                type="number"
+                min="0"
+                [(ngModel)]="editingBudgetValue"
+                (keydown)="onBudgetKeydown($event, row.id)"
+                autofocus
+                placeholder="0"
+              />
+              <button class="budget-save-btn" (click)="commitEditBudget(row.id)">Save</button>
+              <button class="budget-cancel-btn" (click)="cancelEdit()">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="budgetRows.length === 0" class="empty-state">
+          No expense categories found.
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ GRAPH MODE ══ -->
+    <div *ngIf="viewMode === 'graph'" class="graph-section">
+
+      <!-- Category selector -->
+      <div class="category-selector">
+        <select class="cat-select" [(ngModel)]="selectedCategoryId" (ngModelChange)="onCategoryChange()">
+          <option [ngValue]="null">All categories</option>
+          <option *ngFor="let row of budgetRows" [ngValue]="row.id">
+            {{ row.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Graph sub-tabs -->
+      <div class="graph-tabs">
+        <button
+          class="graph-tab"
+          [class.active]="graphMode === 'week'"
+          (click)="setGraphMode('week')"
+        >By Week</button>
+        <button
+          class="graph-tab"
+          [class.active]="graphMode === 'month'"
+          (click)="setGraphMode('month')"
+        >By Month</button>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="graphLoading" class="graph-loading">
+        <div class="skeleton skeleton-chart"></div>
+      </div>
+
+      <!-- SVG Chart -->
+      <div *ngIf="!graphLoading" class="chart-wrapper">
+
+        <div *ngIf="currentChartData.length === 0" class="empty-state">
+          No data available for this period.
+        </div>
+
+        <svg
+          *ngIf="currentChartData.length > 0"
+          viewBox="0 0 300 200"
+          xmlns="http://www.w3.org/2000/svg"
+          class="bar-chart"
+          aria-label="Budget chart"
+        >
+          <ng-container *ngFor="let bar of currentChartData; let i = index">
+            <!-- Bar -->
+            <rect
+              [attr.x]="chartBarX(i, currentChartData.length)"
+              [attr.y]="chartBarY(bar.value, chartMaxVal(currentChartData))"
+              [attr.width]="chartBarWidth(currentChartData.length)"
+              [attr.height]="chartBarHeight(bar.value, chartMaxVal(currentChartData))"
+              [attr.fill]="getBarColor()"
+              rx="3"
+            ></rect>
+
+            <!-- Value label above bar -->
+            <text
+              *ngIf="chartBarHeight(bar.value, chartMaxVal(currentChartData)) > 14"
+              [attr.x]="chartBarX(i, currentChartData.length) + chartBarWidth(currentChartData.length) / 2"
+              [attr.y]="chartBarY(bar.value, chartMaxVal(currentChartData)) - 3"
+              text-anchor="middle"
+              class="bar-value-label"
+            >&#8361;{{ bar.value | number:'1.0-0' }}</text>
+
+            <!-- X axis label -->
+            <text
+              [attr.x]="chartBarX(i, currentChartData.length) + chartBarWidth(currentChartData.length) / 2"
+              y="190"
+              text-anchor="middle"
+              class="bar-x-label"
+            >{{ bar.label }}</text>
+          </ng-container>
+
+          <!-- Baseline -->
+          <line x1="0" y1="170" x2="300" y2="170" stroke="#e0e0e0" stroke-width="1"></line>
+        </svg>
+      </div>
+    </div>
+
+  </ng-container>
+</div>
