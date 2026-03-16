@@ -13,7 +13,7 @@ try {
 const http = require('http');
 const Koa = require('koa');
 const bodyParser = require('koa-bodyparser');
-const cors = require('@koa/cors');
+
 const router = require('./router');
 const db = require('./models');
 const logger = require('./utils/logger');
@@ -33,8 +33,20 @@ global.log = logger;
 
 
 
-// Middleware
-app.use(cors(config.cors));
+// Middleware — permissive CORS for development
+app.use(async (ctx, next) => {
+  ctx.set('Access-Control-Allow-Origin', ctx.get('Origin') || '*');
+  ctx.set('Access-Control-Allow-Credentials', 'true');
+  ctx.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+  ctx.set('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,X-Requested-With,Origin');
+  ctx.set('Access-Control-Expose-Headers', 'Content-Length,Date,X-Request-Id');
+  ctx.set('Access-Control-Max-Age', '86400');
+  if (ctx.method === 'OPTIONS') {
+    ctx.status = 204;
+    return;
+  }
+  await next();
+});
 app.use(bodyParser());
 app.use(logger.requestLogger()); // Add request logging
 

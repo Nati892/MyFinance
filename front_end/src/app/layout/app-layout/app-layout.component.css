@@ -119,7 +119,21 @@
   text-transform: capitalize;
 }
 
-/* Sign out button in header */
+/* User info + sign out */
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.header-username {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+}
 
 .header-signout {
   background: none;

@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../../services/auth.service';
+import { AppAuthService } from '../../services/app-auth.service';
 import { LoggerService } from '../../services/logger.service';
 @Component({
   selector: 'app-login',
@@ -18,7 +18,7 @@ export class LoginComponent {
   loading = false;
 
   constructor(
-    private authService: AuthService,
+    private authService: AppAuthService,
     private router: Router,
     private logger: LoggerService
   ) { }
@@ -40,10 +40,10 @@ export class LoginComponent {
     this.loading = true;
     this.error = '';
 
-    this.authService.login(this.username, this.password).subscribe({
+    this.authService.signIn(this.username, this.password).subscribe({
       next: (response) => {
         this.logger.info('LOGIN_SUCCESS', 'User logged in successfully', { username: this.username });
-        this.router.navigate(['/home']);
+        this.router.navigate(['/app']);
 
       },
       error: (err) => {

@@ -20,9 +20,12 @@
       </div>
     </div>
 
-    <button class="header-signout" (click)="signOut()" title="Sign out">
-      <i class="fa fa-sign-out"></i>
-    </button>
+    <div class="header-user">
+      <span class="header-username">{{ currentUser?.username }}</span>
+      <button class="header-signout" (click)="signOut()" title="Sign out">
+        <i class="fa fa-sign-out"></i>
+      </button>
+    </div>
   </header>
 
   <!-- Scrollable main content -->

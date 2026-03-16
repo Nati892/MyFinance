@@ -82,14 +82,14 @@
             <!-- Budget display -->
             <div class="col-budget budget-cell">
               <button class="budget-display" (click)="startEditBudget(row, 'base')" title="Set budget">
-                <span class="budget-value">{{ row.effectiveBudget != null ? ('&#8361;' + (row.effectiveBudget | number:'1.0-0')) : 'Set' }}</span>
+                <span class="budget-value">{{ row.effectiveBudget != null ? ('&#8362;' + (row.effectiveBudget | number:'1.0-0')) : 'Set' }}</span>
                 <span class="material-symbols-outlined budget-edit-icon">edit</span>
               </button>
             </div>
 
             <!-- Spent -->
             <div class="col-spent">
-              &#8361;{{ row.spent | number:'1.0-0' }}
+              &#8362;{{ row.spent | number:'1.0-0' }}
             </div>
 
             <!-- Result -->
@@ -99,7 +99,7 @@
               [class.under-budget]="!isOverBudget(row) && row.result != null"
             >
               <ng-container *ngIf="row.result != null; else noResult">
-                {{ row.result > 0 ? '+' : '' }}{{ row.result | number:'1.0-0' }}
+                {{ row.result > 0 ? '-' : '+' }}{{ row.result | number:'1.0-0' }}
               </ng-container>
               <ng-template #noResult>—</ng-template>
             </div>
@@ -120,7 +120,7 @@
               >{{ monthLabel }} only</button>
             </div>
             <div class="budget-input-row">
-              <span class="budget-currency">&#8361;</span>
+              <span class="budget-currency">&#8362;</span>
               <input
                 class="budget-input"
                 type="number"
@@ -207,7 +207,7 @@
               [attr.y]="chartBarY(bar.value, chartMaxVal(currentChartData)) - 3"
               text-anchor="middle"
               class="bar-value-label"
-            >&#8361;{{ bar.value | number:'1.0-0' }}</text>
+            >&#8362;{{ bar.value | number:'1.0-0' }}</text>
 
             <!-- X axis label -->
             <text
