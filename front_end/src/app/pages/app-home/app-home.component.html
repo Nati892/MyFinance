@@ -1,63 +1,154 @@
-<div class="board-container">
+<div #boardContainer class="board-container">
 
   <!-- Loading -->
   <div *ngIf="loading" class="board-loading">
     <span class="material-symbols-outlined spin">progress_activity</span>
   </div>
 
+  <!-- Hidden image file input -->
+  <input
+    #imageFileInput
+    type="file"
+    accept="image/*"
+    style="display:none"
+    (change)="onImageFileSelected($event)"
+  />
+
   <!-- Board -->
   <div #board class="board" *ngIf="!loading" [style.height.px]="getBoardHeight()">
 
-    <!-- Notes -->
-    <div
-      *ngFor="let note of notes; trackBy: trackNote"
-      class="sticky-note"
-      [style.left.px]="getNoteLeft(note)"
-      [style.top.px]="note.posY"
-      [style.z-index]="note.zIndex"
-      [style.background]="note.noteColor"
-      (mousedown)="startDrag(note, $event)"
-      (touchstart)="startDrag(note, $event)"
-    >
-      <!-- Note header (drag zone) -->
-      <div class="note-header" [style.background]="note.headerColor">
-        <span class="note-author">{{ note.AppUser?.username || '' }}</span>
-        <div class="note-header-actions">
-          <!-- 3-dot options button -->
-          <button
-            class="note-options-btn"
-            (click)="toggleMenu(note, $event)"
-            title="Options"
-          >⋮</button>
-          <!-- Delete button -->
-          <button class="note-delete" (click)="deleteNote(note, $event)" title="Delete">
-            <span class="material-symbols-outlined">close</span>
-          </button>
+    <ng-container *ngFor="let note of notes; trackBy: trackNote">
+
+      <!-- Text note -->
+      <div
+        *ngIf="note.type === 'text'"
+        class="sticky-note"
+        [style.left.px]="getNoteLeft(note)"
+        [style.top.px]="note.posY"
+        [style.z-index]="note.zIndex"
+        [style.background]="note.noteColor"
+        (mousedown)="startDrag(note, $event)"
+        (touchstart)="startDrag(note, $event)"
+      >
+        <!-- Note header (drag zone) -->
+        <div class="note-header" [style.background]="note.headerColor">
+          <span class="note-author">{{ note.AppUser?.username || '' }}</span>
+          <div class="note-header-actions">
+            <button
+              class="note-options-btn"
+              (click)="toggleMenu(note, $event)"
+              [title]="'HOME.OPTIONS' | translate"
+            >⋮</button>
+            <button class="note-delete" (click)="deleteNote(note, $event)" [title]="'HOME.DELETE' | translate">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
         </div>
+
+        <!-- Content textarea -->
+        <textarea
+          #noteTextarea
+          class="note-content"
+          [attr.data-note-id]="note.id"
+          [value]="note.content"
+          [placeholder]="'HOME.WRITE_PLACEHOLDER' | translate"
+          [style.font-size.px]="note.textSize"
+          [style.color]="note.textColor"
+          [style.-webkit-text-fill-color]="note.textColor"
+          [style.direction]="getTextDirection(note)"
+          [class.bold]="note.isBold"
+          [class.underline]="note.isUnderline"
+          (mousedown)="$event.stopPropagation()"
+          (touchstart)="$event.stopPropagation()"
+          (input)="onNoteInput(note, $any($event.target).value)"
+        ></textarea>
       </div>
 
-      <!-- Content textarea -->
-      <textarea
-        #noteTextarea
-        class="note-content"
-        [attr.data-note-id]="note.id"
-        [value]="note.content"
-        placeholder="Write something..."
-        [style.font-size.px]="note.textSize"
-        [style.color]="note.textColor"
-        [style.-webkit-text-fill-color]="note.textColor"
-        [style.direction]="getTextDirection(note)"
-        [class.bold]="note.isBold"
-        [class.underline]="note.isUnderline"
-        (mousedown)="$event.stopPropagation()"
-        (touchstart)="$event.stopPropagation()"
-        (input)="onNoteInput(note, $any($event.target).value)"
-      ></textarea>
-    </div>
+      <!-- Heart sticker -->
+      <div
+        *ngIf="note.type === 'heart'"
+        class="heart-sticker"
+        [style.left.px]="getNoteLeft(note)"
+        [style.top.px]="note.posY"
+        [style.z-index]="note.zIndex"
+        [style.width.px]="note.width || 120"
+        [style.height.px]="note.height || 120"
+        (mousedown)="startDrag(note, $event)"
+        (touchstart)="startDrag(note, $event)"
+      >
+        <!-- Delete button -->
+        <button class="sticker-delete" (click)="deleteNote(note, $event)" title="Delete">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <!-- Color picker button -->
+        <button class="sticker-options-btn" (click)="toggleMenu(note, $event)" title="Color">
+          <span class="material-symbols-outlined">palette</span>
+        </button>
+
+        <!-- SVG Heart -->
+        <svg
+          class="heart-svg"
+          viewBox="0 0 100 90"
+          xmlns="http://www.w3.org/2000/svg"
+          [style.width.%]="100"
+          [style.height.%]="100"
+        >
+          <path
+            d="M50 85 C30 70, 5 55, 5 30 C5 14 17 4 32 4 C40 4 47 8 50 14 C53 8 60 4 68 4 C83 4 95 14 95 30 C95 55 70 70 50 85 Z"
+            [attr.fill]="note.heartColor || '#e91e63'"
+            stroke="rgba(0,0,0,0.1)"
+            stroke-width="1"
+          />
+        </svg>
+
+        <!-- Resize handle -->
+        <div
+          class="resize-handle"
+          (mousedown)="startResize(note, $event)"
+          (touchstart)="startResize(note, $event)"
+        ></div>
+      </div>
+
+      <!-- Image sticker -->
+      <div
+        *ngIf="note.type === 'image'"
+        class="image-sticker"
+        [style.left.px]="getNoteLeft(note)"
+        [style.top.px]="note.posY"
+        [style.z-index]="note.zIndex"
+        [style.width.px]="note.width || 180"
+        [style.height.px]="note.height || 140"
+        (mousedown)="startDrag(note, $event)"
+        (touchstart)="startDrag(note, $event)"
+      >
+        <!-- Delete button -->
+        <button class="sticker-delete" (click)="deleteNote(note, $event)" title="Delete">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+
+        <!-- Image -->
+        <img
+          class="sticker-img"
+          [src]="note.content"
+          alt="sticker"
+          (mousedown)="$event.stopPropagation()"
+          (touchstart)="$event.stopPropagation()"
+          (dragstart)="$event.preventDefault()"
+        />
+
+        <!-- Resize handle -->
+        <div
+          class="resize-handle"
+          (mousedown)="startResize(note, $event)"
+          (touchstart)="startResize(note, $event)"
+        ></div>
+      </div>
+
+    </ng-container>
 
   </div>
 
-  <!-- 3-dot menus rendered with position:fixed to escape overflow:hidden -->
+  <!-- 3-dot / color menus (position:fixed) -->
   <ng-container *ngIf="!loading">
     <div
       *ngFor="let note of notes; trackBy: trackNote"
@@ -66,102 +157,112 @@
       [style.top.px]="getMenuPosition(note).top"
       [style.left.px]="getMenuPosition(note).left"
     >
-      <!-- Header color picker -->
-      <div class="menu-section">
-        <div class="menu-label">Header color</div>
-        <div class="color-picker-row">
-          <div class="color-preview" [style.background]="note.headerColor"></div>
-          <input
-            type="color"
-            class="color-picker-input"
-            [value]="note.headerColor"
-            (input)="setHeaderColor(note, $any($event.target).value, $event)"
-            title="Pick header color"
-          />
+      <!-- TEXT NOTE MENU -->
+      <ng-container *ngIf="note.type === 'text'">
+        <div class="menu-section">
+          <div class="menu-label">{{ 'HOME.HEADER_COLOR' | translate }}</div>
+          <div class="color-picker-row">
+            <div class="color-preview" [style.background]="note.headerColor"></div>
+            <input type="color" class="color-picker-input" [value]="note.headerColor"
+              (input)="setHeaderColor(note, $any($event.target).value, $event)" />
+          </div>
         </div>
-      </div>
+        <div class="menu-section">
+          <div class="menu-label">{{ 'HOME.BODY_COLOR' | translate }}</div>
+          <div class="color-picker-row">
+            <div class="color-preview" [style.background]="note.noteColor"></div>
+            <input type="color" class="color-picker-input" [value]="note.noteColor"
+              (input)="setNoteColor(note, $any($event.target).value, $event)" />
+          </div>
+        </div>
+        <div class="menu-section">
+          <div class="menu-label">{{ 'HOME.DIRECTION' | translate }}</div>
+          <div class="btn-group">
+            <button class="dir-btn" [class.dir-btn--active]="note.textDirection === 'ltr'"
+              (click)="setTextDirection(note, 'ltr', $event)">{{ 'HOME.LTR' | translate }}</button>
+            <button class="dir-btn" [class.dir-btn--active]="note.textDirection === 'rtl'"
+              (click)="setTextDirection(note, 'rtl', $event)">{{ 'HOME.RTL' | translate }}</button>
+            <button class="dir-btn" [class.dir-btn--active]="note.textDirection === 'auto'"
+              (click)="setTextDirection(note, 'auto', $event)">{{ 'HOME.AUTO' | translate }}</button>
+          </div>
+        </div>
+        <div class="menu-section">
+          <div class="menu-label">{{ 'HOME.FORMATTING' | translate }}</div>
+          <div class="format-row">
+            <button class="fmt-btn" (click)="changeFontSize(note, -2, $event)" title="Smaller">A-</button>
+            <button class="fmt-btn" (click)="changeFontSize(note, 2, $event)" title="Larger">A+</button>
+            <button class="fmt-btn" [class.fmt-btn--active]="note.isBold" (click)="toggleBold(note, $event)"><b>B</b></button>
+            <button class="fmt-btn" [class.fmt-btn--active]="note.isUnderline" (click)="toggleUnderline(note, $event)"><u>U</u></button>
+          </div>
+        </div>
+        <div class="menu-section">
+          <div class="menu-label">{{ 'HOME.TEXT_COLOR' | translate }}</div>
+          <div class="color-picker-row">
+            <div class="color-preview" [style.background]="note.textColor"></div>
+            <input type="color" class="color-picker-input" [value]="note.textColor"
+              (input)="setTextColor(note, $any($event.target).value, $event)" />
+          </div>
+        </div>
+      </ng-container>
 
-      <!-- Body color picker -->
-      <div class="menu-section">
-        <div class="menu-label">Body color</div>
-        <div class="color-picker-row">
-          <div class="color-preview" [style.background]="note.noteColor"></div>
-          <input
-            type="color"
-            class="color-picker-input"
-            [value]="note.noteColor"
-            (input)="setNoteColor(note, $any($event.target).value, $event)"
-            title="Pick body color"
-          />
+      <!-- HEART MENU -->
+      <ng-container *ngIf="note.type === 'heart'">
+        <div class="menu-section">
+          <div class="menu-label">Heart Color</div>
+          <div class="color-picker-row">
+            <div class="color-preview heart-preview" [style.background]="note.heartColor"></div>
+            <input type="color" class="color-picker-input" [value]="note.heartColor || '#e91e63'"
+              (input)="setHeartColor(note, $any($event.target).value, $event)" />
+          </div>
         </div>
-      </div>
-
-      <!-- Text direction -->
-      <div class="menu-section">
-        <div class="menu-label">Direction</div>
-        <div class="btn-group">
-          <button
-            class="dir-btn"
-            [class.dir-btn--active]="note.textDirection === 'ltr'"
-            (click)="setTextDirection(note, 'ltr', $event)"
-          >LTR</button>
-          <button
-            class="dir-btn"
-            [class.dir-btn--active]="note.textDirection === 'rtl'"
-            (click)="setTextDirection(note, 'rtl', $event)"
-          >RTL</button>
-          <button
-            class="dir-btn"
-            [class.dir-btn--active]="note.textDirection === 'auto'"
-            (click)="setTextDirection(note, 'auto', $event)"
-          >Auto</button>
+        <div class="heart-colors-row">
+          <div *ngFor="let c of ['#e91e63','#f44336','#ff9800','#ffeb3b','#4caf50','#2196f3','#9c27b0','#ffffff']"
+            class="heart-color-swatch"
+            [style.background]="c"
+            [class.heart-color-swatch--active]="note.heartColor === c"
+            (click)="setHeartColor(note, c, $event)"
+          ></div>
         </div>
-      </div>
-
-      <!-- Text formatting -->
-      <div class="menu-section">
-        <div class="menu-label">Formatting</div>
-        <div class="format-row">
-          <!-- Font size -->
-          <button class="fmt-btn" (click)="changeFontSize(note, -2, $event)" title="Smaller">A-</button>
-          <button class="fmt-btn" (click)="changeFontSize(note, 2, $event)" title="Larger">A+</button>
-          <!-- Bold -->
-          <button
-            class="fmt-btn"
-            [class.fmt-btn--active]="note.isBold"
-            (click)="toggleBold(note, $event)"
-            title="Bold"
-          ><b>B</b></button>
-          <!-- Underline -->
-          <button
-            class="fmt-btn"
-            [class.fmt-btn--active]="note.isUnderline"
-            (click)="toggleUnderline(note, $event)"
-            title="Underline"
-          ><u>U</u></button>
-        </div>
-      </div>
-
-      <!-- Text color -->
-      <div class="menu-section">
-        <div class="menu-label">Text color</div>
-        <div class="color-picker-row">
-          <div class="color-preview" [style.background]="note.textColor"></div>
-          <input
-            type="color"
-            class="color-picker-input"
-            [value]="note.textColor"
-            (input)="setTextColor(note, $any($event.target).value, $event)"
-            title="Pick text color"
-          />
-        </div>
-      </div>
+      </ng-container>
     </div>
   </ng-container>
 
-  <!-- Floating add button -->
-  <button class="fab-add" (click)="addNote()" title="Add note" aria-label="Add note">
-    <span class="material-symbols-outlined">add</span>
-  </button>
+  <!-- Delete confirmation modal -->
+  <div class="confirm-overlay" *ngIf="pendingDeleteNote" (click)="cancelDeleteNote()">
+    <div class="confirm-modal" (click)="$event.stopPropagation()">
+      <div class="confirm-icon">🗑️</div>
+      <div class="confirm-msg">{{ 'CONFIRM.DELETE_NOTE' | translate }}</div>
+      <div class="confirm-actions">
+        <button class="confirm-btn confirm-btn--cancel" (click)="cancelDeleteNote()">{{ 'CONFIRM.CANCEL' | translate }}</button>
+        <button class="confirm-btn confirm-btn--yes" (click)="confirmDeleteNote()">{{ 'CONFIRM.YES' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB speed-dial -->
+  <div class="fab-container">
+    <!-- Sub-buttons (shown when menu is open) -->
+    <div class="fab-sub-menu" [class.fab-sub-menu--open]="showFabMenu">
+      <button class="fab-sub-btn" (click)="addNote()" title="Add Note">
+        <span class="material-symbols-outlined">sticky_note_2</span>
+      </button>
+      <button class="fab-sub-btn fab-sub-btn--heart" (click)="addHeart()" title="Add Heart">
+        <span class="material-symbols-outlined">favorite</span>
+      </button>
+      <button class="fab-sub-btn" (click)="triggerImageUpload()" title="Upload Image">
+        <span class="material-symbols-outlined">add_photo_alternate</span>
+      </button>
+    </div>
+
+    <!-- Main FAB -->
+    <button
+      class="fab-add"
+      [class.fab-add--open]="showFabMenu"
+      (click)="toggleFabMenu($event)"
+      [attr.aria-label]="'HOME.ADD_NOTE' | translate"
+    >
+      <span class="material-symbols-outlined">add</span>
+    </button>
+  </div>
 
 </div>

@@ -9,13 +9,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 
+import { TranslateModule } from '@ngx-translate/core';
+
 import { AssetsService, Asset } from '../../services/assets.service';
 import { HouseholdStateService } from '../../services/household-state.service';
 
 @Component({
   selector: 'app-app-assets',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   templateUrl: './app-assets.component.html',
   styleUrls: ['./app-assets.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,

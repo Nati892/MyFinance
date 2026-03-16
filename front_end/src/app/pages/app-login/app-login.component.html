@@ -3,26 +3,26 @@
     <div class="login-logo">
       <span class="logo-icon">₪</span>
       <h1 class="logo-title">MyFinance</h1>
-      <p class="logo-subtitle">Manage your household finances</p>
+      <p class="logo-subtitle">{{ 'LOGIN.SUBTITLE' | translate }}</p>
     </div>
 
     <form (ngSubmit)="onSubmit()" class="login-form">
       <div class="form-group">
-        <label for="username">Username</label>
+        <label for="username">{{ 'LOGIN.USERNAME' | translate }}</label>
         <input
           id="username"
           type="text"
           [(ngModel)]="username"
           name="username"
           class="form-control"
-          placeholder="Enter your username"
+          [placeholder]="'LOGIN.USERNAME_PLACEHOLDER' | translate"
           [disabled]="loading"
           autocomplete="username"
         />
       </div>
 
       <div class="form-group">
-        <label for="password">Password</label>
+        <label for="password">{{ 'LOGIN.PASSWORD' | translate }}</label>
         <div class="password-wrapper">
           <input
             id="password"
@@ -30,7 +30,7 @@
             [(ngModel)]="password"
             name="password"
             class="form-control"
-            placeholder="Enter your password"
+            [placeholder]="'LOGIN.PASSWORD_PLACEHOLDER' | translate"
             [disabled]="loading"
             autocomplete="current-password"
           />
@@ -50,13 +50,13 @@
       </div>
 
       <div class="info-message" *ngIf="noHousehold">
-        <i class="fa fa-info-circle"></i> No household assigned yet. Contact your admin.
+        <i class="fa fa-info-circle"></i> {{ 'LOGIN.NO_HOUSEHOLD' | translate }}
       </div>
 
       <button type="submit" class="btn-signin" [disabled]="loading">
-        <span *ngIf="!loading">Sign In</span>
+        <span *ngIf="!loading">{{ 'LOGIN.SIGN_IN' | translate }}</span>
         <span *ngIf="loading" class="loading-spinner">
-          <i class="fa fa-circle-o-notch fa-spin"></i> Signing in...
+          <i class="fa fa-circle-o-notch fa-spin"></i> {{ 'LOGIN.SIGNING_IN' | translate }}
         </span>
       </button>
     </form>

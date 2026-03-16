@@ -47,7 +47,7 @@ app.use(async (ctx, next) => {
   }
   await next();
 });
-app.use(bodyParser());
+app.use(bodyParser({ jsonLimit: '10mb', formLimit: '10mb', textLimit: '10mb' }));
 app.use(logger.requestLogger()); // Add request logging
 
 

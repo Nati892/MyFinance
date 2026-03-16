@@ -8,6 +8,8 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageService } from '../../services/language.service';
 import {
   getFinancialPeriod,
   getFinancialWeeks,
@@ -32,6 +34,7 @@ export interface TransactionItem {
   category: {
     id: number;
     name: string;
+    nameHe?: string | null;
     icon: string;
     color: string;
   };
@@ -72,7 +75,7 @@ interface WeekGroup {
 @Component({
   selector: 'app-timeline',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './timeline.component.html',
   styleUrls: ['./timeline.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -108,14 +111,21 @@ export class TimelineComponent implements OnChanges {
   // Action menu
   openMenuId: number | null = null;
 
-  readonly views: Array<{ key: 'monthly' | 'weekly' | 'daily'; label: string }> = [
-    { key: 'monthly', label: 'Monthly' },
-    { key: 'weekly',  label: 'Weekly'  },
-    { key: 'daily',   label: 'Daily'   },
+  readonly views: Array<{ key: 'monthly' | 'weekly' | 'daily'; labelKey: string }> = [
+    { key: 'monthly', labelKey: 'TIMELINE.MONTHLY' },
+    { key: 'weekly',  labelKey: 'TIMELINE.WEEKLY'  },
+    { key: 'daily',   labelKey: 'TIMELINE.DAILY'   },
   ];
 
-  constructor() {
+  pendingDeleteTx: TransactionItem | null = null;
+
+  constructor(private languageService: LanguageService) {
     this.rebuild();
+  }
+
+  getCategoryDisplayName(tx: TransactionItem): string {
+    if (this.languageService.currentLang === 'he' && tx.category.nameHe) return tx.category.nameHe;
+    return tx.category.name;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -415,7 +425,18 @@ export class TimelineComponent implements OnChanges {
 
   onDelete(tx: TransactionItem): void {
     this.openMenuId = null;
-    this.transactionDelete.emit(tx);
+    this.pendingDeleteTx = tx;
+  }
+
+  confirmDeleteTx(): void {
+    if (this.pendingDeleteTx) {
+      this.transactionDelete.emit(this.pendingDeleteTx);
+      this.pendingDeleteTx = null;
+    }
+  }
+
+  cancelDeleteTx(): void {
+    this.pendingDeleteTx = null;
   }
 
   // ── Template helpers ────────────────────────────────────────────────────────

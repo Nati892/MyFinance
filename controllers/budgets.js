@@ -65,6 +65,7 @@ class BudgetsController {
         return {
           id: category.id,
           name: category.name,
+          nameHe: category.nameHe || null,
           icon: category.icon,
           color: category.color,
           baseBudget,

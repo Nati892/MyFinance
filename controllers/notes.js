@@ -47,7 +47,7 @@ class NotesController {
   async create(ctx) {
     try {
       const appUser = ctx.state.appUser;
-      const { content, posX, posY, zIndex, householdId } = ctx.request.body;
+      const { content, posX, posY, zIndex, householdId, type, heartColor, width, height } = ctx.request.body;
 
       if (!householdId) {
         ctx.status = 400;
@@ -70,7 +70,11 @@ class NotesController {
         posY: posY ?? 50,
         zIndex: zIndex ?? 1,
         householdId,
-        appUserId: appUser.id
+        appUserId: appUser.id,
+        type: type || 'text',
+        heartColor: heartColor || null,
+        width: width || null,
+        height: height || null
       });
 
       const noteWithUser = await Note.findByPk(note.id, {
@@ -99,7 +103,7 @@ class NotesController {
     try {
       const appUser = ctx.state.appUser;
       const { id } = ctx.params;
-      const { content, posX, posY, zIndex, noteColor, textDirection, textSize, isBold, isUnderline, textColor, headerColor } = ctx.request.body;
+      const { content, posX, posY, zIndex, noteColor, textDirection, textSize, isBold, isUnderline, textColor, headerColor, heartColor, width, height } = ctx.request.body;
 
       const note = await Note.findByPk(id);
       if (!note) {
@@ -129,6 +133,9 @@ class NotesController {
       if (isUnderline !== undefined) updates.isUnderline = isUnderline;
       if (textColor !== undefined) updates.textColor = textColor;
       if (headerColor !== undefined) updates.headerColor = headerColor;
+      if (heartColor !== undefined) updates.heartColor = heartColor;
+      if (width !== undefined) updates.width = width;
+      if (height !== undefined) updates.height = height;
 
       await note.update(updates);
 

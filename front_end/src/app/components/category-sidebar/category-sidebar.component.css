@@ -379,6 +379,59 @@
   cursor: not-allowed;
 }
 
+/* ── Name input row with translate button ────────────── */
+
+.name-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.name-input-row .drawer-input {
+  flex: 1;
+}
+
+.translate-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1.5px solid #e0e0e0;
+  background: #f8f8f8;
+  color: #667eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.translate-btn:hover:not(:disabled) {
+  background: #f0f0ff;
+  border-color: #667eea;
+}
+
+.translate-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.translate-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.translate-spinner {
+  font-size: 18px;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ── Tablet+ sizing ──────────────────────────────────── */
 
 @media (min-width: 480px) {

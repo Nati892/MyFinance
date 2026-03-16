@@ -9,8 +9,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 
+import { TranslateModule } from '@ngx-translate/core';
+
 import { BudgetService, MonthBudgetRow, WeekSpend, MonthSpend } from '../../services/budget.service';
 import { HouseholdStateService } from '../../services/household-state.service';
+import { LanguageService } from '../../services/language.service';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -25,7 +28,7 @@ export interface ChartBar {
 @Component({
   selector: 'app-app-budget',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   templateUrl: './app-budget.component.html',
   styleUrls: ['./app-budget.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,6 +70,7 @@ export class AppBudgetComponent implements OnInit, OnDestroy {
     private budgetService: BudgetService,
     private householdState: HouseholdStateService,
     private cdr: ChangeDetectorRef,
+    private languageService: LanguageService,
   ) {
     this.currentYear = this.today.getFullYear();
     this.currentMonth = this.today.getMonth() + 1;
@@ -362,6 +366,11 @@ export class AppBudgetComponent implements OnInit, OnDestroy {
   }
 
   // ── Template helpers ────────────────────────────────────────────────────────
+
+  getCategoryDisplayName(row: MonthBudgetRow): string {
+    if (this.languageService.currentLang === 'he' && row.nameHe) return row.nameHe;
+    return row.name;
+  }
 
   getCategoryLetter(name: string): string {
     return name ? name.charAt(0).toUpperCase() : '?';

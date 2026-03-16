@@ -20,14 +20,17 @@ import {
   TimelineViewConfig,
 } from '../../components/timeline/timeline.component';
 
+import { TranslateModule } from '@ngx-translate/core';
+
 import { HouseholdStateService } from '../../services/household-state.service';
 import { CategoryService } from '../../services/category.service';
 import { TransactionService } from '../../services/transaction.service';
+import { LanguageService } from '../../services/language.service';
 
 @Component({
   selector: 'app-app-incomes',
   standalone: true,
-  imports: [CommonModule, FormsModule, CategorySidebarComponent, TimelineComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, CategorySidebarComponent, TimelineComponent],
   templateUrl: './app-incomes.component.html',
   styleUrls: ['./app-incomes.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,7 +87,13 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
     private categoryService: CategoryService,
     private transactionService: TransactionService,
     private cdr: ChangeDetectorRef,
+    private languageService: LanguageService,
   ) {}
+
+  getCategoryDisplayName(cat: Category): string {
+    if (this.languageService.currentLang === 'he' && cat.nameHe) return cat.nameHe;
+    return cat.name;
+  }
 
   ngOnInit(): void {
     const household = this.householdState.getSelectedHousehold();

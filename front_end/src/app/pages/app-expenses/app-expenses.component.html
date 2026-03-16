@@ -1,8 +1,8 @@
 <!-- No household selected -->
 <div *ngIf="noHousehold" class="no-household">
   <span class="no-household-icon">🏠</span>
-  <p class="no-household-title">No household selected</p>
-  <p class="no-household-sub">Please contact your admin to be added to a household.</p>
+  <p class="no-household-title">{{ 'EXPENSES.NO_HOUSEHOLD' | translate }}</p>
+  <p class="no-household-sub">{{ 'EXPENSES.NO_HOUSEHOLD_MSG' | translate }}</p>
 </div>
 
 <!-- Main layout -->
@@ -27,8 +27,8 @@
   <!-- Timeline area -->
   <div class="timeline-col">
     <div *ngIf="transactionsError" class="timeline-error">
-      <p>Failed to load expenses. Please try again.</p>
-      <button class="retry-btn" (click)="loadExpenses()">Retry</button>
+      <p>{{ 'EXPENSES.LOAD_FAILED' | translate }}</p>
+      <button class="retry-btn" (click)="loadExpenses()">{{ 'EXPENSES.RETRY' | translate }}</button>
     </div>
     <app-timeline
       *ngIf="!transactionsError"
@@ -58,7 +58,7 @@
 
   <!-- Header -->
   <div class="modal-header">
-    <h2 class="modal-title">{{ modalMode === 'add' ? 'New Expense' : 'Edit Expense' }}</h2>
+    <h2 class="modal-title">{{ modalMode === 'add' ? ('EXPENSES.NEW_EXPENSE' | translate) : ('EXPENSES.EDIT_EXPENSE' | translate) }}</h2>
     <button class="modal-close" (click)="closeModal()" aria-label="Close">&#x2715;</button>
   </div>
 
@@ -83,7 +83,7 @@
     </div>
 
     <!-- Category chips -->
-    <div class="field-label">Category</div>
+    <div class="field-label">{{ 'EXPENSES.CATEGORY' | translate }}</div>
     <div class="chip-row">
       <button
         *ngFor="let cat of categories"
@@ -95,12 +95,12 @@
         type="button"
       >
         <span class="material-symbols-outlined chip-icon">{{ cat.icon }}</span>
-        <span class="chip-name">{{ cat.name }}</span>
+        <span class="chip-name">{{ getCategoryDisplayName(cat) }}</span>
       </button>
     </div>
 
     <!-- Date & Time -->
-    <div class="field-label">Date &amp; Time</div>
+    <div class="field-label">{{ 'EXPENSES.DATE_TIME' | translate }}</div>
     <div class="field-group">
       <input
         class="field-input"
@@ -111,7 +111,7 @@
     </div>
 
     <!-- Payment method -->
-    <div class="field-label">Payment Method</div>
+    <div class="field-label">{{ 'EXPENSES.PAYMENT_METHOD' | translate }}</div>
     <div class="payment-segment">
       <button
         *ngFor="let pm of paymentMethods"
@@ -126,12 +126,12 @@
     </div>
 
     <!-- Description -->
-    <div class="field-label">Description <span class="field-optional">(optional)</span></div>
+    <div class="field-label">{{ 'EXPENSES.DESCRIPTION' | translate }} <span class="field-optional">(optional)</span></div>
     <div class="field-group">
       <input
         class="field-input"
         type="text"
-        placeholder="What was this for?"
+        [placeholder]="'EXPENSES.DESCRIPTION_PLACEHOLDER' | translate"
         [(ngModel)]="form.description"
         name="description"
         maxlength="200"
@@ -139,11 +139,11 @@
     </div>
 
     <!-- Note -->
-    <div class="field-label">Note <span class="field-optional">(optional)</span></div>
+    <div class="field-label">{{ 'EXPENSES.NOTE' | translate }} <span class="field-optional">(optional)</span></div>
     <div class="field-group">
       <textarea
         class="field-textarea"
-        placeholder="Add a note..."
+        [placeholder]="'EXPENSES.NOTE_PLACEHOLDER' | translate"
         [(ngModel)]="form.note"
         name="note"
         rows="3"
@@ -158,8 +158,8 @@
       [disabled]="modalSaving"
       type="button"
     >
-      <span *ngIf="!modalSaving">{{ modalMode === 'add' ? 'Add Expense' : 'Save Changes' }}</span>
-      <span *ngIf="modalSaving">Saving...</span>
+      <span *ngIf="!modalSaving">{{ modalMode === 'add' ? ('EXPENSES.ADD_EXPENSE' | translate) : ('EXPENSES.SAVE_CHANGES' | translate) }}</span>
+      <span *ngIf="modalSaving">{{ 'EXPENSES.SAVING' | translate }}</span>
     </button>
 
   </div>

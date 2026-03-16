@@ -1,0 +1,10 @@
+/* RTL global adjustments */
+[dir="rtl"] .fa-chevron-down,
+[dir="rtl"] .fa-chevron-right,
+[dir="rtl"] .fa-chevron-left {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .fa-sign-out {
+  transform: scaleX(-1);
+}

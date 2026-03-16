@@ -2,7 +2,7 @@
 
   <!-- No household -->
   <div *ngIf="noHousehold" class="no-household">
-    <p>No household selected. Please select or create a household to view budget.</p>
+    <p>{{ 'BUDGET.NO_HOUSEHOLD' | translate }}</p>
   </div>
 
   <ng-container *ngIf="!noHousehold">
@@ -13,12 +13,12 @@
         class="mode-tab"
         [class.active]="viewMode === 'table'"
         (click)="setViewMode('table')"
-      >Table</button>
+      >{{ 'BUDGET.TABLE' | translate }}</button>
       <button
         class="mode-tab"
         [class.active]="viewMode === 'graph'"
         (click)="setViewMode('graph')"
-      >Graph</button>
+      >{{ 'BUDGET.GRAPH' | translate }}</button>
     </div>
 
     <!-- Month navigation -->
@@ -52,13 +52,13 @@
       <div *ngIf="!loading" class="budget-table">
         <div class="budget-hint">
           <span class="material-symbols-outlined hint-icon">edit</span>
-          Tap a budget value to set or change it for this month
+          {{ 'BUDGET.TAP_HINT' | translate }}
         </div>
         <div class="table-header">
-          <span class="col-category">Category</span>
-          <span class="col-budget">Budget</span>
-          <span class="col-spent">Spent</span>
-          <span class="col-result">Result</span>
+          <span class="col-category">{{ 'BUDGET.CATEGORY' | translate }}</span>
+          <span class="col-budget">{{ 'BUDGET.BUDGET_COL' | translate }}</span>
+          <span class="col-spent">{{ 'BUDGET.SPENT' | translate }}</span>
+          <span class="col-result">{{ 'BUDGET.RESULT' | translate }}</span>
         </div>
 
         <!-- Rows -->
@@ -75,14 +75,14 @@
                 class="cat-icon"
                 [style.background-color]="row.color + '33'"
                 [style.color]="row.color"
-              >{{ getCategoryLetter(row.name) }}</span>
-              <span class="cat-name">{{ row.name }}</span>
+              >{{ getCategoryLetter(getCategoryDisplayName(row)) }}</span>
+              <span class="cat-name">{{ getCategoryDisplayName(row) }}</span>
             </div>
 
             <!-- Budget display -->
             <div class="col-budget budget-cell">
-              <button class="budget-display" (click)="startEditBudget(row, 'base')" title="Set budget">
-                <span class="budget-value">{{ row.effectiveBudget != null ? ('&#8362;' + (row.effectiveBudget | number:'1.0-0')) : 'Set' }}</span>
+              <button class="budget-display" (click)="startEditBudget(row, 'base')" [title]="'BUDGET.SET_PLACEHOLDER' | translate">
+                <span class="budget-value">{{ row.effectiveBudget != null ? ('&#8362;' + (row.effectiveBudget | number:'1.0-0')) : ('BUDGET.SET_PLACEHOLDER' | translate) }}</span>
                 <span class="material-symbols-outlined budget-edit-icon">edit</span>
               </button>
             </div>
@@ -112,12 +112,12 @@
                 class="budget-mode-tab"
                 [class.active]="editingBudgetMode === 'base'"
                 (click)="setEditMode('base', row)"
-              >Every month</button>
+              >{{ 'BUDGET.EVERY_MONTH' | translate }}</button>
               <button
                 class="budget-mode-tab"
                 [class.active]="editingBudgetMode === 'month'"
                 (click)="setEditMode('month', row)"
-              >{{ monthLabel }} only</button>
+              >{{ monthLabel }} {{ 'BUDGET.THIS_MONTH_ONLY' | translate }}</button>
             </div>
             <div class="budget-input-row">
               <span class="budget-currency">&#8362;</span>
@@ -130,15 +130,15 @@
                 autofocus
                 placeholder="0"
               />
-              <button class="budget-save-btn" (click)="commitEditBudget(row.id)">Save</button>
-              <button class="budget-cancel-btn" (click)="cancelEdit()">Cancel</button>
+              <button class="budget-save-btn" (click)="commitEditBudget(row.id)">{{ 'BUDGET.SAVE' | translate }}</button>
+              <button class="budget-cancel-btn" (click)="cancelEdit()">{{ 'BUDGET.CANCEL' | translate }}</button>
             </div>
           </div>
         </div>
 
         <!-- Empty state -->
         <div *ngIf="budgetRows.length === 0" class="empty-state">
-          No expense categories found.
+          {{ 'BUDGET.NO_CATEGORIES' | translate }}
         </div>
       </div>
     </div>
@@ -149,9 +149,9 @@
       <!-- Category selector -->
       <div class="category-selector">
         <select class="cat-select" [(ngModel)]="selectedCategoryId" (ngModelChange)="onCategoryChange()">
-          <option [ngValue]="null">All categories</option>
+          <option [ngValue]="null">{{ 'BUDGET.ALL_CATEGORIES' | translate }}</option>
           <option *ngFor="let row of budgetRows" [ngValue]="row.id">
-            {{ row.name }}
+            {{ getCategoryDisplayName(row) }}
           </option>
         </select>
       </div>
@@ -162,12 +162,12 @@
           class="graph-tab"
           [class.active]="graphMode === 'week'"
           (click)="setGraphMode('week')"
-        >By Week</button>
+        >{{ 'BUDGET.BY_WEEK' | translate }}</button>
         <button
           class="graph-tab"
           [class.active]="graphMode === 'month'"
           (click)="setGraphMode('month')"
-        >By Month</button>
+        >{{ 'BUDGET.BY_MONTH' | translate }}</button>
       </div>
 
       <!-- Loading -->
@@ -179,7 +179,7 @@
       <div *ngIf="!graphLoading" class="chart-wrapper">
 
         <div *ngIf="currentChartData.length === 0" class="empty-state">
-          No data available for this period.
+          {{ 'BUDGET.NO_DATA' | translate }}
         </div>
 
         <svg

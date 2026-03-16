@@ -66,7 +66,7 @@ export class CategoryService {
   /**
    * POST /api/app/expense-categories
    */
-  createExpenseCategory(data: { name: string; icon: string; color: string; monthlyBudget?: number | null; householdId: number }): Observable<any> {
+  createExpenseCategory(data: { name: string; nameHe?: string; icon: string; color: string; monthlyBudget?: number | null; householdId: number }): Observable<any> {
     return this.http.post(
       `${this.apiUrl}/app/expense-categories`,
       data,
@@ -77,7 +77,7 @@ export class CategoryService {
   /**
    * POST /api/app/income-categories
    */
-  createIncomeCategory(data: { name: string; icon: string; color: string; householdId: number }): Observable<any> {
+  createIncomeCategory(data: { name: string; nameHe?: string; icon: string; color: string; householdId: number }): Observable<any> {
     return this.http.post(
       `${this.apiUrl}/app/income-categories`,
       data,

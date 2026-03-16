@@ -43,7 +43,7 @@ class IncomeCategoriesController {
    */
   async adminCreate(ctx) {
     try {
-      const { name, icon, color, sortOrder, householdId } = ctx.request.body;
+      const { name, nameHe, icon, color, sortOrder, householdId } = ctx.request.body;
 
       if (!name || !icon || !householdId) {
         ctx.status = 400;
@@ -60,6 +60,7 @@ class IncomeCategoriesController {
 
       const category = await IncomeCategory.create({
         name,
+        nameHe: nameHe || null,
         icon,
         color,
         sortOrder,
@@ -85,7 +86,7 @@ class IncomeCategoriesController {
   async adminUpdate(ctx) {
     try {
       const { id } = ctx.params;
-      const { name, icon, color, sortOrder } = ctx.request.body;
+      const { name, nameHe, icon, color, sortOrder } = ctx.request.body;
 
       const category = await IncomeCategory.findByPk(id);
       if (!category) {
@@ -94,7 +95,7 @@ class IncomeCategoriesController {
         return;
       }
 
-      await category.update({ name, icon, color, sortOrder });
+      await category.update({ name, nameHe: nameHe || null, icon, color, sortOrder });
 
       ctx.body = {
         success: true,
@@ -169,7 +170,7 @@ class IncomeCategoriesController {
   async appCreate(ctx) {
     try {
       const appUser = ctx.state.appUser;
-      const { name, icon, color, householdId } = ctx.request.body;
+      const { name, nameHe, icon, color, householdId } = ctx.request.body;
 
       if (!name || !icon || !householdId) {
         ctx.status = 400;
@@ -191,6 +192,7 @@ class IncomeCategoriesController {
 
       const category = await IncomeCategory.create({
         name,
+        nameHe: nameHe || null,
         icon: icon || 'label',
         color: color || '#4CAF50',
         sortOrder,

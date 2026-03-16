@@ -38,7 +38,7 @@ class AppAuthController {
         });
 
         ctx.status = 401;
-        ctx.body = { error: 'Invalid credentials' };
+        ctx.body = { error: 'Invalid credentials bulbul 3' };
         return;
       }
 
@@ -68,7 +68,7 @@ class AppAuthController {
         });
 
         ctx.status = 401;
-        ctx.body = { error: 'Invalid credentials' };
+        ctx.body = { error: 'Invalid credentials bulbul 4' };
         return;
       }
 

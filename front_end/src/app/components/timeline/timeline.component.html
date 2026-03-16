@@ -7,14 +7,14 @@
       class="view-pill"
       [class.active]="currentView === v.key"
       (click)="selectView(v.key)"
-    >{{ v.label }}</button>
+    >{{ v.labelKey | translate }}</button>
   </div>
 
   <!-- ── Period navigation ──────────────────────────────────────────────────── -->
   <div class="period-nav">
-    <button class="nav-arrow" (click)="prev()" aria-label="Previous">&#8249;</button>
+    <button class="nav-arrow" (click)="prev()" [attr.aria-label]="'TIMELINE.PREV' | translate">&#8249;</button>
     <span class="nav-label">{{ navLabel }}</span>
-    <button class="nav-arrow" (click)="next()" aria-label="Next">&#8250;</button>
+    <button class="nav-arrow" (click)="next()" [attr.aria-label]="'TIMELINE.NEXT' | translate">&#8250;</button>
   </div>
 
   <!-- ── Week row (weekly view only) ───────────────────────────────────────── -->
@@ -29,7 +29,7 @@
       [class.disabled]="!w.start"
       [disabled]="!w.start"
       (click)="selectWeek(w)"
-    >Wk {{ w.weekNumber }}</button>
+    >{{ 'TIMELINE.WEEK_SHORT' | translate }} {{ w.weekNumber }}</button>
   </div>
 
   <!-- ── Day row (daily view) ───────────────────────────────────────────────── -->
@@ -44,7 +44,7 @@
 
   <!-- ── Total bar ──────────────────────────────────────────────────────────── -->
   <div class="total-bar" *ngIf="!loading">
-    <span class="total-pill">Total: {{ formatNIS(grandTotal) }}</span>
+    <span class="total-pill">{{ 'TIMELINE.TOTAL' | translate }}: {{ formatNIS(grandTotal) }}</span>
   </div>
 
   <!-- ── Loading state ──────────────────────────────────────────────────────── -->
@@ -100,7 +100,7 @@
 
         <!-- Empty week -->
         <div class="empty-week" *ngIf="wg.dayGroups.length === 0">
-          <span class="empty-week-text">No transactions in this week</span>
+          <span class="empty-week-text">{{ 'TIMELINE.NO_TRANSACTIONS_WEEK' | translate }}</span>
         </div>
       </div>
     </ng-container>
@@ -108,8 +108,8 @@
     <!-- Global empty state -->
     <div class="empty-state" *ngIf="transactions.length === 0">
       <span class="empty-icon">🗒️</span>
-      <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} here yet</p>
-      <p class="empty-sub">Transactions you add will appear here</p>
+      <p class="empty-title">{{ 'TIMELINE.NO_TRANSACTIONS' | translate }}</p>
+      <p class="empty-sub">{{ 'TIMELINE.NO_TRANSACTIONS_SUB' | translate }}</p>
     </div>
   </div>
 
@@ -139,8 +139,8 @@
 
     <div class="empty-state" *ngIf="dayGroups.length === 0">
       <span class="empty-icon">🗒️</span>
-      <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} this week</p>
-      <p class="empty-sub">Transactions you add will appear here</p>
+      <p class="empty-title">{{ 'TIMELINE.NO_TRANSACTIONS_WEEK' | translate }}</p>
+      <p class="empty-sub">{{ 'TIMELINE.NO_TRANSACTIONS_SUB' | translate }}</p>
     </div>
   </div>
 
@@ -157,11 +157,23 @@
 
     <div class="empty-state" *ngIf="dailyTransactions.length === 0">
       <span class="empty-icon">🗒️</span>
-      <p class="empty-title">No {{ type === 'expense' ? 'expenses' : 'income' }} on this day</p>
-      <p class="empty-sub">Transactions you add will appear here</p>
+      <p class="empty-title">{{ 'TIMELINE.NO_TRANSACTIONS_DAY' | translate }}</p>
+      <p class="empty-sub">{{ 'TIMELINE.NO_TRANSACTIONS_SUB' | translate }}</p>
     </div>
   </div>
 
+</div>
+
+<!-- ── Delete confirm modal ──────────────────────────────────────────────────── -->
+<div class="confirm-overlay" *ngIf="pendingDeleteTx" (click)="cancelDeleteTx()">
+  <div class="confirm-modal" (click)="$event.stopPropagation()">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-msg">{{ 'CONFIRM.DELETE_TX' | translate }}</div>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-btn--cancel" (click)="cancelDeleteTx()">{{ 'CONFIRM.CANCEL' | translate }}</button>
+      <button class="confirm-btn confirm-btn--yes" (click)="confirmDeleteTx()">{{ 'CONFIRM.YES' | translate }}</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Transaction card template ─────────────────────────────────────────────── -->
@@ -181,7 +193,7 @@
 
     <!-- Main content -->
     <div class="tx-body">
-      <span class="tx-description">{{ tx.description || tx.category.name }}</span>
+      <span class="tx-description">{{ tx.description || getCategoryDisplayName(tx) }}</span>
     </div>
 
     <!-- Amount + payment + menu -->
@@ -195,16 +207,16 @@
       <button
         class="menu-trigger"
         (click)="toggleMenu(tx, $event)"
-        aria-label="Actions"
+        [attr.aria-label]="'TIMELINE.ACTIONS' | translate"
       >&#8943;</button>
 
       <!-- Dropdown menu -->
       <div class="action-menu" *ngIf="openMenuId === tx.id" (click)="$event.stopPropagation()">
         <button class="action-btn edit-btn" (click)="onEdit(tx)">
-          <span class="material-symbols-outlined">edit</span> Edit
+          <span class="material-symbols-outlined">edit</span> {{ 'TIMELINE.EDIT' | translate }}
         </button>
         <button class="action-btn delete-btn" (click)="onDelete(tx)">
-          <span class="material-symbols-outlined">delete</span> Delete
+          <span class="material-symbols-outlined">delete</span> {{ 'TIMELINE.DELETE' | translate }}
         </button>
       </div>
     </div>

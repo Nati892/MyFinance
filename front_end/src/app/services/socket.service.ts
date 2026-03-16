@@ -35,9 +35,14 @@ export class SocketService implements OnDestroy {
     if (this.socket?.connected) return;
 
     this.socket = io(getWebSocketUrl(), {
-      transports: ['websocket'],
-      auth: { token }
+      transports: ['polling', 'websocket'],
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 2000,
+      reconnectionAttempts: 10,
     });
+
+    this.socket.on('connect_error', () => { /* silent – backend may not be running */ });
 
     this.socket.on('connect', () => {
       this.socket!.emit('join-household', householdId);

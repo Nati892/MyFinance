@@ -23,6 +23,11 @@ export interface Note {
   isBold: boolean;
   isUnderline: boolean;
   textColor: string;
+  // Sticker type fields
+  type: 'text' | 'heart' | 'image';
+  heartColor: string | null;
+  width: number | null;
+  height: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -41,7 +46,17 @@ export class NotesService {
     return this.http.get<any>(`${this.apiUrl}/app/notes`, { headers: this.getHeaders(), params });
   }
 
-  create(data: { content: string; posX: number; posY: number; zIndex: number; householdId: number }): Observable<{ success: boolean; note: Note }> {
+  create(data: {
+    content: string;
+    posX: number;
+    posY: number;
+    zIndex: number;
+    householdId: number;
+    type?: 'text' | 'heart' | 'image';
+    heartColor?: string;
+    width?: number;
+    height?: number;
+  }): Observable<{ success: boolean; note: Note }> {
     return this.http.post<any>(`${this.apiUrl}/app/notes`, data, { headers: this.getHeaders() });
   }
 
@@ -57,6 +72,9 @@ export class NotesService {
     isBold: boolean;
     isUnderline: boolean;
     textColor: string;
+    heartColor: string;
+    width: number;
+    height: number;
   }>): Observable<{ success: boolean; note: Note }> {
     return this.http.put<any>(`${this.apiUrl}/app/notes/${id}`, data, { headers: this.getHeaders() });
   }

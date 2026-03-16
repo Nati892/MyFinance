@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true
     },
     content: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT('medium'),
       allowNull: false,
       defaultValue: ''
     },
@@ -59,6 +59,26 @@ module.exports = (sequelize, DataTypes) => {
     },
     headerColor: {
       type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: null
+    },
+    type: {
+      type: DataTypes.ENUM('text', 'heart', 'image'),
+      allowNull: false,
+      defaultValue: 'text'
+    },
+    heartColor: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: null
+    },
+    width: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null
+    },
+    height: {
+      type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: null
     }

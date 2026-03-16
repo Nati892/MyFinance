@@ -2,8 +2,8 @@
 <ng-container *ngIf="!householdId">
   <div class="state-screen">
     <span class="material-symbols-outlined state-icon">home</span>
-    <p class="state-title">No Household Selected</p>
-    <p class="state-sub">Please select a household from the header to view incomes.</p>
+    <p class="state-title">{{ 'INCOMES.NO_HOUSEHOLD' | translate }}</p>
+    <p class="state-sub">{{ 'INCOMES.NO_HOUSEHOLD_MSG' | translate }}</p>
   </div>
 </ng-container>
 
@@ -27,8 +27,8 @@
       <!-- Load error banner -->
       <div class="error-banner" *ngIf="loadError">
         <span class="material-symbols-outlined">error_outline</span>
-        Failed to load incomes.
-        <button class="retry-btn" (click)="loadIncomes()">Retry</button>
+        {{ 'INCOMES.LOAD_FAILED' | translate }}
+        <button class="retry-btn" (click)="loadIncomes()">{{ 'INCOMES.RETRY' | translate }}</button>
       </div>
 
       <app-timeline
@@ -57,7 +57,7 @@
 
   <!-- Header -->
   <div class="sheet-header">
-    <h2 class="sheet-title">{{ isEditMode ? 'Edit Income' : 'New Income' }}</h2>
+    <h2 class="sheet-title">{{ isEditMode ? ('INCOMES.EDIT_INCOME' | translate) : ('INCOMES.NEW_INCOME' | translate) }}</h2>
     <button class="sheet-close" (click)="closeModal()" aria-label="Close">
       <span class="material-symbols-outlined">close</span>
     </button>
@@ -68,7 +68,7 @@
 
     <!-- Amount -->
     <div class="field-group">
-      <label class="field-label">Amount</label>
+      <label class="field-label">{{ 'INCOMES.AMOUNT' | translate }}</label>
       <div class="amount-input-wrap">
         <span class="currency-prefix">₪</span>
         <input
@@ -85,7 +85,7 @@
 
     <!-- Category chips -->
     <div class="field-group">
-      <label class="field-label">Category</label>
+      <label class="field-label">{{ 'INCOMES.CATEGORY' | translate }}</label>
       <div class="chip-row">
         <button
           *ngFor="let cat of categories"
@@ -95,15 +95,15 @@
           (click)="selectChipCategory(cat.id)"
           type="button">
           <span class="material-symbols-outlined chip-icon">{{ cat.icon }}</span>
-          <span class="chip-label">{{ cat.name }}</span>
+          <span class="chip-label">{{ getCategoryDisplayName(cat) }}</span>
         </button>
-        <span class="chip-empty" *ngIf="categories.length === 0">No categories</span>
+        <span class="chip-empty" *ngIf="categories.length === 0">{{ 'INCOMES.NO_CATEGORIES' | translate }}</span>
       </div>
     </div>
 
     <!-- Date & Time -->
     <div class="field-group">
-      <label class="field-label">Date &amp; Time</label>
+      <label class="field-label">{{ 'INCOMES.DATE_TIME' | translate }}</label>
       <input
         class="text-input"
         type="datetime-local"
@@ -114,7 +114,7 @@
 
     <!-- Payment method -->
     <div class="field-group">
-      <label class="field-label">Payment Method</label>
+      <label class="field-label">{{ 'INCOMES.PAYMENT_METHOD' | translate }}</label>
       <div class="method-row">
         <button
           *ngFor="let pm of paymentMethods"
@@ -129,11 +129,11 @@
 
     <!-- Description -->
     <div class="field-group">
-      <label class="field-label">Description <span class="optional">(optional)</span></label>
+      <label class="field-label">{{ 'INCOMES.DESCRIPTION' | translate }} <span class="optional">(optional)</span></label>
       <input
         class="text-input"
         type="text"
-        placeholder="e.g. Monthly salary"
+        [placeholder]="'INCOMES.DESCRIPTION_PLACEHOLDER' | translate"
         [(ngModel)]="form.description"
         name="description"
       />
@@ -141,11 +141,11 @@
 
     <!-- Note -->
     <div class="field-group">
-      <label class="field-label">Note <span class="optional">(optional)</span></label>
+      <label class="field-label">{{ 'INCOMES.NOTE' | translate }} <span class="optional">(optional)</span></label>
       <textarea
         class="text-input textarea"
         rows="3"
-        placeholder="Any additional notes…"
+        [placeholder]="'INCOMES.NOTE_PLACEHOLDER' | translate"
         [(ngModel)]="form.note"
         name="note">
       </textarea>
@@ -156,14 +156,14 @@
 
     <!-- Actions -->
     <div class="sheet-actions">
-      <button class="btn-cancel" (click)="closeModal()" type="button">Cancel</button>
+      <button class="btn-cancel" (click)="closeModal()" type="button">{{ 'INCOMES.CANCEL' | translate }}</button>
       <button
         class="btn-save"
         (click)="saveIncome()"
         type="button"
         [disabled]="saving">
-        <span *ngIf="!saving">{{ isEditMode ? 'Save Changes' : 'Add Income' }}</span>
-        <span *ngIf="saving">Saving…</span>
+        <span *ngIf="!saving">{{ isEditMode ? ('INCOMES.SAVE_CHANGES' | translate) : ('INCOMES.ADD_INCOME' | translate) }}</span>
+        <span *ngIf="saving">{{ 'INCOMES.SAVING' | translate }}</span>
       </button>
     </div>
 

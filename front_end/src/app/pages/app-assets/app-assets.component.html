@@ -1,6 +1,6 @@
 <!-- No-household state -->
 <div *ngIf="noHousehold" class="no-household">
-  <p>No household selected. Please select a household to view assets.</p>
+  <p>{{ 'ASSETS.NO_HOUSEHOLD' | translate }}</p>
 </div>
 
 <div *ngIf="!noHousehold" class="assets-page">
@@ -8,19 +8,19 @@
   <!-- ── Summary bar ──────────────────────────────────────────────────────── -->
   <div class="summary-bar">
     <div class="summary-card total">
-      <span class="summary-label">Total Assets</span>
+      <span class="summary-label">{{ 'ASSETS.TOTAL_ASSETS' | translate }}</span>
       <span class="summary-value">{{ formatCurrency(totalValue) }}</span>
     </div>
     <div class="summary-card liquid">
-      <span class="summary-label">🟢 Liquid</span>
+      <span class="summary-label">🟢 {{ 'ASSETS.LIQUID' | translate }}</span>
       <span class="summary-value">{{ formatCurrency(liquidValue) }}</span>
     </div>
     <div class="summary-card semi">
-      <span class="summary-label">🟡 Semi-Liquid</span>
+      <span class="summary-label">🟡 {{ 'ASSETS.SEMI_LIQUID' | translate }}</span>
       <span class="summary-value">{{ formatCurrency(semiLiquidValue) }}</span>
     </div>
     <div class="summary-card illiquid">
-      <span class="summary-label">🔴 Illiquid</span>
+      <span class="summary-label">🔴 {{ 'ASSETS.ILLIQUID' | translate }}</span>
       <span class="summary-value">{{ formatCurrency(illiquidValue) }}</span>
     </div>
   </div>
@@ -30,10 +30,10 @@
     <table class="assets-table">
       <thead>
         <tr>
-          <th class="col-name">Name</th>
-          <th class="col-value">Value</th>
-          <th class="col-liquidity">Liquidity</th>
-          <th class="col-description">Description</th>
+          <th class="col-name">{{ 'ASSETS.NAME' | translate }}</th>
+          <th class="col-value">{{ 'ASSETS.VALUE' | translate }}</th>
+          <th class="col-liquidity">{{ 'ASSETS.LIQUIDITY' | translate }}</th>
+          <th class="col-description">{{ 'ASSETS.DESCRIPTION' | translate }}</th>
           <th class="col-actions"></th>
         </tr>
       </thead>
@@ -102,9 +102,9 @@
                 (blur)="cancelEdit()"
                 autofocus
               >
-                <option value="high">🟢 High</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="low">🔴 Low</option>
+                <option value="high">🟢 {{ 'ASSETS.HIGH' | translate }}</option>
+                <option value="medium">🟡 {{ 'ASSETS.MEDIUM' | translate }}</option>
+                <option value="low">🔴 {{ 'ASSETS.LOW' | translate }}</option>
               </select>
               <ng-template #liquidityTpl>
                 <span class="liquidity-badge" [class]="'liquidity-' + asset.liquidity">
@@ -132,7 +132,7 @@
 
             <!-- Actions -->
             <td class="cell-actions">
-              <button class="btn-delete" (click)="deleteAsset(asset)" title="Delete asset">
+              <button class="btn-delete" (click)="deleteAsset(asset)" [title]="'ASSETS.DELETE_ASSET' | translate">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                   fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
@@ -149,7 +149,7 @@
           <tr *ngIf="assets.length === 0" class="empty-row">
             <td colspan="5">
               <div class="empty-state">
-                <span>No assets yet. Click + to add your first asset.</span>
+                <span>{{ 'ASSETS.NO_ASSETS' | translate }}</span>
               </div>
             </td>
           </tr>
@@ -160,7 +160,7 @@
   </div>
 
   <!-- ── Floating add button ─────────────────────────────────────────────── -->
-  <button class="fab-add" (click)="addAsset()" title="Add asset">
+  <button class="fab-add" (click)="addAsset()" [title]="'ASSETS.ADD_ASSET' | translate">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
       fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <line x1="12" y1="5" x2="12" y2="19"></line>

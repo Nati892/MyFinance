@@ -1,14 +1,16 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { AppAuthService, AppUser } from '../../services/app-auth.service';
 import { HouseholdStateService, SelectedHousehold } from '../../services/household-state.service';
+import { LanguageService, Lang } from '../../services/language.service';
 
 @Component({
   selector: 'app-app-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, TranslateModule],
   templateUrl: './app-layout.component.html',
   styleUrls: ['./app-layout.component.css']
 })
@@ -22,7 +24,8 @@ export class AppLayoutComponent implements OnInit, OnDestroy {
 
   constructor(
     private appAuthService: AppAuthService,
-    private householdStateService: HouseholdStateService
+    private householdStateService: HouseholdStateService,
+    public languageService: LanguageService
   ) {}
 
   ngOnInit(): void {
@@ -64,5 +67,13 @@ export class AppLayoutComponent implements OnInit, OnDestroy {
 
   signOut(): void {
     this.appAuthService.signOut();
+  }
+
+  toggleLang(): void {
+    this.languageService.toggleLang();
+  }
+
+  get currentLang(): Lang {
+    return this.languageService.currentLang;
   }
 }

@@ -22,7 +22,10 @@
 
     <div class="header-user">
       <span class="header-username">{{ currentUser?.username }}</span>
-      <button class="header-signout" (click)="signOut()" title="Sign out">
+      <button class="header-lang-toggle" (click)="toggleLang()" [title]="currentLang === 'en' ? 'Switch to Hebrew' : 'Switch to English'">
+        {{ currentLang === 'en' ? 'EN' : 'HE' }}
+      </button>
+      <button class="header-signout" (click)="signOut()" [title]="'HEADER.SIGN_OUT' | translate">
         <i class="fa fa-sign-out"></i>
       </button>
     </div>
@@ -37,23 +40,23 @@
   <nav class="app-bottom-nav">
     <a routerLink="/app/expenses" routerLinkActive="active" class="nav-tab">
       <span class="nav-icon">💸</span>
-      <span class="nav-label">Expenses</span>
+      <span class="nav-label">{{ 'NAV.EXPENSES' | translate }}</span>
     </a>
     <a routerLink="/app/incomes" routerLinkActive="active" class="nav-tab">
       <span class="nav-icon">💰</span>
-      <span class="nav-label">Incomes</span>
+      <span class="nav-label">{{ 'NAV.INCOMES' | translate }}</span>
     </a>
     <a routerLink="/app/budget" routerLinkActive="active" class="nav-tab">
       <span class="nav-icon">📊</span>
-      <span class="nav-label">Budget</span>
+      <span class="nav-label">{{ 'NAV.BUDGET' | translate }}</span>
     </a>
     <a routerLink="/app/assets" routerLinkActive="active" class="nav-tab">
       <span class="nav-icon">🏦</span>
-      <span class="nav-label">Assets</span>
+      <span class="nav-label">{{ 'NAV.ASSETS' | translate }}</span>
     </a>
     <a routerLink="/app/home" routerLinkActive="active" class="nav-tab">
       <span class="nav-icon">📌</span>
-      <span class="nav-label">Board</span>
+      <span class="nav-label">{{ 'NAV.BOARD' | translate }}</span>
     </a>
   </nav>
 </div>

@@ -12,8 +12,8 @@
         [style.background-color]="selectedCategoryId === null ? '#667eea' : '#667eea33'"
         [style.border-color]="'#667eea'"
         (click)="selectAll()"
-        title="All"
-        aria-label="Show all categories"
+        [title]="'CATEGORY.SHOW_ALL' | translate"
+        [attr.aria-label]="'CATEGORY.SHOW_ALL_ARIA' | translate"
       >
         <span class="material-symbols-outlined"
           [style.color]="selectedCategoryId === null ? '#fff' : '#667eea'"
@@ -31,7 +31,7 @@
           [style.border-color]="getBudgetBorderColor(cat)"
           [style.border-width]="getBudgetBorderWidth(cat)"
           (click)="selectCategory(cat.id)"
-          [attr.aria-label]="cat.name"
+          [attr.aria-label]="getDisplayName(cat)"
         >
           <span class="material-symbols-outlined"
             [style.color]="selectedCategoryId === cat.id ? '#fff' : cat.color"
@@ -43,11 +43,11 @@
 
     <!-- ── Add category button (at bottom of scroll) ── -->
     <div class="cat-item">
-      <div class="cat-wrapper" title="Add category">
-        <button class="cat-btn add-btn" (click)="openDrawer()" aria-label="Add category">
+      <div class="cat-wrapper" [title]="'CATEGORY.ADD_CATEGORY' | translate">
+        <button class="cat-btn add-btn" (click)="openDrawer()" [attr.aria-label]="'CATEGORY.ADD_CATEGORY' | translate">
           <span class="material-symbols-outlined">add</span>
         </button>
-        <span class="tooltip-text">Add category</span>
+        <span class="tooltip-text">{{ 'CATEGORY.ADD_CATEGORY' | translate }}</span>
       </div>
     </div>
 
@@ -65,7 +65,7 @@
           [style.border-color]="getBudgetBorderColor(cat)"
           [style.border-width]="getBudgetBorderWidth(cat)"
           (click)="selectCategory(cat.id)"
-          [attr.aria-label]="cat.name + ' (favorite)'"
+          [attr.aria-label]="getDisplayName(cat) + ' (favorite)'"
         >
           <span class="material-symbols-outlined"
             [style.color]="selectedCategoryId === cat.id ? '#fff' : cat.color"
@@ -84,23 +84,63 @@
 <div class="drawer-backdrop" *ngIf="drawerOpen" (click)="closeDrawer()"></div>
 <div class="drawer" [class.drawer-open]="drawerOpen">
   <div class="drawer-handle"></div>
-  <h3 class="drawer-title">New {{ type === 'expense' ? 'Expense' : 'Income' }} Category</h3>
+  <h3 class="drawer-title">{{ (type === 'expense' ? 'CATEGORY.NEW_EXPENSE_CAT' : 'CATEGORY.NEW_INCOME_CAT') | translate }}</h3>
 
-  <!-- Name -->
+  <!-- English Name -->
   <div class="drawer-field">
-    <label>Name</label>
-    <input
-      class="drawer-input"
-      type="text"
-      placeholder="Category name"
-      [(ngModel)]="newCategory.name"
-      maxlength="40"
-    />
+    <label>{{ 'CATEGORY.NAME_EN' | translate }}</label>
+    <div class="name-input-row">
+      <input
+        class="drawer-input"
+        type="text"
+        [placeholder]="'CATEGORY.NAME_EN_PLACEHOLDER' | translate"
+        [(ngModel)]="newCategory.name"
+        maxlength="40"
+        dir="ltr"
+        (ngModelChange)="onNameEnChange()"
+      />
+      <button
+        type="button"
+        class="translate-btn"
+        (click)="translateToHe()"
+        [disabled]="isTranslatingHe || !newCategory.name.trim()"
+        [title]="'CATEGORY.TRANSLATE_TO_HE' | translate"
+      >
+        <span *ngIf="!isTranslatingHe" class="material-symbols-outlined">translate</span>
+        <span *ngIf="isTranslatingHe" class="translate-spinner">⟳</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Hebrew Name -->
+  <div class="drawer-field">
+    <label>{{ 'CATEGORY.NAME_HE' | translate }}</label>
+    <div class="name-input-row">
+      <input
+        class="drawer-input"
+        type="text"
+        [placeholder]="'CATEGORY.NAME_HE_PLACEHOLDER' | translate"
+        [(ngModel)]="newCategory.nameHe"
+        maxlength="40"
+        dir="rtl"
+        (ngModelChange)="onNameHeChange()"
+      />
+      <button
+        type="button"
+        class="translate-btn"
+        (click)="translateToEn()"
+        [disabled]="isTranslatingEn || !newCategory.nameHe.trim()"
+        [title]="'CATEGORY.TRANSLATE_TO_EN' | translate"
+      >
+        <span *ngIf="!isTranslatingEn" class="material-symbols-outlined">translate</span>
+        <span *ngIf="isTranslatingEn" class="translate-spinner">⟳</span>
+      </button>
+    </div>
   </div>
 
   <!-- Color picker -->
   <div class="drawer-field">
-    <label>Color</label>
+    <label>{{ 'CATEGORY.COLOR' | translate }}</label>
     <div class="color-grid">
       <button
         *ngFor="let c of presetColors"
@@ -115,11 +155,11 @@
 
   <!-- Icon picker -->
   <div class="drawer-field">
-    <label>Icon</label>
+    <label>{{ 'CATEGORY.ICON' | translate }}</label>
     <input
       class="drawer-input icon-search"
       type="text"
-      placeholder="Search icons..."
+      [placeholder]="'CATEGORY.SEARCH_ICONS' | translate"
       [(ngModel)]="iconSearch"
     />
     <div class="icon-grid">
@@ -140,7 +180,7 @@
 
   <!-- Budget (expense only) -->
   <div class="drawer-field" *ngIf="type === 'expense'">
-    <label>Monthly Budget (optional)</label>
+    <label>{{ 'CATEGORY.MONTHLY_BUDGET' | translate }}</label>
     <input
       class="drawer-input"
       type="number"
@@ -151,7 +191,7 @@
   </div>
 
   <!-- Preview -->
-  <div class="drawer-preview" *ngIf="newCategory.name || newCategory.icon">
+  <div class="drawer-preview" *ngIf="newCategory.name || newCategory.nameHe || newCategory.icon">
     <button
       class="cat-btn"
       [style.background-color]="newCategory.color"
@@ -160,17 +200,19 @@
     >
       <span class="material-symbols-outlined" style="color:#fff">{{ newCategory.icon }}</span>
     </button>
-    <span class="preview-name">{{ newCategory.name || 'Category name' }}</span>
+    <span class="preview-name">
+      {{ currentLang === 'he' ? (newCategory.nameHe || newCategory.name) : (newCategory.name || newCategory.nameHe) }}
+    </span>
   </div>
 
   <!-- Actions -->
   <div class="drawer-actions">
-    <button class="drawer-cancel" (click)="closeDrawer()">Cancel</button>
+    <button class="drawer-cancel" (click)="closeDrawer()">{{ 'CATEGORY.CANCEL' | translate }}</button>
     <button
       class="drawer-save"
       [style.background]="newCategory.color"
-      [disabled]="!newCategory.name.trim()"
+      [disabled]="!newCategory.name.trim() && !newCategory.nameHe.trim()"
       (click)="submitNewCategory()"
-    >Save</button>
+    >{{ 'CATEGORY.SAVE' | translate }}</button>
   </div>
 </div>

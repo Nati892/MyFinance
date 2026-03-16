@@ -29,8 +29,7 @@ module.exports = {
     },
 
     cors: {
-        origin: '*',
-        credentials: true,
+        origin: 'http://localhost:4200',
         allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
         allowHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin'],
         exposeHeaders: ['Content-Length', 'Date', 'X-Request-Id'],

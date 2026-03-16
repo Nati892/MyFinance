@@ -5,14 +5,18 @@ import {
   EventEmitter,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
-  signal,
+  OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
+import { LanguageService } from '../../services/language.service';
+import { TranslationApiService } from '../../services/translation-api.service';
 
 export interface Category {
   id: number;
   name: string;
+  nameHe?: string;
   icon: string;
   color: string;
   sortOrder: number;
@@ -22,6 +26,7 @@ export interface Category {
 
 export interface NewCategoryData {
   name: string;
+  nameHe: string;
   icon: string;
   color: string;
   monthlyBudget: number | null;
@@ -54,12 +59,12 @@ const PRESET_COLORS = [
 @Component({
   selector: 'app-category-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   templateUrl: './category-sidebar.component.html',
   styleUrls: ['./category-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CategorySidebarComponent {
+export class CategorySidebarComponent implements OnDestroy {
   @Input() categories: Category[] = [];
   @Input() favoriteCategories: Category[] = [];
   @Input() selectedCategoryId: number | null = null;
@@ -72,15 +77,29 @@ export class CategorySidebarComponent {
 
   drawerOpen = false;
   iconSearch = '';
+  isTranslatingHe = false;
+  isTranslatingEn = false;
 
   newCategory = {
     name: '',
+    nameHe: '',
     icon: 'label',
     color: '#667eea',
     monthlyBudget: null as number | null,
   };
 
-  constructor(private cdr: ChangeDetectorRef) {}
+  private enTimer: any = null;
+  private heTimer: any = null;
+
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private languageService: LanguageService,
+    private translationApi: TranslationApiService,
+  ) {}
+
+  get currentLang() {
+    return this.languageService.currentLang;
+  }
 
   get filteredIcons(): string[] {
     if (!this.iconSearch.trim()) return this.iconOptions;
@@ -88,8 +107,13 @@ export class CategorySidebarComponent {
     return this.iconOptions.filter(i => i.includes(q));
   }
 
+  getDisplayName(cat: Category): string {
+    if (this.languageService.currentLang === 'he' && cat.nameHe) return cat.nameHe;
+    return cat.name;
+  }
+
   openDrawer(): void {
-    this.newCategory = { name: '', icon: 'label', color: '#667eea', monthlyBudget: null };
+    this.newCategory = { name: '', nameHe: '', icon: 'label', color: '#667eea', monthlyBudget: null };
     this.iconSearch = '';
     this.drawerOpen = true;
     this.cdr.markForCheck();
@@ -108,10 +132,48 @@ export class CategorySidebarComponent {
     this.newCategory.color = color;
   }
 
+  onNameEnChange(): void {
+    clearTimeout(this.enTimer);
+    if (!this.newCategory.name.trim() || this.newCategory.nameHe.trim()) return;
+    this.enTimer = setTimeout(() => this.translateToHe(), 800);
+  }
+
+  onNameHeChange(): void {
+    clearTimeout(this.heTimer);
+    if (!this.newCategory.nameHe.trim() || this.newCategory.name.trim()) return;
+    this.heTimer = setTimeout(() => this.translateToEn(), 800);
+  }
+
+  translateToHe(): void {
+    if (!this.newCategory.name.trim() || this.isTranslatingHe) return;
+    this.isTranslatingHe = true;
+    this.cdr.markForCheck();
+    this.translationApi.translate(this.newCategory.name, 'en', 'he').subscribe(result => {
+      if (result) this.newCategory.nameHe = result;
+      this.isTranslatingHe = false;
+      this.cdr.markForCheck();
+    });
+  }
+
+  translateToEn(): void {
+    if (!this.newCategory.nameHe.trim() || this.isTranslatingEn) return;
+    this.isTranslatingEn = true;
+    this.cdr.markForCheck();
+    this.translationApi.translate(this.newCategory.nameHe, 'he', 'en').subscribe(result => {
+      if (result) this.newCategory.name = result;
+      this.isTranslatingEn = false;
+      this.cdr.markForCheck();
+    });
+  }
+
   submitNewCategory(): void {
-    if (!this.newCategory.name.trim() || !this.newCategory.icon) return;
+    const nameEn = this.newCategory.name.trim();
+    const nameHe = this.newCategory.nameHe.trim();
+    if (!nameEn && !nameHe) return;
+    if (!this.newCategory.icon) return;
     this.createCategory.emit({
-      name: this.newCategory.name.trim(),
+      name: nameEn || nameHe,
+      nameHe: nameHe || nameEn,
       icon: this.newCategory.icon,
       color: this.newCategory.color,
       monthlyBudget: this.type === 'expense' ? (this.newCategory.monthlyBudget || null) : null,
@@ -155,11 +217,17 @@ export class CategorySidebarComponent {
   }
 
   getBudgetTooltip(cat: Category): string {
-    if (cat.monthlyBudget == null) return cat.name;
-    return `${cat.name}\n\u20AA${cat.currentSpend ?? 0} / \u20AA${cat.monthlyBudget}`;
+    const displayName = this.getDisplayName(cat);
+    if (cat.monthlyBudget == null) return displayName;
+    return `${displayName}\n\u20AA${cat.currentSpend ?? 0} / \u20AA${cat.monthlyBudget}`;
   }
 
   getBgColor(color: string): string {
     return color + '33';
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.enTimer);
+    clearTimeout(this.heTimer);
   }
 }

@@ -115,7 +115,7 @@ class ExpensesController {
         include: [
           {
             model:      ExpenseCategory,
-            attributes: ['id', 'name', 'icon', 'color']
+            attributes: ['id', 'name', 'nameHe', 'icon', 'color']
           },
           {
             model:      AppUser,
@@ -218,7 +218,7 @@ class ExpensesController {
         include: [
           {
             model:      ExpenseCategory,
-            attributes: ['id', 'name', 'icon', 'color']
+            attributes: ['id', 'name', 'nameHe', 'icon', 'color']
           },
           {
             model:      AppUser,
@@ -299,7 +299,7 @@ class ExpensesController {
         include: [
           {
             model:      ExpenseCategory,
-            attributes: ['id', 'name', 'icon', 'color']
+            attributes: ['id', 'name', 'nameHe', 'icon', 'color']
           },
           {
             model:      AppUser,

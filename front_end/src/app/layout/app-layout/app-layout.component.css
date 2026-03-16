@@ -17,7 +17,7 @@
   left: 0;
   right: 0;
   height: 56px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #141e30 0%, #1565c0 100%);
   color: #fff;
   display: flex;
   align-items: center;
@@ -219,4 +219,24 @@
   .app-content {
     padding: 0;
   }
+}
+
+/* Language toggle button */
+.header-lang-toggle {
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  opacity: 0.75;
+  padding: 2px 5px;
+  transition: opacity 0.15s;
+}
+
+.header-lang-toggle:hover {
+  opacity: 1;
 }

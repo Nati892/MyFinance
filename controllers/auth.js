@@ -115,7 +115,7 @@ class AuthController {
       });
 
       if (!user) {
-
+        console.log(`[DEBUG] User not found for username: "${username}"`);
         global.log.warn('LOGIN_FAILED', 'Invalid login attempt', {
           username
         }, {
@@ -124,9 +124,11 @@ class AuthController {
         });
 
         ctx.status = 401;
-        ctx.body = { error: 'Invalid credentials' };
+        ctx.body = { error: 'Invalid credentials bulbul 2' };
         return;
       }
+
+      console.log(`[DEBUG] User found: id=${user.id}, isActive=${user.isActive}, passwordHash="${user.password}"`);
 
       // Check if user is active
       if (!user.isActive) {
@@ -143,10 +145,9 @@ class AuthController {
         return;
       }
 
-      const newHash = await bcrypt.hash(password, global.cfg.bcrypt.saltRounds);
-      console.log(newHash);
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
+      console.log(`[DEBUG] bcrypt.compare("${password}", "${user.password}") => ${isValidPassword}`);
 
       if (!isValidPassword) {
 
@@ -158,7 +159,7 @@ class AuthController {
         });
 
         ctx.status = 401;
-        ctx.body = { error: 'Invalid credentials' };
+        ctx.body = { error: 'Invalid credentials bulbul 1' };
         return;
       }
 

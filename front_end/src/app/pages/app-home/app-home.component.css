@@ -8,7 +8,8 @@
 .board-container {
   position: relative;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ── Loading ─────────────────────────────────────────────── */
@@ -30,15 +31,10 @@
   font-size: 36px;
 }
 
-/* ── Board (vertical-only, no horizontal scroll) ────────── */
+/* ── Board ───────────────────────────────────────────────── */
 
 .board {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  position: relative;
   background:
     radial-gradient(circle, #dde1ff 1px, transparent 1px) 0 0 / 28px 28px;
   background-color: #f4f5ff;
@@ -169,6 +165,141 @@
   text-decoration: underline;
 }
 
+/* ── Heart sticker ───────────────────────────────────────── */
+
+.heart-sticker {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heart-sticker:active {
+  cursor: grabbing;
+}
+
+.heart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(2px 3px 6px rgba(0,0,0,0.2));
+  transition: filter 0.15s;
+}
+
+.heart-sticker:hover .heart-svg {
+  filter: drop-shadow(3px 5px 10px rgba(0,0,0,0.3));
+}
+
+/* ── Image sticker ───────────────────────────────────────── */
+
+.image-sticker {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 3px 4px 14px rgba(0,0,0,0.18);
+  transition: box-shadow 0.15s;
+}
+
+.image-sticker:active {
+  cursor: grabbing;
+}
+
+.image-sticker:hover {
+  box-shadow: 5px 7px 20px rgba(0,0,0,0.26);
+}
+
+.sticker-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Shared sticker action buttons ───────────────────────── */
+
+.sticker-delete,
+.sticker-options-btn {
+  position: absolute;
+  top: 4px;
+  background: rgba(255,255,255,0.85);
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.18s, background 0.15s;
+  z-index: 2;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+
+.sticker-delete {
+  right: 4px;
+}
+
+.sticker-options-btn {
+  right: 30px;
+}
+
+.sticker-delete .material-symbols-outlined,
+.sticker-options-btn .material-symbols-outlined {
+  font-size: 14px;
+  color: #333;
+}
+
+.heart-sticker:hover .sticker-delete,
+.heart-sticker:hover .sticker-options-btn,
+.image-sticker:hover .sticker-delete {
+  opacity: 1;
+}
+
+.sticker-delete:hover {
+  background: #f44336;
+}
+
+.sticker-delete:hover .material-symbols-outlined {
+  color: #fff;
+}
+
+.sticker-options-btn:hover {
+  background: #667eea;
+}
+
+.sticker-options-btn:hover .material-symbols-outlined {
+  color: #fff;
+}
+
+/* ── Resize handle ───────────────────────────────────────── */
+
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 3;
+  background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.25) 50%);
+  border-radius: 0 0 4px 0;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+
+.heart-sticker:hover .resize-handle,
+.image-sticker:hover .resize-handle {
+  opacity: 1;
+}
+
 /* ── 3-dot popover menu (position: fixed) ────────────────── */
 
 .note-menu {
@@ -220,6 +351,12 @@
   flex-shrink: 0;
 }
 
+.heart-preview {
+  clip-path: polygon(50% 90%, 10% 45%, 25% 10%, 50% 30%, 75% 10%, 90% 45%);
+  border-radius: 0;
+  border: none;
+}
+
 .color-picker-input {
   flex: 1;
   height: 28px;
@@ -228,6 +365,32 @@
   cursor: pointer;
   padding: 2px;
   background: none;
+}
+
+/* ── Heart color swatches ────────────────────────────────── */
+
+.heart-colors-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.heart-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.12);
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+}
+
+.heart-color-swatch:hover {
+  transform: scale(1.2);
+}
+
+.heart-color-swatch--active {
+  border-color: #333;
+  transform: scale(1.15);
 }
 
 /* ── Direction buttons ───────────────────────────────────── */
@@ -288,12 +451,73 @@
   border-color: #667eea;
 }
 
-/* ── Floating add button ─────────────────────────────────── */
+/* ── FAB speed-dial ──────────────────────────────────────── */
 
-.fab-add {
+.fab-container {
   position: fixed;
   bottom: 20px;
   right: 20px;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.fab-sub-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.fab-sub-menu--open {
+  max-height: 200px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fab-sub-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #fff;
+  color: #667eea;
+  border: 2px solid #667eea;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: background 0.15s, transform 0.12s;
+}
+
+.fab-sub-btn:hover {
+  background: #667eea;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.fab-sub-btn--heart {
+  border-color: #e91e63;
+  color: #e91e63;
+}
+
+.fab-sub-btn--heart:hover {
+  background: #e91e63;
+  color: #fff;
+}
+
+.fab-sub-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.fab-add {
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -305,8 +529,7 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 14px rgba(102, 126, 234, 0.45);
-  transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
-  z-index: 9000;
+  transition: background 0.15s, transform 0.25s, box-shadow 0.15s;
 }
 
 .fab-add:hover {
@@ -318,6 +541,24 @@
   transform: scale(0.92);
 }
 
+.fab-add--open {
+  transform: rotate(45deg);
+}
+
+.fab-add--open:active {
+  transform: rotate(45deg) scale(0.92);
+}
+
 .fab-add .material-symbols-outlined {
   font-size: 28px;
+}
+
+/* ── Mobile: always show sticker controls (no :hover on touch) ── */
+
+@media (hover: none) {
+  .sticker-delete,
+  .sticker-options-btn,
+  .resize-handle {
+    opacity: 1;
+  }
 }

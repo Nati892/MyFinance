@@ -9,6 +9,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(100),
       allowNull: false
     },
+    nameHe: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
     icon: {
       type: DataTypes.STRING(100),
       allowNull: false

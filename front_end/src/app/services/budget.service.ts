@@ -8,6 +8,7 @@ import { getApiUrl } from '../utils/get-base-address';
 export interface MonthBudgetRow {
   id: number;
   name: string;
+  nameHe?: string | null;
   icon: string;
   color: string;
   baseBudget: number | null;

@@ -2,13 +2,14 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { AppAuthService } from '../../services/app-auth.service';
 import { HouseholdStateService } from '../../services/household-state.service';
 
 @Component({
   selector: 'app-app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   templateUrl: './app-login.component.html',
   styleUrls: ['./app-login.component.css']
 })
