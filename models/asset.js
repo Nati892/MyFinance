@@ -28,7 +28,12 @@ module.exports = (sequelize, DataTypes) => {
     sortOrder: {
       type: DataTypes.INTEGER,
       defaultValue: 0
-    }
+    },
+    date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      defaultValue: null
+    },
   }, {
     timestamps: true,
     tableName: 'assets'

@@ -27,9 +27,8 @@
       <span class="month-label">{{ monthLabel }}</span>
       <button
         class="nav-arrow"
+        [class.nav-arrow--current]="isCurrentMonth"
         (click)="nextMonth()"
-        [disabled]="isCurrentMonth"
-        [class.disabled]="isCurrentMonth"
         aria-label="Next month"
       >&#8594;</button>
     </div>

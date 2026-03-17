@@ -5,7 +5,7 @@
 
 <div *ngIf="!noHousehold" class="assets-page">
 
-  <!-- ── Summary bar ──────────────────────────────────────────────────────── -->
+  <!-- Summary bar -->
   <div class="summary-bar">
     <div class="summary-card total">
       <span class="summary-label">{{ 'ASSETS.TOTAL_ASSETS' | translate }}</span>
@@ -25,144 +25,154 @@
     </div>
   </div>
 
-  <!-- ── Table ───────────────────────────────────────────────────────────── -->
-  <div class="table-wrapper">
-    <table class="assets-table">
-      <thead>
-        <tr>
-          <th class="col-name">{{ 'ASSETS.NAME' | translate }}</th>
-          <th class="col-value">{{ 'ASSETS.VALUE' | translate }}</th>
-          <th class="col-liquidity">{{ 'ASSETS.LIQUIDITY' | translate }}</th>
-          <th class="col-description">{{ 'ASSETS.DESCRIPTION' | translate }}</th>
-          <th class="col-actions"></th>
-        </tr>
-      </thead>
-      <tbody>
-
-        <!-- Loading skeletons -->
-        <ng-container *ngIf="loading">
-          <tr *ngFor="let s of skeletonRows" class="skeleton-row">
-            <td><div class="skeleton-cell"></div></td>
-            <td><div class="skeleton-cell short"></div></td>
-            <td><div class="skeleton-cell badge"></div></td>
-            <td><div class="skeleton-cell long"></div></td>
-            <td><div class="skeleton-cell icon"></div></td>
-          </tr>
-        </ng-container>
-
-        <!-- Asset rows -->
-        <ng-container *ngIf="!loading">
-          <tr
-            *ngFor="let asset of assets; trackBy: trackById; let even = even"
-            class="asset-row"
-            [class.row-even]="even"
-            [class.row-odd]="!even"
-          >
-            <!-- Name -->
-            <td class="cell-name" (click)="startEdit(asset.id, 'name')">
-              <input
-                *ngIf="isEditing(asset.id, 'name'); else nameTpl"
-                class="cell-input"
-                type="text"
-                [value]="asset.name"
-                (input)="onCellChange(asset, 'name', $any($event.target).value)"
-                (blur)="onCellBlur(asset, 'name')"
-                (keydown)="onCellKeydown($event, asset, 'name')"
-                autofocus
-              />
-              <ng-template #nameTpl>
-                <span class="cell-display">{{ asset.name }}</span>
-              </ng-template>
-            </td>
-
-            <!-- Value -->
-            <td class="cell-value" (click)="startEdit(asset.id, 'value')">
-              <input
-                *ngIf="isEditing(asset.id, 'value'); else valueTpl"
-                class="cell-input"
-                type="number"
-                [value]="asset.value"
-                (input)="onCellChange(asset, 'value', +$any($event.target).value)"
-                (blur)="onCellBlur(asset, 'value')"
-                (keydown)="onCellKeydown($event, asset, 'value')"
-                autofocus
-              />
-              <ng-template #valueTpl>
-                <span class="cell-display value-display">{{ formatCurrency(asset.value) }}</span>
-              </ng-template>
-            </td>
-
-            <!-- Liquidity -->
-            <td class="cell-liquidity" (click)="startEdit(asset.id, 'liquidity')">
-              <select
-                *ngIf="isEditing(asset.id, 'liquidity'); else liquidityTpl"
-                class="cell-input liquidity-select"
-                [value]="asset.liquidity"
-                (change)="onLiquidityChange(asset, $any($event.target).value)"
-                (blur)="cancelEdit()"
-                autofocus
-              >
-                <option value="high">🟢 {{ 'ASSETS.HIGH' | translate }}</option>
-                <option value="medium">🟡 {{ 'ASSETS.MEDIUM' | translate }}</option>
-                <option value="low">🔴 {{ 'ASSETS.LOW' | translate }}</option>
-              </select>
-              <ng-template #liquidityTpl>
-                <span class="liquidity-badge" [class]="'liquidity-' + asset.liquidity">
-                  {{ liquidityDot(asset.liquidity) }} {{ liquidityLabel(asset.liquidity) }}
-                </span>
-              </ng-template>
-            </td>
-
-            <!-- Description -->
-            <td class="cell-description" (click)="startEdit(asset.id, 'description')">
-              <input
-                *ngIf="isEditing(asset.id, 'description'); else descTpl"
-                class="cell-input"
-                type="text"
-                [value]="asset.description"
-                (input)="onCellChange(asset, 'description', $any($event.target).value)"
-                (blur)="onCellBlur(asset, 'description')"
-                (keydown)="onCellKeydown($event, asset, 'description')"
-                autofocus
-              />
-              <ng-template #descTpl>
-                <span class="cell-display desc-display">{{ asset.description || '—' }}</span>
-              </ng-template>
-            </td>
-
-            <!-- Actions -->
-            <td class="cell-actions">
-              <button class="btn-delete" (click)="deleteAsset(asset)" [title]="'ASSETS.DELETE_ASSET' | translate">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6l-1 14H6L5 6"></path>
-                  <path d="M10 11v6"></path>
-                  <path d="M14 11v6"></path>
-                  <path d="M9 6V4h6v2"></path>
-                </svg>
-              </button>
-            </td>
-          </tr>
-
-          <!-- Empty state -->
-          <tr *ngIf="assets.length === 0" class="empty-row">
-            <td colspan="5">
-              <div class="empty-state">
-                <span>{{ 'ASSETS.NO_ASSETS' | translate }}</span>
-              </div>
-            </td>
-          </tr>
-        </ng-container>
-
-      </tbody>
-    </table>
+  <!-- Loading skeletons -->
+  <div *ngIf="loading" class="skeleton-groups">
+    <div *ngFor="let s of skeletonRows" class="skeleton-group-card">
+      <div class="skeleton skeleton-group-header"></div>
+      <div class="skeleton skeleton-row-item"></div>
+      <div class="skeleton skeleton-row-item short"></div>
+    </div>
   </div>
 
-  <!-- ── Floating add button ─────────────────────────────────────────────── -->
+  <!-- Grouped asset list -->
+  <div *ngIf="!loading" class="groups-container">
+
+    <!-- Empty state -->
+    <div *ngIf="assetGroups.length === 0" class="empty-state">
+      {{ 'ASSETS.NO_ASSETS' | translate }}
+    </div>
+
+    <!-- Each group -->
+    <div *ngFor="let group of assetGroups; trackBy: trackByName" class="asset-group">
+
+      <!-- Group header -->
+      <div class="group-header">
+        <span class="group-name">{{ group.name }}</span>
+        <span class="group-count">{{ group.assets.length }}</span>
+      </div>
+
+      <!-- Individual entries -->
+      <div class="group-table-wrapper">
+        <table class="assets-table">
+          <thead>
+            <tr>
+              <th class="col-date">{{ 'ASSETS.DATE' | translate }}</th>
+              <th class="col-value">{{ 'ASSETS.VALUE' | translate }}</th>
+              <th class="col-liquidity">{{ 'ASSETS.LIQUIDITY' | translate }}</th>
+              <th class="col-description">{{ 'ASSETS.DESCRIPTION' | translate }}</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let asset of group.assets; trackBy: trackById; let even = even"
+              class="asset-row"
+              [class.row-even]="even"
+              [class.row-odd]="!even"
+            >
+              <!-- Date -->
+              <td class="cell-date" (click)="startEdit(asset.id, 'date')">
+                <input
+                  *ngIf="isEditing(asset.id, 'date'); else dateTpl"
+                  class="cell-input"
+                  type="date"
+                  [value]="asset.date || ''"
+                  (input)="onCellChange(asset, 'date', $any($event.target).value)"
+                  (blur)="onCellBlur(asset, 'date')"
+                  (keydown)="onCellKeydown($event, asset, 'date')"
+                  autofocus
+                />
+                <ng-template #dateTpl>
+                  <span class="cell-display date-display">{{ asset.date ? (asset.date | slice:0:10) : '—' }}</span>
+                </ng-template>
+              </td>
+
+              <!-- Value -->
+              <td class="cell-value" (click)="startEdit(asset.id, 'value')">
+                <input
+                  *ngIf="isEditing(asset.id, 'value'); else valueTpl"
+                  class="cell-input"
+                  type="number"
+                  [value]="asset.value"
+                  (input)="onCellChange(asset, 'value', +$any($event.target).value)"
+                  (blur)="onCellBlur(asset, 'value')"
+                  (keydown)="onCellKeydown($event, asset, 'value')"
+                  autofocus
+                />
+                <ng-template #valueTpl>
+                  <span class="cell-display value-display">{{ formatCurrency(asset.value) }}</span>
+                </ng-template>
+              </td>
+
+              <!-- Liquidity -->
+              <td class="cell-liquidity" (click)="startEdit(asset.id, 'liquidity')">
+                <select
+                  *ngIf="isEditing(asset.id, 'liquidity'); else liquidityTpl"
+                  class="cell-input liquidity-select"
+                  [value]="asset.liquidity"
+                  (change)="onLiquidityChange(asset, $any($event.target).value)"
+                  (blur)="cancelEdit()"
+                  autofocus
+                >
+                  <option value="high">🟢 {{ 'ASSETS.HIGH' | translate }}</option>
+                  <option value="medium">🟡 {{ 'ASSETS.MEDIUM' | translate }}</option>
+                  <option value="low">🔴 {{ 'ASSETS.LOW' | translate }}</option>
+                </select>
+                <ng-template #liquidityTpl>
+                  <span class="liquidity-badge" [class]="'liquidity-' + asset.liquidity">
+                    {{ liquidityDot(asset.liquidity) }} {{ liquidityLabel(asset.liquidity) }}
+                  </span>
+                </ng-template>
+              </td>
+
+              <!-- Description -->
+              <td class="cell-description" (click)="startEdit(asset.id, 'description')">
+                <input
+                  *ngIf="isEditing(asset.id, 'description'); else descTpl"
+                  class="cell-input"
+                  type="text"
+                  [value]="asset.description"
+                  (input)="onCellChange(asset, 'description', $any($event.target).value)"
+                  (blur)="onCellBlur(asset, 'description')"
+                  (keydown)="onCellKeydown($event, asset, 'description')"
+                  autofocus
+                />
+                <ng-template #descTpl>
+                  <span class="cell-display desc-display">{{ asset.description || '—' }}</span>
+                </ng-template>
+              </td>
+
+              <!-- Actions -->
+              <td class="cell-actions">
+                <button class="btn-delete" (click)="deleteAsset(asset)" [title]="'ASSETS.DELETE_ASSET' | translate">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14H6L5 6"></path>
+                    <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                    <path d="M9 6V4h6v2"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Group total row -->
+      <div class="group-total" [class.group-total--mismatch]="group.mismatch">
+        <span class="group-total-label">{{ 'ASSETS.GROUP_TOTAL' | translate }}</span>
+        <span class="group-total-value">{{ formatCurrency(group.frontendTotal) }}</span>
+        <span *ngIf="group.mismatch" class="mismatch-warning" [title]="'ASSETS.TOTAL_MISMATCH_DETAIL' | translate">
+          ⚠️ {{ 'ASSETS.TOTAL_MISMATCH' | translate }}
+        </span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FAB -->
   <button class="fab-add" (click)="addAsset()" [title]="'ASSETS.ADD_ASSET' | translate">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-      fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <line x1="12" y1="5" x2="12" y2="19"></line>
       <line x1="5" y1="12" x2="19" y2="12"></line>
     </svg>

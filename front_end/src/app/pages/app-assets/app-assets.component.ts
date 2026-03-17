@@ -14,6 +14,14 @@ import { TranslateModule } from '@ngx-translate/core';
 import { AssetsService, Asset } from '../../services/assets.service';
 import { HouseholdStateService } from '../../services/household-state.service';
 
+export interface AssetGroup {
+  name: string;
+  assets: Asset[];
+  frontendTotal: number;
+  backendTotal: number | null;
+  mismatch: boolean;
+}
+
 @Component({
   selector: 'app-app-assets',
   standalone: true,
@@ -30,6 +38,8 @@ export class AppAssetsComponent implements OnInit, OnDestroy {
   noHousehold = false;
   editingCell: { assetId: number; field: keyof Asset } | null = null;
   pendingSave = new Map<number, Partial<Asset>>();
+  backendGroupTotals: Record<string, number> = {};
+  totalMismatchError = false;
 
   /** Skeleton placeholder rows shown during initial load */
   readonly skeletonRows = Array(5).fill(null);
@@ -77,6 +87,7 @@ export class AppAssetsComponent implements OnInit, OnDestroy {
     this.assetsService.list(this.householdId).subscribe({
       next: res => {
         this.assets = res.assets ?? [];
+        this.backendGroupTotals = res.groupTotals ?? {};
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -85,6 +96,33 @@ export class AppAssetsComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  // ── Asset groups ───────────────────────────────────────────────────────────
+
+  get assetGroups(): AssetGroup[] {
+    const map = new Map<string, Asset[]>();
+    for (const a of this.assets) {
+      const key = (a.name || '').trim();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(a);
+    }
+    return Array.from(map.entries()).map(([name, assets]) => {
+      const sorted = [...assets].sort((a, b) => {
+        if (!a.date && !b.date) return 0;
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
+      const frontendTotal = parseFloat(sorted.reduce((sum, a) => sum + (parseFloat(String(a.value)) || 0), 0).toFixed(2));
+      const backendTotal = this.backendGroupTotals[name] ?? null;
+      const mismatch = backendTotal !== null && Math.abs(backendTotal - frontendTotal) > 0.01;
+      return { name, assets: sorted, frontendTotal, backendTotal, mismatch };
+    });
+  }
+
+  trackByName(_: number, group: AssetGroup): string {
+    return group.name;
   }
 
   // ── Inline editing ─────────────────────────────────────────────────────────
@@ -170,25 +208,24 @@ export class AppAssetsComponent implements OnInit, OnDestroy {
 
   addAsset(): void {
     if (this.householdId == null) return;
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const maxOrder = this.assets.reduce((m, a) => Math.max(m, a.sortOrder ?? 0), 0);
-    this.assetsService
-      .create({
-        name: 'New Asset',
-        value: 0,
-        liquidity: 'medium',
-        description: '',
-        householdId: this.householdId,
-        sortOrder: maxOrder + 1,
-      })
-      .subscribe({
-        next: res => {
-          this.assets = [...this.assets, res.asset];
-          // Immediately start editing the name of the new row
-          this.editingCell = { assetId: res.asset.id, field: 'name' };
-          this.cdr.markForCheck();
-        },
-        error: () => alert('Failed to create asset. Please try again.'),
-      });
+    this.assetsService.create({
+      name: 'New Asset',
+      value: 0,
+      liquidity: 'medium',
+      description: '',
+      householdId: this.householdId,
+      sortOrder: maxOrder + 1,
+      date: today,
+    }).subscribe({
+      next: res => {
+        this.assets = [...this.assets, res.asset];
+        this.editingCell = { assetId: res.asset.id, field: 'name' };
+        this.cdr.markForCheck();
+      },
+      error: () => alert('Failed to create asset.'),
+    });
   }
 
   deleteAsset(asset: Asset): void {

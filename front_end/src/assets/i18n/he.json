@@ -94,7 +94,11 @@
     "ADD_ASSET": "הוסף נכס",
     "HIGH": "גבוהה",
     "MEDIUM": "בינונית",
-    "LOW": "נמוכה"
+    "LOW": "נמוכה",
+    "DATE": "תאריך",
+    "GROUP_TOTAL": "סה\"כ",
+    "TOTAL_MISMATCH": "שגיאת נתונים",
+    "TOTAL_MISMATCH_DETAIL": "סכום הצד הלקוח והשרת אינם תואמים — בעיית שלמות נתונים אפשרית"
   },
   "HOME": {
     "WRITE_PLACEHOLDER": "כתוב משהו...",
@@ -110,7 +114,13 @@
     "BOLD": "מ",
     "UNDERLINE": "ק",
     "TEXT_COLOR": "צבע טקסט",
-    "ADD_NOTE": "הוסף פתק"
+    "ADD_NOTE": "הוסף פתק",
+    "ADD_NOTE_BTN": "פתק",
+    "ADD_HEART_BTN": "לב",
+    "ADD_IMAGE_BTN": "תמונה",
+    "BACKGROUND": "רקע",
+    "BG_COLOR": "צבע",
+    "ROTATE": "סיבוב"
   },
   "CATEGORY": {
     "SHOW_ALL": "הכל",

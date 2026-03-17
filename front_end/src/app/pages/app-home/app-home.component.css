@@ -41,6 +41,7 @@
   cursor: default;
   width: 100%;
   box-sizing: border-box;
+  padding-bottom: calc(60px + env(safe-area-inset-bottom) + 60px);
 }
 
 /* ── Sticky note ─────────────────────────────────────────── */
@@ -94,6 +95,11 @@
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.sticky-note.note--selected .note-header-actions {
+  opacity: 1;
 }
 
 /* ── Options (3-dot) button ──────────────────────────────── */
@@ -257,9 +263,9 @@
   color: #333;
 }
 
-.heart-sticker:hover .sticker-delete,
-.heart-sticker:hover .sticker-options-btn,
-.image-sticker:hover .sticker-delete {
+.heart-sticker.note--selected .sticker-delete,
+.heart-sticker.note--selected .sticker-options-btn,
+.image-sticker.note--selected .sticker-delete {
   opacity: 1;
 }
 
@@ -295,8 +301,9 @@
   transition: opacity 0.18s;
 }
 
-.heart-sticker:hover .resize-handle,
-.image-sticker:hover .resize-handle {
+.heart-sticker.note--selected .resize-handle,
+.image-sticker.note--selected .resize-handle,
+.sticky-note.note--selected .resize-handle {
   opacity: 1;
 }
 
@@ -455,12 +462,12 @@
 
 .fab-container {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: calc(60px + env(safe-area-inset-bottom) + 16px);
+  right: 16px;
   z-index: 9000;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
 }
 
@@ -477,24 +484,35 @@
 }
 
 .fab-sub-menu--open {
-  max-height: 200px;
+  max-height: 300px;
   opacity: 1;
   pointer-events: auto;
 }
 
 .fab-sub-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
+  width: auto;
+  min-width: 130px;
+  height: 38px;
+  border-radius: 20px;
   background: #fff;
   color: #667eea;
   border: 2px solid #667eea;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding: 0 14px;
+  gap: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   transition: background 0.15s, transform 0.12s;
+}
+.fab-sub-label {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fab-sub-btn .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .fab-sub-btn:hover {
@@ -513,13 +531,12 @@
   color: #fff;
 }
 
-.fab-sub-btn .material-symbols-outlined {
-  font-size: 20px;
-}
+.fab-sub-btn--bg { border-color: #4caf50; color: #4caf50; }
+.fab-sub-btn--bg:hover { background: #4caf50; color: #fff; }
 
 .fab-add {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #667eea;
   color: #fff;
@@ -550,15 +567,82 @@
 }
 
 .fab-add .material-symbols-outlined {
-  font-size: 28px;
+  font-size: 22px;
 }
 
-/* ── Mobile: always show sticker controls (no :hover on touch) ── */
+/* ── Rotate handle ───────────────────────────────────────── */
 
-@media (hover: none) {
-  .sticker-delete,
-  .sticker-options-btn,
-  .resize-handle {
-    opacity: 1;
-  }
+.rotate-handle {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 22px;
+  cursor: grab;
+  background: rgba(255,255,255,0.92);
+  border-radius: 50%;
+  border: 1.5px solid #667eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  opacity: 0;
+  transition: opacity 0.18s;
+  z-index: 4;
 }
+.rotate-handle .material-symbols-outlined {
+  font-size: 13px;
+  color: #667eea;
+}
+.note--selected .rotate-handle {
+  opacity: 1;
+}
+.rotate-handle--sticker {
+  top: 4px;
+  left: 4px;
+  transform: none;
+}
+
+/* ── Background panel ────────────────────────────────────── */
+
+.bg-panel {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.16);
+  padding: 12px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.bg-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #667eea;
+}
+.bg-pattern-row {
+  display: flex;
+  gap: 6px;
+}
+.bg-pattern-thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+  font-size: 14px;
+  background: #f5f5f5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s;
+}
+.bg-pattern-thumb--active { border-color: #667eea; background: #f0f2ff; }
+.bg-color-row { display: flex; align-items: center; gap: 8px; }
+.bg-color-label { font-size: 11px; color: #888; white-space: nowrap; }
+.bg-color-picker { flex: 1; height: 28px; border: 1.5px solid rgba(0,0,0,0.15); border-radius: 6px; cursor: pointer; padding: 2px; background: none; }
+

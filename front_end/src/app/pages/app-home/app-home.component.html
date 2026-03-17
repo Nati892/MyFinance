@@ -15,7 +15,7 @@
   />
 
   <!-- Board -->
-  <div #board class="board" *ngIf="!loading" [style.height.px]="getBoardHeight()">
+  <div #board class="board" *ngIf="!loading" [style.height.px]="getBoardHeight()" [ngStyle]="boardBgStyle">
 
     <ng-container *ngFor="let note of notes; trackBy: trackNote">
 
@@ -23,10 +23,14 @@
       <div
         *ngIf="note.type === 'text'"
         class="sticky-note"
+        [class.note--selected]="selectedNoteId === note.id"
         [style.left.px]="getNoteLeft(note)"
         [style.top.px]="note.posY"
         [style.z-index]="note.zIndex"
         [style.background]="note.noteColor"
+        [style.width.px]="getStickerWidth(note)"
+        [style.transform]="'rotate(' + (note.rotation || 0) + 'deg)'"
+        [style.transform-origin]="'center center'"
         (mousedown)="startDrag(note, $event)"
         (touchstart)="startDrag(note, $event)"
       >
@@ -58,21 +62,26 @@
           [style.direction]="getTextDirection(note)"
           [class.bold]="note.isBold"
           [class.underline]="note.isUnderline"
-          (mousedown)="$event.stopPropagation()"
-          (touchstart)="$event.stopPropagation()"
+          (mousedown)="selectNoteById(note.id); $event.stopPropagation()"
+          (touchstart)="selectNoteById(note.id); $event.stopPropagation()"
           (input)="onNoteInput(note, $any($event.target).value)"
         ></textarea>
+        <div class="resize-handle" (mousedown)="startResize(note, $event)" (touchstart)="startResize(note, $event)"></div>
+        <div class="rotate-handle" (mousedown)="startRotate(note, $event)" (touchstart)="startRotate(note, $event)" title="Rotate"><span class="material-symbols-outlined">sync</span></div>
       </div>
 
       <!-- Heart sticker -->
       <div
         *ngIf="note.type === 'heart'"
         class="heart-sticker"
+        [class.note--selected]="selectedNoteId === note.id"
         [style.left.px]="getNoteLeft(note)"
         [style.top.px]="note.posY"
         [style.z-index]="note.zIndex"
         [style.width.px]="note.width || 120"
         [style.height.px]="note.height || 120"
+        [style.transform]="'rotate(' + (note.rotation || 0) + 'deg)'"
+        [style.transform-origin]="'center center'"
         (mousedown)="startDrag(note, $event)"
         (touchstart)="startDrag(note, $event)"
       >
@@ -84,6 +93,8 @@
         <button class="sticker-options-btn" (click)="toggleMenu(note, $event)" title="Color">
           <span class="material-symbols-outlined">palette</span>
         </button>
+        <!-- Rotate handle -->
+        <div class="rotate-handle rotate-handle--sticker" (mousedown)="startRotate(note, $event)" (touchstart)="startRotate(note, $event)"><span class="material-symbols-outlined">sync</span></div>
 
         <!-- SVG Heart -->
         <svg
@@ -113,11 +124,14 @@
       <div
         *ngIf="note.type === 'image'"
         class="image-sticker"
+        [class.note--selected]="selectedNoteId === note.id"
         [style.left.px]="getNoteLeft(note)"
         [style.top.px]="note.posY"
         [style.z-index]="note.zIndex"
         [style.width.px]="note.width || 180"
         [style.height.px]="note.height || 140"
+        [style.transform]="'rotate(' + (note.rotation || 0) + 'deg)'"
+        [style.transform-origin]="'center center'"
         (mousedown)="startDrag(note, $event)"
         (touchstart)="startDrag(note, $event)"
       >
@@ -125,6 +139,8 @@
         <button class="sticker-delete" (click)="deleteNote(note, $event)" title="Delete">
           <span class="material-symbols-outlined">close</span>
         </button>
+        <!-- Rotate handle -->
+        <div class="rotate-handle rotate-handle--sticker" (mousedown)="startRotate(note, $event)" (touchstart)="startRotate(note, $event)"><span class="material-symbols-outlined">sync</span></div>
 
         <!-- Image -->
         <img
@@ -203,6 +219,14 @@
               (input)="setTextColor(note, $any($event.target).value, $event)" />
           </div>
         </div>
+        <div class="menu-section">
+          <div class="menu-label">{{ 'HOME.ROTATE' | translate }}</div>
+          <div class="format-row">
+            <button class="fmt-btn" (click)="rotateNote(note, -15, $event)">↺</button>
+            <button class="fmt-btn" (click)="resetRotation(note, $event)">⊙</button>
+            <button class="fmt-btn" (click)="rotateNote(note, 15, $event)">↻</button>
+          </div>
+        </div>
       </ng-container>
 
       <!-- HEART MENU -->
@@ -223,6 +247,14 @@
             (click)="setHeartColor(note, c, $event)"
           ></div>
         </div>
+        <div class="menu-section">
+          <div class="menu-label">{{ 'HOME.ROTATE' | translate }}</div>
+          <div class="format-row">
+            <button class="fmt-btn" (click)="rotateNote(note, -15, $event)">↺</button>
+            <button class="fmt-btn" (click)="resetRotation(note, $event)">⊙</button>
+            <button class="fmt-btn" (click)="rotateNote(note, 15, $event)">↻</button>
+          </div>
+        </div>
       </ng-container>
     </div>
   </ng-container>
@@ -241,26 +273,42 @@
 
   <!-- FAB speed-dial -->
   <div class="fab-container">
-    <!-- Sub-buttons (shown when menu is open) -->
+    <!-- Background panel -->
+    <div class="bg-panel" *ngIf="showBgPanel" (click)="$event.stopPropagation()">
+      <div class="bg-panel-title">{{ 'HOME.BACKGROUND' | translate }}</div>
+      <div class="bg-pattern-row">
+        <button *ngFor="let def of BOARD_BG_DEFS; let i = index"
+          class="bg-pattern-thumb" [class.bg-pattern-thumb--active]="boardBgIndex === i"
+          (click)="setBgPattern(i, $event)" [title]="def.label">{{ def.icon }}</button>
+      </div>
+      <div class="bg-color-row">
+        <span class="bg-color-label">{{ 'HOME.BG_COLOR' | translate }}</span>
+        <input type="color" class="bg-color-picker"
+          [value]="boardBgColor ?? currentBgDef.defaultColor"
+          (input)="setBgColor($any($event.target).value, $event)" />
+      </div>
+    </div>
+    <!-- Sub-buttons -->
     <div class="fab-sub-menu" [class.fab-sub-menu--open]="showFabMenu">
-      <button class="fab-sub-btn" (click)="addNote()" title="Add Note">
+      <button class="fab-sub-btn" (click)="addNote()">
         <span class="material-symbols-outlined">sticky_note_2</span>
+        <span class="fab-sub-label">{{ 'HOME.ADD_NOTE_BTN' | translate }}</span>
       </button>
-      <button class="fab-sub-btn fab-sub-btn--heart" (click)="addHeart()" title="Add Heart">
+      <button class="fab-sub-btn fab-sub-btn--heart" (click)="addHeart()">
         <span class="material-symbols-outlined">favorite</span>
+        <span class="fab-sub-label">{{ 'HOME.ADD_HEART_BTN' | translate }}</span>
       </button>
-      <button class="fab-sub-btn" (click)="triggerImageUpload()" title="Upload Image">
+      <button class="fab-sub-btn" (click)="triggerImageUpload()">
         <span class="material-symbols-outlined">add_photo_alternate</span>
+        <span class="fab-sub-label">{{ 'HOME.ADD_IMAGE_BTN' | translate }}</span>
+      </button>
+      <button class="fab-sub-btn fab-sub-btn--bg" (click)="toggleBgPanel($event)">
+        <span class="material-symbols-outlined">wallpaper</span>
+        <span class="fab-sub-label">{{ 'HOME.BACKGROUND' | translate }}</span>
       </button>
     </div>
-
     <!-- Main FAB -->
-    <button
-      class="fab-add"
-      [class.fab-add--open]="showFabMenu"
-      (click)="toggleFabMenu($event)"
-      [attr.aria-label]="'HOME.ADD_NOTE' | translate"
-    >
+    <button class="fab-add" [class.fab-add--open]="showFabMenu" (click)="toggleFabMenu($event)" [attr.aria-label]="'HOME.ADD_NOTE' | translate">
       <span class="material-symbols-outlined">add</span>
     </button>
   </div>

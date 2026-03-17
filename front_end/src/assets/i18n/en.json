@@ -94,7 +94,11 @@
     "ADD_ASSET": "Add asset",
     "HIGH": "High",
     "MEDIUM": "Medium",
-    "LOW": "Low"
+    "LOW": "Low",
+    "DATE": "Date",
+    "GROUP_TOTAL": "Total",
+    "TOTAL_MISMATCH": "Data error",
+    "TOTAL_MISMATCH_DETAIL": "Frontend and backend totals don't match — possible data integrity issue"
   },
   "HOME": {
     "WRITE_PLACEHOLDER": "Write something...",
@@ -110,7 +114,13 @@
     "BOLD": "B",
     "UNDERLINE": "U",
     "TEXT_COLOR": "Text color",
-    "ADD_NOTE": "Add note"
+    "ADD_NOTE": "Add note",
+    "ADD_NOTE_BTN": "Note",
+    "ADD_HEART_BTN": "Heart",
+    "ADD_IMAGE_BTN": "Image",
+    "BACKGROUND": "Background",
+    "BG_COLOR": "Color",
+    "ROTATE": "Rotate"
   },
   "CATEGORY": {
     "SHOW_ALL": "All",

@@ -81,6 +81,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: null
+    },
+    rotation: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0
     }
   }, {
     timestamps: true,

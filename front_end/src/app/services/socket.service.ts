@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { getWebSocketUrl } from '../utils/get-base-address';
@@ -31,6 +31,8 @@ export class SocketService implements OnDestroy {
   noteUpdated$ = new Subject<NotePayload>();
   noteDeleted$ = new Subject<number>();
 
+  constructor(private zone: NgZone) {}
+
   connect(householdId: number, token: string): void {
     if (this.socket?.connected) return;
 
@@ -48,9 +50,10 @@ export class SocketService implements OnDestroy {
       this.socket!.emit('join-household', householdId);
     });
 
-    this.socket.on('note:created', (note: NotePayload) => this.noteCreated$.next(note));
-    this.socket.on('note:updated', (note: NotePayload) => this.noteUpdated$.next(note));
-    this.socket.on('note:deleted', (id: number) => this.noteDeleted$.next(id));
+    // Wrap in zone.run so Angular change detection fires
+    this.socket.on('note:created', (note: NotePayload) => this.zone.run(() => this.noteCreated$.next(note)));
+    this.socket.on('note:updated', (note: NotePayload) => this.zone.run(() => this.noteUpdated$.next(note)));
+    this.socket.on('note:deleted', (id: number) => this.zone.run(() => this.noteDeleted$.next(id)));
   }
 
   disconnect(): void {

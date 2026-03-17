@@ -63,6 +63,31 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // 3-dot menu state
   openMenuNoteId: number | null = null;
 
+  // Selection
+  selectedNoteId: number | null = null;
+
+  // Rotation drag
+  private rotating: {
+    noteId: number;
+    centerX: number;
+    centerY: number;
+    startAngle: number;
+    startRotation: number;
+  } | null = null;
+
+  // Background
+  showBgPanel = false;
+  boardBgIndex = 0;
+  boardBgColor: string | null = null;
+
+  readonly BOARD_BG_DEFS = [
+    { label: 'Dots',     icon: '·',  defaultColor: '#c5caf7', bgColor: '#f4f5ff', getPattern: (c: string) => `radial-gradient(circle, ${c} 1.5px, transparent 1.5px)`,                                                                                   bgSize: '28px 28px' },
+    { label: 'Grid',     icon: '#',  defaultColor: '#d8dcff', bgColor: '#ffffff', getPattern: (c: string) => `linear-gradient(${c} 1px, transparent 1px), linear-gradient(90deg, ${c} 1px, transparent 1px)`,                                            bgSize: '28px 28px' },
+    { label: 'Diagonal', icon: '/',  defaultColor: '#f0d4e8', bgColor: '#fff8fd', getPattern: (c: string) => `repeating-linear-gradient(45deg, ${c} 0, ${c} 1px, transparent 0, transparent 50%)`,                                                       bgSize: '20px 20px' },
+    { label: 'Linen',    icon: '≡',  defaultColor: '#e0d8c8', bgColor: '#fdf8f0', getPattern: (c: string) => `repeating-linear-gradient(0deg, ${c} 0, ${c} 1px, transparent 0, transparent 100%)`,                                                      bgSize: '100% 32px' },
+    { label: 'Plain',    icon: '■',  defaultColor: '#e0e8f0', bgColor: '#f0f4f8', getPattern: (_c: string) => 'none',                                                                                                                                    bgSize: 'auto' },
+  ];
+
   // Delete confirmation
   pendingDeleteNote: Note | null = null;
 
@@ -86,6 +111,17 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     startWidth: number;
     startHeight: number;
     aspectRatio: number | null; // non-null for image notes
+  } | null = null;
+
+  // Pinch gesture state (two-finger resize + rotate)
+  private pinching: {
+    noteId: number;
+    startDist: number;
+    startAngle: number;
+    startWidth: number;
+    startHeight: number;
+    startRotation: number;
+    aspectRatio: number | null;
   } | null = null;
 
   // Debounce timers for text saves: noteId -> timer handle
@@ -152,6 +188,15 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     document.addEventListener('click', this.docClickListener, true);
+
+    try {
+      const savedBg = localStorage.getItem('board-bg');
+      if (savedBg) {
+        const { index, color } = JSON.parse(savedBg);
+        this.boardBgIndex = index ?? 0;
+        this.boardBgColor = color ?? null;
+      }
+    } catch {}
   }
 
   ngAfterViewInit(): void {
@@ -164,6 +209,8 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.socketService.disconnect();
     this.removeDragListeners();
     this.removeResizeListeners();
+    this.removeRotateListeners();
+    this.removePinchListeners();
     document.removeEventListener('click', this.docClickListener, true);
     this.saveTimers.forEach(t => clearTimeout(t));
     this.saveTimers.clear();
@@ -191,6 +238,7 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
       heartColor: note.heartColor ?? DEFAULT_HEART_COLOR,
       width: note.width ?? null,
       height: note.height ?? null,
+      rotation: note.rotation ?? 0,
     };
   }
 
@@ -218,6 +266,7 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   toggleFabMenu(event: Event): void {
     event.stopPropagation();
     this.showFabMenu = !this.showFabMenu;
+    if (!this.showFabMenu) this.showBgPanel = false;
     this.cdr.markForCheck();
   }
 
@@ -382,7 +431,7 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── Position helpers ────────────────────────────────────────────────────────
 
   getStickerWidth(note: Note): number {
-    if (note.type === 'text') return NOTE_WIDTH;
+    if (note.type === 'text') return note.width ?? NOTE_WIDTH;
     return note.width ?? (note.type === 'heart' ? DEFAULT_HEART_SIZE : DEFAULT_IMAGE_WIDTH);
   }
 
@@ -423,6 +472,23 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.showFabMenu) {
       if (!target.closest('.fab-container')) {
         this.showFabMenu = false;
+        needsCheck = true;
+      }
+    }
+    if (this.showBgPanel) {
+      if (!target.closest('.fab-container')) {
+        this.showBgPanel = false;
+        needsCheck = true;
+      }
+    }
+    if (this.selectedNoteId !== null) {
+      if (
+        !target.closest('.sticky-note') &&
+        !target.closest('.heart-sticker') &&
+        !target.closest('.image-sticker') &&
+        !target.closest('.note-menu')
+      ) {
+        this.selectedNoteId = null;
         needsCheck = true;
       }
     }
@@ -507,7 +573,17 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── Drag handling ───────────────────────────────────────────────────────────
 
   startDrag(note: Note, event: MouseEvent | TouchEvent): void {
+    this.selectedNoteId = note.id;
     const target = event.target as HTMLElement;
+
+    // Two-finger touch → pinch gesture (resize + rotate)
+    if (event instanceof TouchEvent && event.touches.length >= 2) {
+      this.dragging = null;
+      this.removeDragListeners();
+      this.startPinch(note, event);
+      return;
+    }
+
     if (
       target.closest('textarea') ||
       target.closest('button') ||
@@ -544,6 +620,17 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private onDragMove = (event: MouseEvent | TouchEvent): void => {
     if (!this.dragging) return;
+
+    // Second finger added mid-drag → transition to pinch
+    if (event instanceof TouchEvent && event.touches.length >= 2) {
+      const noteId = this.dragging.noteId;
+      this.dragging = null;
+      this.removeDragListeners();
+      const note = this.notes.find(n => n.id === noteId);
+      if (note) this.startPinch(note, event);
+      return;
+    }
+
     if (event instanceof TouchEvent) event.preventDefault();
 
     const { clientX, clientY } = this.getEventCoords(event);
@@ -589,11 +676,12 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── Resize handling ─────────────────────────────────────────────────────────
 
   startResize(note: Note, event: MouseEvent | TouchEvent): void {
+    this.selectedNoteId = note.id;
     event.stopPropagation();
     event.preventDefault();
 
     const { clientX, clientY } = this.getEventCoords(event);
-    const w = note.width ?? (note.type === 'heart' ? DEFAULT_HEART_SIZE : DEFAULT_IMAGE_WIDTH);
+    const w = note.type === 'text' ? (note.width ?? NOTE_WIDTH) : (note.width ?? (note.type === 'heart' ? DEFAULT_HEART_SIZE : DEFAULT_IMAGE_WIDTH));
     const h = note.height ?? (note.type === 'heart' ? DEFAULT_HEART_SIZE : DEFAULT_IMAGE_HEIGHT);
 
     this.resizing = {
@@ -672,5 +760,192 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   trackNote(_: number, note: Note): number {
     return note.id;
+  }
+
+  selectNoteById(noteId: number): void {
+    this.selectedNoteId = noteId;
+    this.cdr.markForCheck();
+  }
+
+  toggleBgPanel(event: Event): void {
+    event.stopPropagation();
+    this.showBgPanel = !this.showBgPanel;
+    this.cdr.markForCheck();
+  }
+
+  setBgPattern(i: number, event: Event): void {
+    event.stopPropagation();
+    this.boardBgIndex = i;
+    this.boardBgColor = null;
+    localStorage.setItem('board-bg', JSON.stringify({ index: i, color: null }));
+    this.cdr.markForCheck();
+  }
+
+  setBgColor(color: string, event: Event): void {
+    event.stopPropagation();
+    this.boardBgColor = color;
+    localStorage.setItem('board-bg', JSON.stringify({ index: this.boardBgIndex, color }));
+    this.cdr.markForCheck();
+  }
+
+  get currentBgDef() { return this.BOARD_BG_DEFS[this.boardBgIndex] ?? this.BOARD_BG_DEFS[0]; }
+
+  get boardBgStyle(): Record<string, string> {
+    const def = this.currentBgDef;
+    const c = this.boardBgColor ?? def.defaultColor;
+    return { 'background-color': def.bgColor, 'background-image': def.getPattern(c), 'background-size': def.bgSize };
+  }
+
+  rotateNote(note: Note, delta: number, event: Event): void {
+    event.stopPropagation();
+    const next = (note.rotation ?? 0) + delta;
+    this.notes = this.notes.map(n => n.id === note.id ? { ...n, rotation: next } : n);
+    this.notesService.update(note.id, { rotation: next }).subscribe({ error: () => {} });
+    this.cdr.detectChanges();
+  }
+
+  resetRotation(note: Note, event: Event): void {
+    event.stopPropagation();
+    this.notes = this.notes.map(n => n.id === note.id ? { ...n, rotation: 0 } : n);
+    this.notesService.update(note.id, { rotation: 0 }).subscribe({ error: () => {} });
+    this.cdr.detectChanges();
+  }
+
+  startRotate(note: Note, event: MouseEvent | TouchEvent): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.selectedNoteId = note.id;
+    const { clientX, clientY } = this.getEventCoords(event);
+    const noteLeft = this.getNoteLeft(note);
+    const noteWidth = this.getStickerWidth(note);
+    const noteHeight = note.type === 'text' ? (note.height ?? 180) : (note.height ?? (note.type === 'heart' ? DEFAULT_HEART_SIZE : DEFAULT_IMAGE_HEIGHT));
+    const containerEl = this.boardContainerRef?.nativeElement;
+    const rect = containerEl ? containerEl.getBoundingClientRect() : { top: 0, left: 0 };
+    const scrollTop = containerEl?.scrollTop ?? 0;
+    const centerX = rect.left + noteLeft + noteWidth / 2;
+    const centerY = rect.top + note.posY + noteHeight / 2 - scrollTop;
+    this.rotating = {
+      noteId: note.id, centerX, centerY,
+      startAngle: Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI),
+      startRotation: note.rotation ?? 0,
+    };
+    this.zone.runOutsideAngular(() => {
+      window.addEventListener('mousemove', this.onRotateMove);
+      window.addEventListener('touchmove', this.onRotateMove, { passive: false });
+      window.addEventListener('mouseup', this.onRotateEnd);
+      window.addEventListener('touchend', this.onRotateEnd);
+    });
+  }
+
+  private onRotateMove = (event: MouseEvent | TouchEvent): void => {
+    if (!this.rotating) return;
+    if (event instanceof TouchEvent) event.preventDefault();
+    const { clientX, clientY } = this.getEventCoords(event);
+    const cur = Math.atan2(clientY - this.rotating.centerY, clientX - this.rotating.centerX) * (180 / Math.PI);
+    const newRot = this.rotating.startRotation + (cur - this.rotating.startAngle);
+    this.zone.run(() => {
+      this.notes = this.notes.map(n => n.id === this.rotating!.noteId ? { ...n, rotation: newRot } : n);
+      this.cdr.markForCheck();
+    });
+  };
+
+  private onRotateEnd = (): void => {
+    if (!this.rotating) return;
+    const { noteId } = this.rotating;
+    this.rotating = null;
+    this.removeRotateListeners();
+    const note = this.notes.find(n => n.id === noteId);
+    if (note) this.notesService.update(noteId, { rotation: note.rotation! }).subscribe({ error: () => {} });
+  };
+
+  private removeRotateListeners(): void {
+    window.removeEventListener('mousemove', this.onRotateMove);
+    window.removeEventListener('touchmove', this.onRotateMove);
+    window.removeEventListener('mouseup', this.onRotateEnd);
+    window.removeEventListener('touchend', this.onRotateEnd);
+  }
+
+  // ── Pinch gesture (two-finger resize + rotate) ───────────────────────────────
+
+  private startPinch(note: Note, event: TouchEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const t0 = event.touches[0];
+    const t1 = event.touches[1];
+    const dx = t1.clientX - t0.clientX;
+    const dy = t1.clientY - t0.clientY;
+
+    const w = note.type === 'text'
+      ? (note.width ?? NOTE_WIDTH)
+      : (note.width ?? (note.type === 'heart' ? DEFAULT_HEART_SIZE : DEFAULT_IMAGE_WIDTH));
+    const h = note.height ?? (note.type === 'heart' ? DEFAULT_HEART_SIZE : DEFAULT_IMAGE_HEIGHT);
+
+    this.pinching = {
+      noteId: note.id,
+      startDist: Math.sqrt(dx * dx + dy * dy),
+      startAngle: Math.atan2(dy, dx) * (180 / Math.PI),
+      startWidth: w,
+      startHeight: h,
+      startRotation: note.rotation ?? 0,
+      aspectRatio: note.type === 'image' ? h / w : null,
+    };
+
+    this.zone.runOutsideAngular(() => {
+      window.addEventListener('touchmove', this.onPinchMove, { passive: false });
+      window.addEventListener('touchend', this.onPinchEnd);
+    });
+  }
+
+  private onPinchMove = (event: TouchEvent): void => {
+    if (!this.pinching || event.touches.length < 2) return;
+    event.preventDefault();
+
+    const t0 = event.touches[0];
+    const t1 = event.touches[1];
+    const dx = t1.clientX - t0.clientX;
+    const dy = t1.clientY - t0.clientY;
+
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const scale = dist / this.pinching.startDist;
+    const deltaAngle = angle - this.pinching.startAngle;
+
+    const newWidth = Math.max(60, this.pinching.startWidth * scale);
+    const newHeight = this.pinching.aspectRatio !== null
+      ? newWidth * this.pinching.aspectRatio
+      : Math.max(60, this.pinching.startHeight * scale);
+    const newRotation = this.pinching.startRotation + deltaAngle;
+
+    this.zone.run(() => {
+      this.notes = this.notes.map(n =>
+        n.id === this.pinching!.noteId
+          ? { ...n, width: newWidth, height: newHeight, rotation: newRotation }
+          : n
+      );
+      this.cdr.markForCheck();
+    });
+  };
+
+  private onPinchEnd = (event: TouchEvent): void => {
+    if (event.touches.length >= 2) return; // still pinching
+    if (!this.pinching) return;
+    const { noteId } = this.pinching;
+    this.pinching = null;
+    this.removePinchListeners();
+
+    const note = this.notes.find(n => n.id === noteId);
+    if (note) {
+      this.notesService.update(noteId, {
+        width: note.width!,
+        height: note.height!,
+        rotation: note.rotation!,
+      }).subscribe({ error: () => {} });
+    }
+  };
+
+  private removePinchListeners(): void {
+    window.removeEventListener('touchmove', this.onPinchMove);
+    window.removeEventListener('touchend', this.onPinchEnd);
   }
 }

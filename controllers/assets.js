@@ -30,7 +30,13 @@ class AssetsController {
         order: [['sortOrder', 'ASC']]
       });
 
-      ctx.body = { success: true, assets };
+      // Compute group totals by name (backend calculation)
+      const groupTotals = {};
+      assets.forEach(a => {
+        const key = (a.name || '').trim();
+        groupTotals[key] = parseFloat(((groupTotals[key] || 0) + parseFloat(a.value || 0)).toFixed(2));
+      });
+      ctx.body = { success: true, assets, groupTotals };
     } catch (error) {
       console.error('Assets list error:', error);
       ctx.status = 500;
@@ -45,7 +51,7 @@ class AssetsController {
   async create(ctx) {
     try {
       const appUser = ctx.state.appUser;
-      const { name, value, liquidity, description, householdId, sortOrder } = ctx.request.body;
+      const { name, value, liquidity, description, householdId, sortOrder, date } = ctx.request.body;
 
       if (!name || !householdId) {
         ctx.status = 400;
@@ -68,7 +74,8 @@ class AssetsController {
         liquidity: liquidity ?? 'medium',
         description: description ?? null,
         householdId,
-        sortOrder: sortOrder ?? 0
+        sortOrder: sortOrder ?? 0,
+        date: date || null
       });
 
       ctx.status = 201;
@@ -88,7 +95,7 @@ class AssetsController {
     try {
       const appUser = ctx.state.appUser;
       const { id } = ctx.params;
-      const { name, value, liquidity, description, sortOrder } = ctx.request.body;
+      const { name, value, liquidity, description, sortOrder, date } = ctx.request.body;
 
       const asset = await Asset.findByPk(id);
       if (!asset) {
@@ -106,7 +113,7 @@ class AssetsController {
         return;
       }
 
-      await asset.update({ name, value, liquidity, description, sortOrder });
+      await asset.update({ name, value, liquidity, description, sortOrder, date });
 
       ctx.body = { success: true, asset };
     } catch (error) {

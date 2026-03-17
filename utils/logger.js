@@ -133,7 +133,7 @@ class Logger {
     startSizeMonitoring() {
         // Check size every hour
         this.sizeCheckInterval = setInterval(() => {
-            this.checkDatabaseSize();
+            this.cleanupOldLogs();
         }, 60 * 60 * 1000);
     }
 

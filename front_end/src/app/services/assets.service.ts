@@ -12,6 +12,7 @@ export interface Asset {
   description: string;
   householdId: number;
   sortOrder: number;
+  date?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,7 +26,7 @@ export class AssetsService {
     return new HttpHeaders({ Authorization: `Bearer ${token}` });
   }
 
-  list(householdId: number): Observable<{ success: boolean; assets: Asset[] }> {
+  list(householdId: number): Observable<{ success: boolean; assets: Asset[]; groupTotals: Record<string, number> }> {
     const params = new HttpParams().set('householdId', householdId.toString());
     return this.http.get<any>(this.apiUrl, { headers: this.getHeaders(), params });
   }

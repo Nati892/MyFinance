@@ -448,3 +448,17 @@
   width: 100%;
   height: 200px;
 }
+
+/* ── RTL arrow fix ────────────────────────────────────────────────────────── */
+/* In RTL layouts the physical positions of ← and → are reversed,
+   so we flip the arrow glyphs to match the expected direction. */
+:host-context([dir="rtl"]) .nav-arrow {
+  transform: scaleX(-1);
+}
+
+/* Subtle indicator when viewing current month (not disabled, just highlighted) */
+.nav-arrow--current {
+  color: #667eea;
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.06);
+}

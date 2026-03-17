@@ -28,6 +28,7 @@ export interface Note {
   heartColor: string | null;
   width: number | null;
   height: number | null;
+  rotation?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -75,6 +76,7 @@ export class NotesService {
     heartColor: string;
     width: number;
     height: number;
+    rotation: number;
   }>): Observable<{ success: boolean; note: Note }> {
     return this.http.put<any>(`${this.apiUrl}/app/notes/${id}`, data, { headers: this.getHeaders() });
   }

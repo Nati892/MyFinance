@@ -129,7 +129,6 @@ export class AppBudgetComponent implements OnInit, OnDestroy {
   }
 
   nextMonth(): void {
-    if (this.isCurrentMonth) return;
     if (this.currentMonth === 12) {
       this.currentMonth = 1;
       this.currentYear++;
