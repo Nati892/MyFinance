@@ -27,7 +27,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: app_backend
+    container_name: HouseholdServer
     environment:
       ENV: production
       DB_HOST: db
