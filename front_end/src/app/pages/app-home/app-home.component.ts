@@ -130,6 +130,17 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // Document click listener reference for closing menus/fab
   private docClickListener = (e: MouseEvent) => this.onDocumentClick(e);
 
+  // Document touch listener for global 2-finger pinch on selected note
+  private docTouchListener = (e: TouchEvent) => {
+    if (e.touches.length >= 2 && this.selectedNoteId !== null && !this.pinching) {
+      const note = this.notes.find(n => n.id === this.selectedNoteId);
+      if (note) {
+        if (this.dragging) { this.dragging = null; this.removeDragListeners(); }
+        this.startPinch(note, e);
+      }
+    }
+  };
+
   private subs = new Subscription();
 
   constructor(
@@ -188,6 +199,7 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     document.addEventListener('click', this.docClickListener, true);
+    document.addEventListener('touchstart', this.docTouchListener, { passive: false } as any);
 
     try {
       const savedBg = localStorage.getItem('board-bg');
@@ -212,6 +224,7 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.removeRotateListeners();
     this.removePinchListeners();
     document.removeEventListener('click', this.docClickListener, true);
+    document.removeEventListener('touchstart', this.docTouchListener);
     this.saveTimers.forEach(t => clearTimeout(t));
     this.saveTimers.clear();
   }
@@ -621,13 +634,10 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private onDragMove = (event: MouseEvent | TouchEvent): void => {
     if (!this.dragging) return;
 
-    // Second finger added mid-drag → transition to pinch
+    // Second finger added mid-drag → transition to pinch (if not already started by docTouchListener)
     if (event instanceof TouchEvent && event.touches.length >= 2) {
-      const noteId = this.dragging.noteId;
       this.dragging = null;
       this.removeDragListeners();
-      const note = this.notes.find(n => n.id === noteId);
-      if (note) this.startPinch(note, event);
       return;
     }
 
@@ -709,10 +719,10 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const dx = clientX - this.resizing.startMouseX;
     const dy = clientY - this.resizing.startMouseY;
 
-    const newWidth = Math.max(60, this.resizing.startWidth + dx);
+    const newWidth = this.snapSize(Math.max(60, this.resizing.startWidth + dx));
     const newHeight = this.resizing.aspectRatio !== null
       ? newWidth * this.resizing.aspectRatio
-      : Math.max(60, this.resizing.startHeight + dy);
+      : this.snapSize(Math.max(60, this.resizing.startHeight + dy));
 
     this.zone.run(() => {
       this.notes = this.notes.map(n =>
@@ -739,6 +749,24 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     window.removeEventListener('touchmove', this.onResizeMove);
     window.removeEventListener('mouseup', this.onResizeEnd);
     window.removeEventListener('touchend', this.onResizeEnd);
+  }
+
+  // ── Snap helpers ─────────────────────────────────────────────────────────────
+
+  /** Soft snap to every 15° (covers 30, 45, 90 …). Within ±6° of a snap point it locks in. */
+  private snapAngle(angle: number): number {
+    const SNAP_EVERY = 15;
+    const THRESHOLD = 6;
+    const nearest = Math.round(angle / SNAP_EVERY) * SNAP_EVERY;
+    return Math.abs(angle - nearest) <= THRESHOLD ? nearest : angle;
+  }
+
+  /** Soft snap to every 40px grid. Within ±12px of a snap point it locks in. */
+  private snapSize(size: number): number {
+    const SNAP_EVERY = 40;
+    const THRESHOLD = 12;
+    const nearest = Math.round(size / SNAP_EVERY) * SNAP_EVERY;
+    return Math.abs(size - nearest) <= THRESHOLD ? nearest : size;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -842,7 +870,7 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (event instanceof TouchEvent) event.preventDefault();
     const { clientX, clientY } = this.getEventCoords(event);
     const cur = Math.atan2(clientY - this.rotating.centerY, clientX - this.rotating.centerX) * (180 / Math.PI);
-    const newRot = this.rotating.startRotation + (cur - this.rotating.startAngle);
+    const newRot = this.snapAngle(this.rotating.startRotation + (cur - this.rotating.startAngle));
     this.zone.run(() => {
       this.notes = this.notes.map(n => n.id === this.rotating!.noteId ? { ...n, rotation: newRot } : n);
       this.cdr.markForCheck();
@@ -911,11 +939,11 @@ export class AppHomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const scale = dist / this.pinching.startDist;
     const deltaAngle = angle - this.pinching.startAngle;
 
-    const newWidth = Math.max(60, this.pinching.startWidth * scale);
+    const newWidth = this.snapSize(Math.max(60, this.pinching.startWidth * scale));
     const newHeight = this.pinching.aspectRatio !== null
       ? newWidth * this.pinching.aspectRatio
-      : Math.max(60, this.pinching.startHeight * scale);
-    const newRotation = this.pinching.startRotation + deltaAngle;
+      : this.snapSize(Math.max(60, this.pinching.startHeight * scale));
+    const newRotation = this.snapAngle(this.pinching.startRotation + deltaAngle);
 
     this.zone.run(() => {
       this.notes = this.notes.map(n =>
