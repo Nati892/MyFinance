@@ -34,6 +34,51 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: null
     },
+    // ── Exit dates ───────────────────────────────────────────────────────────
+    exitType: {
+      type: DataTypes.ENUM('none', 'single', 'series'),
+      defaultValue: 'none'
+    },
+    exitDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      defaultValue: null
+    },
+    exitSeriesStart: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      defaultValue: null
+    },
+    exitSeriesInterval: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null
+    },
+    exitSeriesUnit: {
+      type: DataTypes.ENUM('days', 'weeks', 'months', 'years'),
+      allowNull: true,
+      defaultValue: null
+    },
+    // ── Repetitive income ────────────────────────────────────────────────────
+    isRepetitive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    repetitiveAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      defaultValue: null
+    },
+    repetitiveInterval: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null
+    },
+    repetitiveUnit: {
+      type: DataTypes.ENUM('days', 'weeks', 'months', 'years'),
+      allowNull: true,
+      defaultValue: null
+    },
   }, {
     timestamps: true,
     tableName: 'assets'

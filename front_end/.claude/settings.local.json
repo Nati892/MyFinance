@@ -4,7 +4,20 @@
       "Bash(flutter --version)",
       "Bash(flutter create:*)",
       "Bash(flutter pub:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(flutter run:*)",
+      "Bash(git -C C:/Repos/Household worktree list)",
+      "Bash(git -C C:/Repos/Household worktree prune)",
+      "Bash(find C:/Users -path */material_symbols_icons* -name *.dart)",
+      "Bash(dart pub:*)",
+      "Skill(update-config)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(go get:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Repos/Household/models/**)",
+      "Bash(done)"
     ]
   }
 }

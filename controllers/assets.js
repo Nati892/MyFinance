@@ -51,7 +51,11 @@ class AssetsController {
   async create(ctx) {
     try {
       const appUser = ctx.state.appUser;
-      const { name, value, liquidity, description, householdId, sortOrder, date } = ctx.request.body;
+      const {
+        name, value, liquidity, description, householdId, sortOrder, date,
+        exitType, exitDate, exitSeriesStart, exitSeriesInterval, exitSeriesUnit,
+        isRepetitive, repetitiveAmount, repetitiveInterval, repetitiveUnit,
+      } = ctx.request.body;
 
       if (!name || !householdId) {
         ctx.status = 400;
@@ -75,7 +79,16 @@ class AssetsController {
         description: description ?? null,
         householdId,
         sortOrder: sortOrder ?? 0,
-        date: date || null
+        date: date || null,
+        exitType: exitType ?? 'none',
+        exitDate: exitDate || null,
+        exitSeriesStart: exitSeriesStart || null,
+        exitSeriesInterval: exitSeriesInterval ?? null,
+        exitSeriesUnit: exitSeriesUnit || null,
+        isRepetitive: isRepetitive ?? false,
+        repetitiveAmount: repetitiveAmount ?? null,
+        repetitiveInterval: repetitiveInterval ?? null,
+        repetitiveUnit: repetitiveUnit || null,
       });
 
       ctx.status = 201;
@@ -95,7 +108,11 @@ class AssetsController {
     try {
       const appUser = ctx.state.appUser;
       const { id } = ctx.params;
-      const { name, value, liquidity, description, sortOrder, date } = ctx.request.body;
+      const {
+        name, value, liquidity, description, sortOrder, date,
+        exitType, exitDate, exitSeriesStart, exitSeriesInterval, exitSeriesUnit,
+        isRepetitive, repetitiveAmount, repetitiveInterval, repetitiveUnit,
+      } = ctx.request.body;
 
       const asset = await Asset.findByPk(id);
       if (!asset) {
@@ -113,7 +130,11 @@ class AssetsController {
         return;
       }
 
-      await asset.update({ name, value, liquidity, description, sortOrder, date });
+      await asset.update({
+        name, value, liquidity, description, sortOrder, date,
+        exitType, exitDate, exitSeriesStart, exitSeriesInterval, exitSeriesUnit,
+        isRepetitive, repetitiveAmount, repetitiveInterval, repetitiveUnit,
+      });
 
       ctx.body = { success: true, asset };
     } catch (error) {

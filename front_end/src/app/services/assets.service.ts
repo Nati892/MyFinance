@@ -13,6 +13,19 @@ export interface Asset {
   householdId: number;
   sortOrder: number;
   date?: string | null;
+
+  // Exit fields
+  exitType?: 'none' | 'single' | 'series';
+  exitDate?: string | null;
+  exitSeriesStart?: string | null;
+  exitSeriesInterval?: number | null;
+  exitSeriesUnit?: 'days' | 'weeks' | 'months' | 'years' | null;
+
+  // Repetitive income fields
+  isRepetitive?: boolean;
+  repetitiveAmount?: number | null;
+  repetitiveInterval?: number | null;
+  repetitiveUnit?: 'days' | 'weeks' | 'months' | 'years' | null;
 }
 
 @Injectable({ providedIn: 'root' })

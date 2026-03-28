@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:lts
+    container_name: housely_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /my_volumes/hously/db:/var/lib/mysql
+    # Port 35432 → 3306: non-default host port reduces automated scan noise.
+    # For extra hardening, comment this out entirely — the app reaches the DB
+    # via the internal Docker network (db:3306), so external exposure is only
+    # needed for admin tools (DBeaver, TablePlus, etc.).
+    ports:
+      - "35432:3306"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app:
+    build:
+      context: ./backend_go
+      dockerfile: Dockerfile
+    container_name: housely_server
+    restart: always
+    env_file:
+      - .env
+    environment:
+      # These override .env — DB_HOST must be the service name, not localhost
+      ENV: production
+      DB_HOST: db
+      DB_PORT: 3306   # internal Docker network — NOT 35432
+    ports:
+      - "1234:1234"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

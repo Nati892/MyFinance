@@ -198,6 +198,20 @@
   color: #667eea;
 }
 
+.nav-tab--main .nav-icon {
+  font-size: 24px;
+}
+
+.nav-tab--main .nav-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.nav-tab--main.active .nav-label {
+  color: #764ba2;
+}
+
 .nav-icon {
   font-size: 20px;
   line-height: 1;
