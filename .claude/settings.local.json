@@ -1,11 +1,21 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(find:*)",
       "Bash(cd:*)",
       "Bash(wc:*)",
       "Bash(npm install:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx ng:*)",
+      "Bash(ls:*)",
+      "Bash(find /c/Repos/MyFinance -maxdepth 3 -type f \\\\\\(-name *.json -o -name *.config.* \\\\\\) ! -path */node_modules/* ! -path */.claude/* ! -path */dist/*)",
+      "Bash(head -40 /c/Repos/Household/migrations/*.js)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }
