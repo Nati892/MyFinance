@@ -73,7 +73,43 @@ class CategorySidebar extends StatelessWidget {
               ],
             ),
           ),
+          // ── Search button (pinned at bottom) ──────────────────────────────
+          const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
+          GestureDetector(
+            onTap: () => _showSearchSheet(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.search, size: 20, color: Color(0xFF888888)),
+                  const SizedBox(height: 3),
+                  Text(
+                    AppLocalizations.of(context)!.categorySearch,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 9, color: Color(0xFF888888)),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showSearchSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => _SearchSheet(
+        categories: [...categories, ...favoriteCategories],
+        onCategorySelected: (id) {
+          Navigator.pop(context);
+          onCategoryQuickAdd(id);
+        },
       ),
     );
   }
@@ -111,10 +147,11 @@ class _FilterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const indigo = Color(0xFF6366F1);
+    const indigo = Color(0xffff0000);
     final base = category != null ? _hexColor(category!.color) : indigo;
 
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
       padding: const EdgeInsets.symmetric(vertical: 8),
       constraints: const BoxConstraints(minHeight: 44),
@@ -124,6 +161,7 @@ class _FilterTile extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
             category != null
@@ -217,6 +255,100 @@ class _QuickAddTile extends StatelessWidget {
   }
 }
 
+// ── Search bottom sheet ───────────────────────────────────────────────────────
+
+class _SearchSheet extends StatefulWidget {
+  final List<Category> categories;
+  final ValueChanged<int> onCategorySelected;
+
+  const _SearchSheet({required this.categories, required this.onCategorySelected});
+
+  @override
+  State<_SearchSheet> createState() => _SearchSheetState();
+}
+
+class _SearchSheetState extends State<_SearchSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _query.isEmpty
+        ? widget.categories
+        : widget.categories
+            .where((c) => c.name.toLowerCase().contains(_query.toLowerCase()))
+            .toList();
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDDDDDD),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.categorySearch,
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 320),
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.only(bottom: 24),
+              children: filtered.map((cat) {
+                final color = _hexColor(cat.color);
+                return ListTile(
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(iconDataFromName(cat.icon), size: 18, color: color),
+                    ),
+                  ),
+                  title: Text(cat.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  onTap: () => widget.onCategorySelected(cat.id),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _hexColor(String hex) {
+    try {
+      return Color(int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
+    } catch (_) {
+      return const Color(0xFF888888);
+    }
+  }
+}
+
 // ── Filter bottom sheet ───────────────────────────────────────────────────────
 
 class _FilterSheet extends StatelessWidget {
@@ -235,6 +367,7 @@ class _FilterSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Fixed header
         Padding(

@@ -1070,6 +1070,12 @@ abstract class AppLocalizations {
   /// **'Filter by category'**
   String get categoryFilterByCategory;
 
+  /// No description provided for @categorySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get categorySearch;
+
   /// No description provided for @timelineTotal.
   ///
   /// In en, this message translates to:

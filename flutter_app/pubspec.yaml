@@ -28,6 +28,9 @@ dependencies:
   # Material Symbols icons — bundled font, zero network requests
   material_symbols_icons: ^4.2906.0
 
+  # Image picker (for board image notes)
+  image_picker: ^1.1.2
+
   # Utilities
   intl: ^0.20.2
 

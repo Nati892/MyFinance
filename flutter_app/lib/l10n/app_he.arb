@@ -10,7 +10,7 @@
   "navIncomes": "הכנסות",
 
   "headerSignOut": "התנתק",
-  "headerBrand": "Household",
+  "headerBrand": "הבית שלי",
 
   "loginTitle": "Household",
   "loginSubtitle": "נהל את כספי המשפחה שלך",
@@ -173,6 +173,7 @@
   "categorySave": "צור קטגוריה",
   "categoryFailed": "יצירת הקטגוריה נכשלה",
   "categoryFilterByCategory": "סנן לפי קטגוריה",
+  "categorySearch": "חיפוש",
 
   "timelineTotal": "סך הכל",
   "timelineMonthly": "חודש",

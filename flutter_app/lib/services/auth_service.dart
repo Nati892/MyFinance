@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/core/storage/secure_storage.dart';
@@ -25,22 +26,40 @@ class AuthService extends ChangeNotifier {
 
   /// Called at app startup — restores session from secure storage.
   Future<void> tryRestoreSession() async {
-    final token = await _storage.getAccessToken();
-    if (token == null) return;
-    accessToken = token;
+    final storedToken = await _storage.getAccessToken();
+    if (storedToken == null) return;
+    accessToken = storedToken;
+
     try {
-      final data = await _repo.getProfile();
-      // Profile endpoint may return { appUser: {...} } or the user directly.
+      // Try the stored access token first.
+      final data = await _repo.getProfile(token: storedToken);
       final userJson = data['appUser'] ?? data['user'] ?? data;
       currentUser = AppUser.fromJson(userJson as Map<String, dynamic>);
-    } catch (_) {
-      final refreshed = await tryRefresh();
-      if (!refreshed) {
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        // Access token expired — try the refresh token.
+        final refreshed = await tryRefresh();
+        if (refreshed) {
+          try {
+            final data = await _repo.getProfile(token: accessToken!);
+            final userJson = data['appUser'] ?? data['user'] ?? data;
+            currentUser = AppUser.fromJson(userJson as Map<String, dynamic>);
+          } catch (_) {
+            // Profile fetch failed even after refresh — force sign-out.
+            await signOut();
+          }
+        }
+        // If !refreshed, tryRefresh already called signOut() — tokens/user cleared.
+      } else {
+        // Network error or other transient failure — don't wipe tokens.
+        // User will see login screen this launch but tokens survive for next attempt.
         accessToken = null;
-        currentUser = null;
       }
+    } catch (_) {
+      // Non-network exception (e.g. JSON parse error) — don't wipe tokens.
+      accessToken = null;
     }
-    // No notifyListeners here — called before the widget tree exists.
+    // notifyListeners intentionally omitted — called before the widget tree exists.
   }
 
   Future<void> signIn(String username, String password) async {
@@ -68,8 +87,14 @@ class AuthService extends ChangeNotifier {
         refreshToken: data['refreshToken'] as String? ?? refreshToken,
       );
       return true;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        // Refresh token is definitively rejected — clear everything.
+        await signOut();
+      }
+      // Network error or other transient failure — don't wipe tokens.
+      return false;
     } catch (_) {
-      await signOut();
       return false;
     }
   }

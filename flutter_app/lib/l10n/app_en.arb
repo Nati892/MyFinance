@@ -173,6 +173,7 @@
   "categorySave": "Create Category",
   "categoryFailed": "Failed to create category",
   "categoryFilterByCategory": "Filter by category",
+  "categorySearch": "Search",
 
   "timelineTotal": "Total",
   "timelineMonthly": "Month",

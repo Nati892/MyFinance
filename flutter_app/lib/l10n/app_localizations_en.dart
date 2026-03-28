@@ -497,6 +497,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryFilterByCategory => 'Filter by category';
 
   @override
+  String get categorySearch => 'Search';
+
+  @override
   String get timelineTotal => 'Total';
 
   @override

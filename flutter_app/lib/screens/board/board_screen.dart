@@ -1,9 +1,13 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/screens/board/board_view_model.dart';
 import 'package:household/screens/board/canvas_note_widget.dart';
 import 'package:household/services/auth_service.dart';
+import 'package:image_picker/image_picker.dart';
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 
@@ -325,6 +329,7 @@ class _AddNoteSheet extends ConsumerStatefulWidget {
 
 class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
   late final TextEditingController _contentCtrl;
+  Uint8List? _pickedImageBytes;
 
   @override
   void initState() {
@@ -336,6 +341,20 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
   void dispose() {
     _contentCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      setState(() => _pickedImageBytes = bytes);
+    }
   }
 
   @override
@@ -409,17 +428,15 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
           ),
           const SizedBox(height: 16),
 
-          // ── Content field (hidden for heart type) ─────────────────────
-          if (!isHeart) ...[
+          // ── Content field (hidden for heart; upload for image) ────────
+          if (!isHeart && !isImage) ...[
             TextField(
               controller: _contentCtrl,
               onChanged: vm.setFormContent,
-              minLines: isImage ? 1 : 3,
-              maxLines: isImage ? 1 : 6,
+              minLines: 3,
+              maxLines: 6,
               decoration: InputDecoration(
-                hintText: isImage
-                    ? l10n.boardImagePlaceholder
-                    : l10n.boardWritePlaceholder,
+                hintText: l10n.boardWritePlaceholder,
                 hintStyle: const TextStyle(color: Color(0xFFBBBBBB)),
                 filled: true,
                 fillColor: const Color(0xFFFFF8EE),
@@ -428,6 +445,37 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (isImage) ...[
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                height: 120,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F0EC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFDDD5CB)),
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: _pickedImageBytes != null
+                    ? Image.memory(_pickedImageBytes!, fit: BoxFit.cover,
+                        width: double.infinity)
+                    : const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add_photo_alternate_outlined,
+                                color: Color(0xFFBBBBBB), size: 40),
+                            SizedBox(height: 6),
+                            Text('Tap to pick an image',
+                                style: TextStyle(
+                                    color: Color(0xFFBBBBBB), fontSize: 13)),
+                          ],
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 16),
@@ -543,6 +591,14 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
             onPressed: vm.sheetSaving
                 ? null
                 : () async {
+                    if (isImage) {
+                      if (_pickedImageBytes == null) {
+                        // nothing picked yet — bounce
+                        return;
+                      }
+                      final b64 = base64Encode(_pickedImageBytes!);
+                      vm.setFormContent('data:image/jpeg;base64,$b64');
+                    }
                     final nav = Navigator.of(context);
                     await vm.saveNote();
                     if (!vm.sheetOpen && mounted) {

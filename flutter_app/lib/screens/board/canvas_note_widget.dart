@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:household/models/board_note.dart';
 
@@ -76,6 +77,11 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
   Widget build(BuildContext context) {
     final w = _effectiveWidth();
     final h = _effectiveHeight();
+    final isHeart = widget.note.type == 'heart';
+
+    // When selected, non-heart notes need extra height below for the toolbar.
+    final toolbarExtraH = (widget.isSelected && !isHeart) ? 60.0 : 0.0;
+
     final bgColor = _hexColor(widget.note.noteColor);
     final headerColor = _darken(bgColor, 0.1);
     final textColor = _hexColor(widget.note.textColor, fallback: const Color(0xFF333333));
@@ -110,93 +116,139 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
             widget.onDragEnd();
           }
         },
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Note card
-            SizedBox(
-              width: w,
-              height: h,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [
-                    BoxShadow(
-                      color: widget.isSelected
-                          ? const Color(0xFF667EEA).withValues(alpha: 0.4)
-                          : Colors.black.withValues(alpha: 0.15),
-                      blurRadius: widget.isSelected ? 12 : 6,
-                      offset: const Offset(2, 3),
-                    ),
-                  ],
-                  border: widget.isSelected
-                      ? Border.all(color: const Color(0xFF667EEA), width: 2)
-                      : null,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header bar
-                    Container(
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: headerColor,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Row(
-                        children: [
-                          Text(
-                            widget.note.authorUsername,
-                            style: const TextStyle(fontSize: 10, color: Colors.white70),
-                          ),
-                          const Spacer(),
-                          // Delete button (owner only)
-                          if (widget.isOwner && widget.isSelected)
-                            GestureDetector(
-                              onTap: widget.onDelete,
-                              child: const Icon(Icons.close, size: 14, color: Colors.white70),
-                            ),
-                        ],
-                      ),
-                    ),
-                    // Content area
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: _buildContent(textColor),
-                      ),
-                    ),
-                  ],
-                ),
+        child: SizedBox(
+          width: w,
+          height: h + toolbarExtraH,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Main note content
+              SizedBox(
+                width: w,
+                height: h,
+                child: isHeart
+                    ? _buildHeartContent(w, h)
+                    : _buildNoteCard(w, h, bgColor, headerColor, textColor),
               ),
-            ),
-            // Inline toolbar (shown when selected)
-            if (widget.isSelected) _buildToolbar(w),
-          ],
+              // Delete button for heart (overlay top-right corner)
+              if (widget.isSelected && widget.isOwner && isHeart)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: widget.onDelete,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                    ),
+                  ),
+                ),
+              // Toolbar for text/image notes (inside GestureDetector bounds)
+              if (widget.isSelected && !isHeart)
+                _buildToolbar(w, h),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  /// Heart notes: just the icon, no card or header.
+  Widget _buildHeartContent(double w, double h) {
+    final heartColor = _hexColor(widget.note.heartColor ?? '#e53935');
+    final size = (w < h ? w : h) * 0.75;
+    return Center(
+      child: Icon(Icons.favorite, color: heartColor, size: size),
+    );
+  }
+
+  /// Regular note card with header + content area.
+  Widget _buildNoteCard(
+    double w,
+    double h,
+    Color bgColor,
+    Color headerColor,
+    Color textColor,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: [
+          BoxShadow(
+            color: widget.isSelected
+                ? const Color(0xFF667EEA).withValues(alpha: 0.4)
+                : Colors.black.withValues(alpha: 0.15),
+            blurRadius: widget.isSelected ? 12 : 6,
+            offset: const Offset(2, 3),
+          ),
+        ],
+        border: widget.isSelected
+            ? Border.all(color: const Color(0xFF667EEA), width: 2)
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header bar
+          Container(
+            height: 28,
+            decoration: BoxDecoration(
+              color: headerColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                Text(
+                  widget.note.authorUsername,
+                  style: const TextStyle(fontSize: 10, color: Colors.white70),
+                ),
+                const Spacer(),
+                if (widget.isOwner && widget.isSelected)
+                  GestureDetector(
+                    onTap: widget.onDelete,
+                    child: const Icon(Icons.close, size: 14, color: Colors.white70),
+                  ),
+              ],
+            ),
+          ),
+          // Content area
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: _buildContent(textColor),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildContent(Color textColor) {
     switch (widget.note.type) {
-      case 'heart':
-        final heartColor = _hexColor(widget.note.heartColor ?? '#e53935');
-        return Center(
-          child: Icon(Icons.favorite, color: heartColor, size: 48),
-        );
       case 'image':
+        final content = widget.note.content;
         return ClipRRect(
           borderRadius: BorderRadius.circular(4),
-          child: Image.network(
-            widget.note.content,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Center(
-              child: Icon(Icons.broken_image, color: Colors.grey),
-            ),
-          ),
+          child: content.startsWith('data:image')
+              ? Image.memory(
+                  base64Decode(content.split(',').last),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                )
+              : Image.network(
+                  content,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                ),
         );
       default: // text
         final td = widget.note.textDirection == 'rtl'
@@ -217,9 +269,10 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
     }
   }
 
-  Widget _buildToolbar(double noteWidth) {
+  /// Toolbar positioned below the note card, within GestureDetector bounds.
+  Widget _buildToolbar(double noteWidth, double noteHeight) {
     return Positioned(
-      bottom: -48,
+      top: noteHeight + 6,
       left: 0,
       child: Material(
         elevation: 4,

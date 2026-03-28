@@ -118,6 +118,7 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
   int _offset = 0;
   int _activeWeek = 1;
   DateTime _activeDate = DateTime.now();
+  String _locale = 'en';
 
   static const _purple = Color(0xFF667EEA);
   static const _textDim = Color(0xFF888888);
@@ -131,9 +132,21 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
     _rebuild();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final newLocale = Localizations.localeOf(context).languageCode;
+    if (newLocale != _locale) {
+      setState(() {
+        _locale = newLocale;
+        _rebuild();
+      });
+    }
+  }
+
   void _rebuild() {
-    _period = getFinancialPeriod(_offset);
-    _weeks  = getFinancialWeeks(_period);
+    _period = getFinancialPeriod(_offset, locale: _locale);
+    _weeks  = getFinancialWeeks(_period, locale: _locale);
   }
 
   void _emit() {
@@ -218,8 +231,8 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
       case 'monthly': return _period.label;
       case 'weekly':
         final w = _weeks.firstWhere((x) => x.weekNumber == _activeWeek, orElse: () => _weeks.first);
-        return buildWeekLabel(w);
-      case 'daily': return buildDayLabel(_activeDate);
+        return buildWeekLabel(w, locale: _locale);
+      case 'daily': return buildDayLabel(_activeDate, locale: _locale);
       default: return '';
     }
   }
@@ -229,7 +242,8 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
   List<WeekGroup> _buildMonthlyGroups() {
     return _weeks.map((week) {
       if (week.start == null || week.end == null) {
-        return WeekGroup(weekNumber: week.weekNumber, label: 'Week ${week.weekNumber}', total: 0, dayGroups: []);
+        final wk = _locale == 'he' ? "שב׳" : 'Week';
+        return WeekGroup(weekNumber: week.weekNumber, label: '$wk ${week.weekNumber}', total: 0, dayGroups: []);
       }
       final txs = widget.transactions.where((t) {
         final d = DateTime.parse(t.dateTime).toLocal();
@@ -237,9 +251,10 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
       }).toList();
       final days = _groupByDay(txs);
       final total = txs.fold(0.0, (s, t) => s + t.amount);
+      final wk = _locale == 'he' ? "שב׳" : 'Week';
       return WeekGroup(
         weekNumber: week.weekNumber,
-        label: 'Week ${week.weekNumber} · ${week.label} · ${formatNIS(total)}',
+        label: '$wk ${week.weekNumber} · ${week.label} · ${formatNIS(total)}',
         total: total,
         dayGroups: days,
       );
@@ -276,7 +291,7 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
       final date = DateTime(parts[0], parts[1], parts[2]);
       final total = e.value.fold(0.0, (s, t) => s + t.amount);
       return DayGroup(
-        label: '${buildDayLabel(date)} · ${formatNIS(total)}',
+        label: '${buildDayLabel(date, locale: _locale)} · ${formatNIS(total)}',
         dateKey: e.key,
         total: total,
         transactions: e.value..sort((a, b) => DateTime.parse(a.dateTime).compareTo(DateTime.parse(b.dateTime))),
@@ -509,8 +524,19 @@ class _TxTile extends StatelessWidget {
   final ValueChanged<TimelineTx> onDelete;
   const _TxTile({required this.tx, required this.onEdit, required this.onDelete});
 
+  String _localizedPaymentMethod(String method, AppLocalizations l10n) {
+    switch (method) {
+      case 'credit_card':   return l10n.paymentCard;
+      case 'debit_card':    return l10n.paymentDebit;
+      case 'cash':          return l10n.paymentCash;
+      case 'bank_transfer': return l10n.paymentTransfer;
+      default:              return method;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final color = _hexColor(tx.categoryColor ?? '#888888');
     final time = buildTimeLabel(DateTime.parse(tx.dateTime).toLocal());
 
@@ -541,7 +567,7 @@ class _TxTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          '$time · ${formatPaymentMethod(tx.paymentMethod)}'
+          '$time · ${_localizedPaymentMethod(tx.paymentMethod, l10n)}'
           '${tx.username != null ? ' · ${tx.username}' : ''}',
           style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
         ),

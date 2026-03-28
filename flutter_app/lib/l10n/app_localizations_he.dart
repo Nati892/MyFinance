@@ -33,7 +33,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get headerSignOut => 'התנתק';
 
   @override
-  String get headerBrand => 'Household';
+  String get headerBrand => 'הבית שלי';
 
   @override
   String get loginTitle => 'Household';
@@ -493,6 +493,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get categoryFilterByCategory => 'סנן לפי קטגוריה';
+
+  @override
+  String get categorySearch => 'חיפוש';
 
   @override
   String get timelineTotal => 'סך הכל';

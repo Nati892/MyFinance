@@ -30,8 +30,12 @@ class AuthRepository {
   }
 
   /// GET /api/app/auth/profile
-  Future<Map<String, dynamic>> getProfile() async {
-    final res = await _dio.get('/app/auth/profile');
+  /// Pass [token] to inject the Authorization header (bareDio has no interceptor).
+  Future<Map<String, dynamic>> getProfile({required String token}) async {
+    final res = await _dio.get(
+      '/app/auth/profile',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
     return res.data as Map<String, dynamic>;
   }
 }

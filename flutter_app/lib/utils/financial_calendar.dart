@@ -17,21 +17,33 @@ class FinancialWeek {
   const FinancialWeek({required this.weekNumber, this.start, this.end, required this.label});
 }
 
+// ─── Hebrew month names ───────────────────────────────────────────────────────
+
+const _heMonths = [
+  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+];
+
+// index 0 = Monday (weekday 1) … index 6 = Sunday (weekday 7)
+const _heDays = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת', 'ראשון'];
+
 // ─── Period / weeks ───────────────────────────────────────────────────────────
 
 /// Returns a calendar-month period shifted by [offset] months from today.
-FinancialPeriod getFinancialPeriod(int offset) {
+FinancialPeriod getFinancialPeriod(int offset, {String locale = 'en'}) {
   final now = DateTime.now();
   final year  = now.year  + ((now.month - 1 + offset) ~/ 12);
   final month = ((now.month - 1 + offset) % 12) + 1;
   final start = DateTime(year, month, 1);
   final end   = DateTime(year, month + 1, 1).subtract(const Duration(seconds: 1));
-  final label = DateFormat('MMMM yyyy').format(start);
+  final label = locale == 'he'
+      ? '${_heMonths[month - 1]} $year'
+      : DateFormat('MMMM yyyy').format(start);
   return FinancialPeriod(start: start, end: end, label: label);
 }
 
 /// Splits [period] into ISO weeks (Mon–Sun), trimmed to the period boundaries.
-List<FinancialWeek> getFinancialWeeks(FinancialPeriod period) {
+List<FinancialWeek> getFinancialWeeks(FinancialPeriod period, {String locale = 'en'}) {
   final weeks = <FinancialWeek>[];
   var cursor = period.start;
   int weekNum = 1;
@@ -49,7 +61,7 @@ List<FinancialWeek> getFinancialWeeks(FinancialPeriod period) {
       weekNumber: weekNum,
       start: weekStart,
       end: weekEndEod,
-      label: _weekRangeLabel(weekStart, weekEnd),
+      label: _weekRangeLabel(weekStart, weekEnd, locale: locale),
     ));
 
     cursor = weekEnd.add(const Duration(days: 1));
@@ -61,12 +73,16 @@ List<FinancialWeek> getFinancialWeeks(FinancialPeriod period) {
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
-String buildWeekLabel(FinancialWeek week) {
-  if (week.start == null || week.end == null) return 'Week ${week.weekNumber}';
-  return 'Week ${week.weekNumber} · ${_weekRangeLabel(week.start!, week.end!)}';
+String buildWeekLabel(FinancialWeek week, {String locale = 'en'}) {
+  final wk = locale == 'he' ? "שב׳" : 'Week';
+  if (week.start == null || week.end == null) return '$wk ${week.weekNumber}';
+  return '$wk ${week.weekNumber} · ${_weekRangeLabel(week.start!, week.end!, locale: locale)}';
 }
 
-String buildDayLabel(DateTime date) {
+String buildDayLabel(DateTime date, {String locale = 'en'}) {
+  if (locale == 'he') {
+    return '${_heDays[date.weekday - 1]}, ${_heMonths[date.month - 1]} ${date.day}';
+  }
   return DateFormat('EEE, MMM d').format(date);
 }
 
@@ -95,7 +111,12 @@ double sumAmounts(List<dynamic> items) =>
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-String _weekRangeLabel(DateTime s, DateTime e) {
+String _weekRangeLabel(DateTime s, DateTime e, {String locale = 'en'}) {
+  if (locale == 'he') {
+    final start = '${_heMonths[s.month - 1]} ${s.day}';
+    final end = s.month == e.month ? '${e.day}' : '${_heMonths[e.month - 1]} ${e.day}';
+    return '$start–$end';
+  }
   final sf = DateFormat('MMM d');
   final ef = DateFormat('d');
   return '${sf.format(s)}–${ef.format(e)}';
