@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
-import { AppAuthService } from '../../services/app-auth.service';
 import { LoggerService } from '../../services/logger.service';
 
 @Component({
@@ -21,12 +20,12 @@ export class LoginComponent {
 
   constructor(
     private authService: AuthService,
-    private appAuthService: AppAuthService,
     private router: Router,
     private logger: LoggerService
   ) { }
 
   ngOnInit(): void {
+    console.log("AAADADAWDADAWDWDAWD");
     this.logger.logComponentInit('LoginComponent');
   }
 
@@ -35,6 +34,7 @@ export class LoginComponent {
   }
 
   onSubmit(): void {
+    console.error("Hi !! Over HERE!");
     if (!this.username || !this.password) {
       this.error = 'Please enter username and password';
       return;
@@ -43,31 +43,15 @@ export class LoginComponent {
     this.loading = true;
     this.error = '';
 
-    // Try management system login first
     this.authService.login(this.username, this.password).subscribe({
       next: () => {
         this.logger.info('LOGIN_SUCCESS', 'Management user logged in', { username: this.username });
         this.router.navigate(['/home']);
       },
-      error: () => {
-        // Fall back to app user login
-        this.appAuthService.signIn(this.username, this.password).subscribe({
-          next: (response) => {
-            this.logger.info('LOGIN_SUCCESS', 'App user logged in', { username: this.username });
-            const user = response.user;
-            if (!user.households || user.households.length === 0) {
-              this.error = 'No household assigned to this account.';
-              this.loading = false;
-              return;
-            }
-            this.router.navigate(['/app']);
-          },
-          error: (err) => {
-            this.logger.warn('LOGIN_FAILED', 'Login attempt failed', { username: this.username, error: err.message });
-            this.error = 'Invalid username or password';
-            this.loading = false;
-          }
-        });
+      error: (err) => {
+        this.logger.warn('LOGIN_FAILED', 'Login attempt failed', { username: this.username, error: err.message });
+        this.error = 'Invalid username or password';
+        this.loading = false;
       }
     });
   }

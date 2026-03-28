@@ -22,6 +22,25 @@ export interface AssetGroup {
   mismatch: boolean;
 }
 
+export interface AssetForm {
+  name: string;
+  value: number | null;
+  liquidity: 'high' | 'medium' | 'low';
+  description: string;
+  date: string;
+  // Exit
+  exitType: 'none' | 'single' | 'series';
+  exitDate: string;
+  exitSeriesStart: string;
+  exitSeriesInterval: number | null;
+  exitSeriesUnit: 'days' | 'weeks' | 'months' | 'years';
+  // Repetitive income
+  isRepetitive: boolean;
+  repetitiveAmount: number | null;
+  repetitiveInterval: number | null;
+  repetitiveUnit: 'days' | 'weeks' | 'months' | 'years';
+}
+
 @Component({
   selector: 'app-app-assets',
   standalone: true,
@@ -43,6 +62,22 @@ export class AppAssetsComponent implements OnInit, OnDestroy {
 
   /** Skeleton placeholder rows shown during initial load */
   readonly skeletonRows = Array(5).fill(null);
+
+  // ── Asset detail modal ─────────────────────────────────────────────────────
+  assetModalOpen = false;
+  assetModalMode: 'add' | 'edit' = 'add';
+  editingAssetId: number | null = null;
+  assetModalSaving = false;
+  assetModalError: string | null = null;
+
+  assetForm: AssetForm = this.defaultForm();
+
+  readonly intervalUnits: { key: 'days' | 'weeks' | 'months' | 'years'; label: string }[] = [
+    { key: 'days',   label: 'Days'   },
+    { key: 'weeks',  label: 'Weeks'  },
+    { key: 'months', label: 'Months' },
+    { key: 'years',  label: 'Years'  },
+  ];
 
   private subs = new Subscription();
 
@@ -207,25 +242,128 @@ export class AppAssetsComponent implements OnInit, OnDestroy {
   // ── Add / Delete ───────────────────────────────────────────────────────────
 
   addAsset(): void {
+    this.assetModalMode = 'add';
+    this.editingAssetId = null;
+    this.assetModalError = null;
+    this.assetForm = this.defaultForm();
+    this.assetModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  openEditAssetModal(asset: Asset): void {
+    this.assetModalMode = 'edit';
+    this.editingAssetId = asset.id;
+    this.assetModalError = null;
+    this.assetForm = {
+      name: asset.name,
+      value: asset.value,
+      liquidity: asset.liquidity,
+      description: asset.description ?? '',
+      date: asset.date ? asset.date.slice(0, 10) : new Date().toISOString().split('T')[0],
+      exitType: asset.exitType ?? 'none',
+      exitDate: asset.exitDate ? asset.exitDate.slice(0, 10) : '',
+      exitSeriesStart: asset.exitSeriesStart ? asset.exitSeriesStart.slice(0, 10) : '',
+      exitSeriesInterval: asset.exitSeriesInterval ?? null,
+      exitSeriesUnit: asset.exitSeriesUnit ?? 'months',
+      isRepetitive: asset.isRepetitive ?? false,
+      repetitiveAmount: asset.repetitiveAmount ?? null,
+      repetitiveInterval: asset.repetitiveInterval ?? null,
+      repetitiveUnit: asset.repetitiveUnit ?? 'months',
+    };
+    this.assetModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeAssetModal(): void {
+    this.assetModalOpen = false;
+    this.assetModalError = null;
+    this.cdr.markForCheck();
+  }
+
+  saveAssetModal(): void {
+    if (!this.assetForm.name?.trim()) {
+      this.assetModalError = 'Please enter an asset name.';
+      return;
+    }
+    if (this.assetForm.value == null) {
+      this.assetModalError = 'Please enter a value.';
+      return;
+    }
     if (this.householdId == null) return;
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const maxOrder = this.assets.reduce((m, a) => Math.max(m, a.sortOrder ?? 0), 0);
-    this.assetsService.create({
-      name: 'New Asset',
-      value: 0,
+
+    this.assetModalSaving = true;
+    this.assetModalError = null;
+    this.cdr.markForCheck();
+
+    const payload: Partial<Asset> = {
+      name: this.assetForm.name.trim(),
+      value: this.assetForm.value,
+      liquidity: this.assetForm.liquidity,
+      description: this.assetForm.description,
+      date: this.assetForm.date || undefined,
+      exitType: this.assetForm.exitType,
+      exitDate: this.assetForm.exitType === 'single' ? (this.assetForm.exitDate || undefined) : undefined,
+      exitSeriesStart: this.assetForm.exitType === 'series' ? (this.assetForm.exitSeriesStart || undefined) : undefined,
+      exitSeriesInterval: this.assetForm.exitType === 'series' ? (this.assetForm.exitSeriesInterval ?? undefined) : undefined,
+      exitSeriesUnit: this.assetForm.exitType === 'series' ? this.assetForm.exitSeriesUnit : undefined,
+      isRepetitive: this.assetForm.isRepetitive,
+      repetitiveAmount: this.assetForm.isRepetitive ? (this.assetForm.repetitiveAmount ?? undefined) : undefined,
+      repetitiveInterval: this.assetForm.isRepetitive ? (this.assetForm.repetitiveInterval ?? undefined) : undefined,
+      repetitiveUnit: this.assetForm.isRepetitive ? this.assetForm.repetitiveUnit : undefined,
+    };
+
+    if (this.assetModalMode === 'add') {
+      const maxOrder = this.assets.reduce((m, a) => Math.max(m, a.sortOrder ?? 0), 0);
+      this.assetsService.create({ ...payload, householdId: this.householdId, sortOrder: maxOrder + 1 }).subscribe({
+        next: res => {
+          this.assets = [...this.assets, res.asset];
+          this.assetModalSaving = false;
+          this.assetModalOpen = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.assetModalSaving = false;
+          this.assetModalError = 'Failed to create asset. Please try again.';
+          this.cdr.markForCheck();
+        },
+      });
+    } else {
+      if (this.editingAssetId == null) return;
+      this.assetsService.update(this.editingAssetId, payload).subscribe({
+        next: res => {
+          const idx = this.assets.findIndex(a => a.id === this.editingAssetId);
+          if (idx !== -1) this.assets[idx] = res.asset;
+          this.assets = [...this.assets];
+          this.assetModalSaving = false;
+          this.assetModalOpen = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.assetModalSaving = false;
+          this.assetModalError = 'Failed to update asset. Please try again.';
+          this.cdr.markForCheck();
+        },
+      });
+    }
+  }
+
+  private defaultForm(): AssetForm {
+    return {
+      name: '',
+      value: null,
       liquidity: 'medium',
       description: '',
-      householdId: this.householdId,
-      sortOrder: maxOrder + 1,
-      date: today,
-    }).subscribe({
-      next: res => {
-        this.assets = [...this.assets, res.asset];
-        this.editingCell = { assetId: res.asset.id, field: 'name' };
-        this.cdr.markForCheck();
-      },
-      error: () => alert('Failed to create asset.'),
-    });
+      date: new Date().toISOString().split('T')[0],
+      exitType: 'none',
+      exitDate: '',
+      exitSeriesStart: '',
+      exitSeriesInterval: null,
+      exitSeriesUnit: 'months',
+      isRepetitive: false,
+      repetitiveAmount: null,
+      repetitiveInterval: null,
+      repetitiveUnit: 'months',
+    };
   }
 
   deleteAsset(asset: Asset): void {

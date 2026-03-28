@@ -25,6 +25,9 @@ dependencies:
   # Secure token storage
   flutter_secure_storage: ^9.2.2
 
+  # Material Symbols icons — bundled font, zero network requests
+  material_symbols_icons: ^4.2906.0
+
   # Utilities
   intl: ^0.20.2
 

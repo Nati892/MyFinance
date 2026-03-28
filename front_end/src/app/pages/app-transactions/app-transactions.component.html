@@ -1,0 +1,232 @@
+<!-- No household selected -->
+<div *ngIf="noHousehold" class="no-household">
+  <span class="no-household-icon">🏠</span>
+  <p class="no-household-title">{{ 'TRANSACTIONS.NO_HOUSEHOLD' | translate }}</p>
+  <p class="no-household-sub">{{ 'TRANSACTIONS.NO_HOUSEHOLD_MSG' | translate }}</p>
+</div>
+
+<!-- Main layout -->
+<div *ngIf="!noHousehold" class="transactions-layout">
+
+  <!-- Category sidebar -->
+  <div class="sidebar-col">
+    <div *ngIf="categoriesError" class="sidebar-error"><span>!</span></div>
+    <app-category-sidebar
+      *ngIf="!categoriesError"
+      [categories]="sidebarCategories"
+      [favoriteCategories]="sidebarFavorites"
+      [selectedCategoryId]="selectedCategoryId"
+      [type]="sidebarType"
+      (categorySelected)="onCategorySelected($event)"
+      (createCategory)="sidebarType === 'expense' ? onCreateExpenseCategory($event) : onCreateIncomeCategory($event)"
+    ></app-category-sidebar>
+  </div>
+
+  <!-- Timeline area -->
+  <div class="timeline-col">
+
+    <!-- Filter toolbar -->
+    <div class="filter-toolbar">
+      <!-- View filter chips -->
+      <div class="filter-chips">
+        <button
+          class="filter-chip"
+          [class.active]="viewFilter === 'all'"
+          (click)="setViewFilter('all')"
+          type="button"
+        >{{ 'TRANSACTIONS.ALL' | translate }}</button>
+        <button
+          class="filter-chip expense-chip"
+          [class.active]="viewFilter === 'expense'"
+          (click)="setViewFilter('expense')"
+          type="button"
+        >💸 {{ 'TRANSACTIONS.EXPENSES_ONLY' | translate }}</button>
+        <button
+          class="filter-chip income-chip"
+          [class.active]="viewFilter === 'income'"
+          (click)="setViewFilter('income')"
+          type="button"
+        >💰 {{ 'TRANSACTIONS.INCOMES_ONLY' | translate }}</button>
+      </div>
+      <!-- More filters button -->
+      <button
+        class="filter-more-btn"
+        [class.active]="hasActiveFilters"
+        (click)="toggleFilterPanel()"
+        type="button"
+        [title]="'TRANSACTIONS.FILTERS' | translate"
+      >
+        <span class="material-symbols-outlined">tune</span>
+      </button>
+    </div>
+
+    <!-- Filter panel -->
+    <div class="filter-panel" *ngIf="filterPanelOpen">
+      <div class="filter-panel-row">
+        <span class="filter-panel-label">{{ 'TRANSACTIONS.MIN_AMOUNT' | translate }}</span>
+        <input class="filter-number-input" type="number" min="0" step="1" [(ngModel)]="filterMinAmount" placeholder="—" />
+      </div>
+      <div class="filter-panel-row">
+        <span class="filter-panel-label">{{ 'TRANSACTIONS.MAX_AMOUNT' | translate }}</span>
+        <input class="filter-number-input" type="number" min="0" step="1" [(ngModel)]="filterMaxAmount" placeholder="—" />
+      </div>
+      <div class="filter-panel-actions">
+        <button class="filter-reset-btn" (click)="resetFilters()" type="button">{{ 'TRANSACTIONS.RESET' | translate }}</button>
+        <button class="filter-apply-btn" (click)="applyFilterPanel()" type="button">{{ 'TRANSACTIONS.APPLY' | translate }}</button>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div *ngIf="transactionsError" class="timeline-error">
+      <p>{{ 'TRANSACTIONS.LOAD_FAILED' | translate }}</p>
+      <button class="retry-btn" (click)="loadTransactions()">{{ 'TRANSACTIONS.RETRY' | translate }}</button>
+    </div>
+
+    <!-- Timeline -->
+    <app-timeline
+      *ngIf="!transactionsError"
+      [transactions]="displayedTransactions"
+      [loading]="transactionsLoading"
+      type="expense"
+      (viewChanged)="onViewChanged($event)"
+      (transactionEdit)="onTransactionEdit($event)"
+      (transactionDelete)="onTransactionDelete($event)"
+    ></app-timeline>
+  </div>
+</div>
+
+<!-- FAB buttons -->
+<button *ngIf="!noHousehold" class="fab fab-expense" (click)="openAddModal('expense')" type="button" title="Add Expense">
+  <span class="fab-label">+ {{ 'TRANSACTIONS.EXPENSE' | translate }}</span>
+</button>
+<button *ngIf="!noHousehold" class="fab fab-income" (click)="openAddModal('income')" type="button" title="Add Income">
+  <span class="fab-label">+ {{ 'TRANSACTIONS.INCOME' | translate }}</span>
+</button>
+
+<!-- Modal backdrop -->
+<div *ngIf="modalOpen" class="modal-backdrop" (click)="closeModal()"></div>
+
+<!-- Bottom sheet modal -->
+<div class="modal-sheet" [class.modal-sheet--open]="modalOpen" role="dialog" aria-modal="true">
+  <!-- Handle -->
+  <div class="modal-handle"></div>
+
+  <!-- Header -->
+  <div class="modal-header" [class.modal-header--income]="modalType === 'income'">
+    <h2 class="modal-title">
+      <span *ngIf="modalMode === 'add' && modalType === 'expense'">{{ 'TRANSACTIONS.NEW_EXPENSE' | translate }}</span>
+      <span *ngIf="modalMode === 'edit' && modalType === 'expense'">{{ 'TRANSACTIONS.EDIT_EXPENSE' | translate }}</span>
+      <span *ngIf="modalMode === 'add' && modalType === 'income'">{{ 'TRANSACTIONS.NEW_INCOME' | translate }}</span>
+      <span *ngIf="modalMode === 'edit' && modalType === 'income'">{{ 'TRANSACTIONS.EDIT_INCOME' | translate }}</span>
+    </h2>
+    <button class="modal-close" (click)="closeModal()" aria-label="Close">&#x2715;</button>
+  </div>
+
+  <!-- Error banner -->
+  <div *ngIf="modalError" class="modal-error-banner">{{ modalError }}</div>
+
+  <!-- Form body -->
+  <div class="modal-body">
+
+    <!-- Amount -->
+    <div class="field-group field-group--amount" [class.field-group--income]="modalType === 'income'">
+      <span class="amount-prefix">&#x20AA;</span>
+      <input
+        class="amount-input"
+        type="number"
+        min="0"
+        step="0.01"
+        placeholder="0.00"
+        [(ngModel)]="form.amount"
+        name="amount"
+      />
+    </div>
+
+    <!-- Category chips -->
+    <div class="field-label">{{ 'EXPENSES.CATEGORY' | translate }}</div>
+    <div class="chip-row">
+      <button
+        *ngFor="let cat of activeCategoriesForModal"
+        class="chip"
+        [class.chip--selected]="form.categoryId === cat.id"
+        [style.background]="form.categoryId === cat.id ? cat.color : getBgColor(cat.color)"
+        [style.color]="form.categoryId === cat.id ? '#fff' : '#333'"
+        (click)="selectCategory(cat.id)"
+        type="button"
+      >
+        <span class="material-symbols-outlined chip-icon">{{ cat.icon }}</span>
+        <span class="chip-name">{{ getCategoryDisplayName(cat) }}</span>
+      </button>
+    </div>
+
+    <!-- Date & Time -->
+    <div class="field-label">{{ 'EXPENSES.DATE_TIME' | translate }}</div>
+    <div class="field-group">
+      <input
+        class="field-input"
+        type="datetime-local"
+        [(ngModel)]="form.dateTime"
+        name="dateTime"
+      />
+    </div>
+
+    <!-- Payment method -->
+    <div class="field-label">{{ 'EXPENSES.PAYMENT_METHOD' | translate }}</div>
+    <div class="payment-segment">
+      <button
+        *ngFor="let pm of paymentMethods"
+        class="segment-btn"
+        [class.segment-btn--active]="form.paymentMethod === pm.key"
+        [class.segment-btn--income]="modalType === 'income' && form.paymentMethod === pm.key"
+        (click)="selectPayment(pm.key)"
+        type="button"
+      >
+        <span class="segment-emoji">{{ pm.emoji }}</span>
+        <span class="segment-label">{{ pm.label }}</span>
+      </button>
+    </div>
+
+    <!-- Description -->
+    <div class="field-label">{{ 'EXPENSES.DESCRIPTION' | translate }} <span class="field-optional">(optional)</span></div>
+    <div class="field-group">
+      <input
+        class="field-input"
+        type="text"
+        [placeholder]="'EXPENSES.DESCRIPTION_PLACEHOLDER' | translate"
+        [(ngModel)]="form.description"
+        name="description"
+        maxlength="200"
+      />
+    </div>
+
+    <!-- Note -->
+    <div class="field-label">{{ 'EXPENSES.NOTE' | translate }} <span class="field-optional">(optional)</span></div>
+    <div class="field-group">
+      <textarea
+        class="field-textarea"
+        [placeholder]="'EXPENSES.NOTE_PLACEHOLDER' | translate"
+        [(ngModel)]="form.note"
+        name="note"
+        rows="3"
+        maxlength="500"
+      ></textarea>
+    </div>
+
+    <!-- Save button -->
+    <button
+      class="save-btn"
+      [class.save-btn--income]="modalType === 'income'"
+      (click)="saveTransaction()"
+      [disabled]="modalSaving"
+      type="button"
+    >
+      <span *ngIf="!modalSaving">
+        <ng-container *ngIf="modalMode === 'add' && modalType === 'expense'">{{ 'TRANSACTIONS.ADD_EXPENSE' | translate }}</ng-container>
+        <ng-container *ngIf="modalMode === 'add' && modalType === 'income'">{{ 'TRANSACTIONS.ADD_INCOME' | translate }}</ng-container>
+        <ng-container *ngIf="modalMode === 'edit'">{{ 'EXPENSES.SAVE_CHANGES' | translate }}</ng-container>
+      </span>
+      <span *ngIf="modalSaving">{{ 'EXPENSES.SAVING' | translate }}</span>
+    </button>
+
+  </div>
+</div>

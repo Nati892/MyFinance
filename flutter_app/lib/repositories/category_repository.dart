@@ -35,9 +35,13 @@ class CategoryRepository {
         .toList();
   }
 
-  Future<void> createExpenseCategory(Map<String, dynamic> body) =>
-      _dio.post('/app/expense-categories', data: body);
+  Future<Category> createExpenseCategory(Map<String, dynamic> body) async {
+    final res = await _dio.post('/app/expense-categories', data: body);
+    return Category.fromJson(res.data['category'] as Map<String, dynamic>);
+  }
 
-  Future<void> createIncomeCategory(Map<String, dynamic> body) =>
-      _dio.post('/app/income-categories', data: body);
+  Future<Category> createIncomeCategory(Map<String, dynamic> body) async {
+    final res = await _dio.post('/app/income-categories', data: body);
+    return Category.fromJson(res.data['category'] as Map<String, dynamic>);
+  }
 }

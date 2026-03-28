@@ -70,12 +70,16 @@ class TransactionService {
     required String view,
     required int periodOffset,
     int? categoryId,
+    int? weekNumber,
+    String? date,
   }) {
     return _repo.getIncomes({
       'householdId': _householdId,
       'view': view,
       'periodOffset': periodOffset,
       if (categoryId != null) 'categoryId': categoryId,
+      if (weekNumber != null) 'weekNumber': weekNumber,
+      if (date != null) 'date': date,
     });
   }
 

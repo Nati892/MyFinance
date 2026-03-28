@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:household/l10n/app_localizations.dart';
 import 'package:household/screens/login/login_view_model.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -53,6 +54,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildCard(LoginViewModel vm) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -73,21 +75,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           children: [
             _buildLogo(),
             const SizedBox(height: 36),
-            _buildUsernameField(vm),
+            _buildUsernameField(vm, l10n),
             const SizedBox(height: 20),
-            _buildPasswordField(vm),
+            _buildPasswordField(vm, l10n),
             if (vm.state == LoginState.error && vm.errorMessage != null) ...[
               const SizedBox(height: 16),
               _buildErrorBanner(vm.errorMessage!),
             ],
             if (vm.state == LoginState.noHousehold) ...[
               const SizedBox(height: 16),
-              _buildInfoBanner(
-                'Your account has no household assigned. Please contact an admin.',
-              ),
+              _buildInfoBanner(l10n.loginNoHousehold),
             ],
             const SizedBox(height: 20),
-            _buildSignInButton(vm),
+            _buildSignInButton(vm, l10n),
           ],
         ),
       ),
@@ -127,9 +127,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        const Text(
-          'Household',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)!.loginTitle,
+          style: const TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1A1A2E),
@@ -137,21 +137,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Sign in to your account',
-          style: TextStyle(fontSize: 14, color: Color(0xFF888888)),
+        Text(
+          AppLocalizations.of(context)!.loginSubtitle,
+          style: const TextStyle(fontSize: 14, color: Color(0xFF888888)),
         ),
       ],
     );
   }
 
-  Widget _buildUsernameField(LoginViewModel vm) {
+  Widget _buildUsernameField(LoginViewModel vm, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Username',
-          style: TextStyle(
+        Text(
+          l10n.loginUsername,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: Color(0xFF444444),
@@ -163,19 +163,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           enabled: !vm.isLoading,
           autocorrect: false,
           textInputAction: TextInputAction.next,
-          decoration: _inputDecoration('Enter your username'),
+          decoration: _inputDecoration(l10n.loginUsernamePlaceholder),
         ),
       ],
     );
   }
 
-  Widget _buildPasswordField(LoginViewModel vm) {
+  Widget _buildPasswordField(LoginViewModel vm, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Password',
-          style: TextStyle(
+        Text(
+          l10n.loginPassword,
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: Color(0xFF444444),
@@ -188,7 +188,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           obscureText: vm.obscurePassword,
           textInputAction: TextInputAction.done,
           onFieldSubmitted: (_) => _submit(vm),
-          decoration: _inputDecoration('Enter your password').copyWith(
+          decoration: _inputDecoration(l10n.loginPasswordPlaceholder).copyWith(
             suffixIcon: IconButton(
               icon: Icon(
                 vm.obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -249,7 +249,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildSignInButton(LoginViewModel vm) {
+  Widget _buildSignInButton(LoginViewModel vm, AppLocalizations l10n) {
     return SizedBox(
       width: double.infinity,
       child: DecoratedBox(
@@ -283,10 +283,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
           child: vm.isLoading
-              ? const Row(
+              ? Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
@@ -294,11 +294,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(width: 10),
-                    Text('Signing in…'),
+                    const SizedBox(width: 10),
+                    Text(l10n.loginSigningIn),
                   ],
                 )
-              : const Text('Sign In'),
+              : Text(l10n.loginSignIn),
         ),
       ),
     );

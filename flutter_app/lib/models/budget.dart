@@ -1,0 +1,76 @@
+/// MonthBudgetRow mirrors the Angular MonthBudgetRow interface from budget.service.ts.
+/// The API returns these from GET /app/budget/month.
+class MonthBudgetRow {
+  final int id;
+  final String name;
+  final String? nameHe;
+  final String icon;
+  final String color;
+
+  /// Budget set for every month (base).
+  final double? baseBudget;
+
+  /// One-off override for a specific month.
+  final double? override;
+
+  /// The budget actually used: override ?? baseBudget.
+  final double? effectiveBudget;
+
+  /// Total spent in the month for this category.
+  final double spent;
+
+  /// spent - effectiveBudget (positive = over budget).
+  final double? result;
+
+  const MonthBudgetRow({
+    required this.id,
+    required this.name,
+    this.nameHe,
+    required this.icon,
+    required this.color,
+    this.baseBudget,
+    this.override,
+    this.effectiveBudget,
+    required this.spent,
+    this.result,
+  });
+
+  factory MonthBudgetRow.fromJson(Map<String, dynamic> json) => MonthBudgetRow(
+        id: json['id'] as int,
+        name: json['name'] as String,
+        nameHe: json['nameHe'] as String?,
+        icon: json['icon'] as String? ?? '',
+        color: json['color'] as String? ?? '#888888',
+        baseBudget: (json['baseBudget'] as num?)?.toDouble(),
+        override: (json['override'] as num?)?.toDouble(),
+        effectiveBudget: (json['effectiveBudget'] as num?)?.toDouble(),
+        spent: (json['spent'] as num?)?.toDouble() ?? 0,
+        result: (json['result'] as num?)?.toDouble(),
+      );
+}
+
+/// Spending per calendar week — from GET /app/budget/by-week.
+class WeekSpend {
+  final String weekLabel;
+  final double total;
+
+  const WeekSpend({required this.weekLabel, required this.total});
+
+  factory WeekSpend.fromJson(Map<String, dynamic> json) => WeekSpend(
+        weekLabel: json['weekLabel'] as String? ?? '',
+        total: (json['total'] as num?)?.toDouble() ?? 0,
+      );
+}
+
+/// Spending per month — from GET /app/budget/by-month.
+class MonthSpend {
+  final String label;
+  final double total;
+
+  const MonthSpend({required this.label, required this.total});
+
+  factory MonthSpend.fromJson(Map<String, dynamic> json) => MonthSpend(
+        label: json['label'] as String? ?? '',
+        total: (json['total'] as num?)?.toDouble() ?? 0,
+      );
+}

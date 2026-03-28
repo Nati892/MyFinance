@@ -33,6 +33,8 @@ class AppAuthController {
         global.log.warn('APP_LOGIN_FAILED', 'Invalid app login attempt', {
           username
         }, {
+
+          
           ipAddress: ctx.ip,
           userAgent: ctx.headers['user-agent']
         });

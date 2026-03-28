@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 /// For a real device on the same LAN, change 10.0.2.2 to your machine's IP.
 final String kBaseUrl = kIsWeb
     ? 'http://localhost:1234/api'
-    : 'http://10.0.2.2:1234/api';
+    : 'http://192.168.1.62:1234/api';
 
 BaseOptions _baseOptions() => BaseOptions(
   baseUrl: kBaseUrl,
