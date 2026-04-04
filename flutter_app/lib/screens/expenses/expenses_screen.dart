@@ -91,7 +91,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               _showExpenseSheet(context);
             },
             backgroundColor: const Color(0xFF667EEA),
-            child: const Icon(Icons.add, color: Colors.white),
+            child: const Icon(Icons.remove, color: Colors.white),
           ),
         ),
       ],
@@ -220,6 +220,7 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   late TextEditingController _amountCtrl;
   late TextEditingController _descCtrl;
   late TextEditingController _noteCtrl;
+  int? _selectedParentId;
 
   static const _purple = Color(0xFF667EEA);
 
@@ -238,6 +239,21 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
         text: vm.formAmount != null ? vm.formAmount.toString() : '');
     _descCtrl = TextEditingController(text: vm.formDescription);
     _noteCtrl = TextEditingController(text: vm.formNote);
+    // Pre-select parent based on current formCategoryId
+    if (vm.formCategoryId != null) {
+      for (final cat in vm.categories) {
+        if (cat.id == vm.formCategoryId) {
+          _selectedParentId = cat.id;
+          break;
+        }
+        for (final sub in cat.subCategories) {
+          if (sub.id == vm.formCategoryId) {
+            _selectedParentId = cat.id;
+            break;
+          }
+        }
+      }
+    }
   }
 
   @override
@@ -253,6 +269,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
     final vm = ref.watch(expensesViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    final locale = Localizations.localeOf(context);
+    final selectedCategoryName = _getCategoryDisplayName(vm, locale.languageCode);
 
     return Container(
       decoration: const BoxDecoration(
@@ -280,11 +298,17 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
             // Header
             Row(
               children: [
-                Text(
-                  vm.isEditMode ? l10n.expensesEdit : l10n.expensesNew,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                Expanded(
+                  child: Text(
+                    vm.isEditMode
+                        ? l10n.expensesEdit
+                        : selectedCategoryName != null
+                            ? '${l10n.expensesNew} - $selectedCategoryName'
+                            : l10n.expensesNew,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () {
@@ -418,50 +442,140 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
       return Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: [
-          _buildNewCategoryChip(vm, l10n),
-        ],
+        children: [_buildNewCategoryChip(vm, l10n)],
       );
     }
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+
+    final selectedParent = _selectedParentId != null
+        ? vm.categories.where((c) => c.id == _selectedParentId).firstOrNull
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...vm.categories.map((cat) {
-          final selected = vm.formCategoryId == cat.id;
-          final base = _hexColor(cat.color);
-          final catName = (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true)
-              ? cat.nameHe!
-              : cat.name;
-          return GestureDetector(
-            onTap: () => vm.setFormCategory(cat.id),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: selected ? base : base.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(iconDataFromName(cat.icon), size: 16, color: selected ? Colors.white : base),
-                  const SizedBox(width: 4),
-                  Text(
-                    catName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? Colors.white : const Color(0xFF333333),
+        // Parent chips
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ...vm.categories.map((cat) {
+              final isActiveParent = _selectedParentId == cat.id;
+              final base = _hexColor(cat.color);
+              final catName = (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true)
+                  ? cat.nameHe!
+                  : cat.name;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _selectedParentId = cat.id);
+                  if (cat.subCategories.isEmpty) {
+                    vm.setFormCategory(cat.id);
+                  } else {
+                    vm.setFormCategory(cat.id);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isActiveParent ? base : base.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: isActiveParent && cat.subCategories.isNotEmpty
+                        ? Border.all(color: base, width: 2)
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(iconDataFromName(cat.icon), size: 16,
+                          color: isActiveParent ? Colors.white : base),
+                      const SizedBox(width: 4),
+                      Text(
+                        catName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isActiveParent ? Colors.white : const Color(0xFF333333),
+                        ),
+                      ),
+                      if (cat.subCategories.isNotEmpty) ...[
+                        const SizedBox(width: 2),
+                        Icon(Icons.chevron_right, size: 14,
+                            color: isActiveParent ? Colors.white : base),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }),
+            _buildNewCategoryChip(vm, l10n),
+          ],
+        ),
+        // Subcategory chips — shown when parent has subcategories
+        if (selectedParent != null && selectedParent.subCategories.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: selectedParent.subCategories.map((sub) {
+                final selected = vm.formCategoryId == sub.id;
+                final base = _hexColor(sub.color.isNotEmpty ? sub.color : selectedParent.color);
+                final subName = (locale.languageCode == 'he' && sub.nameHe?.isNotEmpty == true)
+                    ? sub.nameHe!
+                    : sub.name;
+                return GestureDetector(
+                  onTap: () => vm.setFormCategory(sub.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: selected ? base : base.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: selected ? base : base.withValues(alpha: 0.4),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (sub.icon != null && sub.icon!.isNotEmpty) ...[
+                          Icon(iconDataFromName(sub.icon), size: 13,
+                              color: selected ? Colors.white : base),
+                          const SizedBox(width: 3),
+                        ],
+                        Text(
+                          subName,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: selected ? Colors.white : const Color(0xFF444444),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                );
+              }).toList(),
             ),
-          );
-        }),
-        _buildNewCategoryChip(vm, l10n),
+          ),
+        ],
       ],
     );
+  }
+
+  String? _getCategoryDisplayName(ExpensesViewModel vm, String languageCode) {
+    if (vm.formCategoryId == null) return null;
+    for (final cat in vm.categories) {
+      if (cat.id == vm.formCategoryId) {
+        return (languageCode == 'he' && cat.nameHe?.isNotEmpty == true) ? cat.nameHe! : cat.name;
+      }
+      for (final sub in cat.subCategories) {
+        if (sub.id == vm.formCategoryId) {
+          return (languageCode == 'he' && sub.nameHe?.isNotEmpty == true) ? sub.nameHe! : sub.name;
+        }
+      }
+    }
+    return null;
   }
 
   Widget _buildNewCategoryChip(ExpensesViewModel vm, AppLocalizations l10n) {
