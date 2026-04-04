@@ -484,8 +484,28 @@ class _AssetRow extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            // Description
-            if (asset.description?.isNotEmpty == true)
+            // Description / Company
+            if (asset.company?.isNotEmpty == true)
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.business_outlined, size: 11, color: Color(0xFF888888)),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          asset.company!,
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF888888)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (asset.description?.isNotEmpty == true)
               Flexible(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -569,6 +589,7 @@ class _AssetFormSheetState extends ConsumerState<_AssetFormSheet> {
   late TextEditingController _valueCtrl;
   late TextEditingController _descCtrl;
   late TextEditingController _dateCtrl;
+  late TextEditingController _companyCtrl;
   late TextEditingController _exitSeriesIntervalCtrl;
   late TextEditingController _repetitiveAmountCtrl;
   late TextEditingController _repetitiveIntervalCtrl;
@@ -582,6 +603,7 @@ class _AssetFormSheetState extends ConsumerState<_AssetFormSheet> {
         text: vm.formValue == 0 ? '' : vm.formValue.toString());
     _descCtrl = TextEditingController(text: vm.formDescription);
     _dateCtrl = TextEditingController(text: vm.formDate);
+    _companyCtrl = TextEditingController(text: vm.formCompany);
     _exitSeriesIntervalCtrl = TextEditingController(
         text: vm.formExitSeriesInterval?.toString() ?? '');
     _repetitiveAmountCtrl = TextEditingController(
@@ -596,6 +618,7 @@ class _AssetFormSheetState extends ConsumerState<_AssetFormSheet> {
     _valueCtrl.dispose();
     _descCtrl.dispose();
     _dateCtrl.dispose();
+    _companyCtrl.dispose();
     _exitSeriesIntervalCtrl.dispose();
     _repetitiveAmountCtrl.dispose();
     _repetitiveIntervalCtrl.dispose();
@@ -742,6 +765,21 @@ class _AssetFormSheetState extends ConsumerState<_AssetFormSheet> {
               onChanged: vm.setFormDescription,
               decoration: _inputDeco('e.g. IBI savings'),
               maxLength: 200,
+              buildCounter: (_,
+                      {required currentLength,
+                      required isFocused,
+                      maxLength}) =>
+                  null,
+            ),
+            const SizedBox(height: 16),
+            // Company
+            _buildLabel(l10n.assetsCompany, optional: true),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _companyCtrl,
+              onChanged: vm.setFormCompany,
+              decoration: _inputDeco(l10n.assetsCompanyPlaceholder),
+              maxLength: 255,
               buildCounter: (_,
                       {required currentLength,
                       required isFocused,

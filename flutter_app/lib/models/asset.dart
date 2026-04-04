@@ -21,6 +21,8 @@ class Asset {
   final int? repetitiveInterval;
   final String? repetitiveUnit; // 'days'|'weeks'|'months'|'years'
 
+  final String? company;
+
   const Asset({
     required this.id,
     required this.name,
@@ -39,6 +41,7 @@ class Asset {
     this.repetitiveAmount,
     this.repetitiveInterval,
     this.repetitiveUnit,
+    this.company,
   });
 
   factory Asset.fromJson(Map<String, dynamic> json) => Asset(
@@ -65,6 +68,7 @@ class Asset {
             : null,
         repetitiveInterval: json['repetitive_interval'] as int?,
         repetitiveUnit: json['repetitive_unit'] as String?,
+        company: json['company'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -90,6 +94,7 @@ class Asset {
         if (repetitiveInterval != null)
           'repetitive_interval': repetitiveInterval,
         if (repetitiveUnit != null) 'repetitive_unit': repetitiveUnit,
+        if (company != null && company!.isNotEmpty) 'company': company,
       };
 
   Asset copyWith({
@@ -110,6 +115,7 @@ class Asset {
     double? repetitiveAmount,
     int? repetitiveInterval,
     String? repetitiveUnit,
+    String? company,
   }) =>
       Asset(
         id: id ?? this.id,
@@ -129,5 +135,6 @@ class Asset {
         repetitiveAmount: repetitiveAmount ?? this.repetitiveAmount,
         repetitiveInterval: repetitiveInterval ?? this.repetitiveInterval,
         repetitiveUnit: repetitiveUnit ?? this.repetitiveUnit,
+        company: company ?? this.company,
       );
 }

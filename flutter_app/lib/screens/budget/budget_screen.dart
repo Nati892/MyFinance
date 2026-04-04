@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/budget.dart';
+import 'package:household/models/category.dart';
 import 'package:household/screens/budget/budget_view_model.dart';
 import 'package:household/utils/icon_helper.dart';
 
@@ -54,7 +55,9 @@ class BudgetScreen extends ConsumerWidget {
             Expanded(
               child: vm.viewMode == BudgetViewMode.table
                   ? _TableSection(vm: vm)
-                  : _GraphSection(vm: vm),
+                  : vm.viewMode == BudgetViewMode.graph
+                      ? _GraphSection(vm: vm)
+                      : _PlanSection(vm: vm),
             ),
           ],
         ),
@@ -111,6 +114,11 @@ class _ModeTabs extends StatelessWidget {
             label: AppLocalizations.of(context)!.budgetGraph,
             active: viewMode == BudgetViewMode.graph,
             onTap: () => onChanged(BudgetViewMode.graph),
+          ),
+          _ModeTab(
+            label: AppLocalizations.of(context)!.budgetPlan,
+            active: viewMode == BudgetViewMode.plan,
+            onTap: () => onChanged(BudgetViewMode.plan),
           ),
         ],
       ),
@@ -943,6 +951,272 @@ class _BarChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(_BarChartPainter old) =>
       old.data != data || old.maxVal != maxVal || old.barColor != barColor;
+}
+
+// ─── Plan section ────────────────────────────────────────────────────────────
+
+class _PlanSection extends ConsumerStatefulWidget {
+  final BudgetViewModel vm;
+  const _PlanSection({required this.vm});
+
+  @override
+  ConsumerState<_PlanSection> createState() => _PlanSectionState();
+}
+
+class _PlanSectionState extends ConsumerState<_PlanSection> {
+  // categoryId → controller with current month's budget value
+  final Map<int, TextEditingController> _controllers = {};
+  bool _saving = false;
+
+  @override
+  void didUpdateWidget(_PlanSection old) {
+    super.didUpdateWidget(old);
+    _syncControllers();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _syncControllers();
+  }
+
+  void _syncControllers() {
+    final vm = widget.vm;
+    for (final cat in vm.allExpenseCategories) {
+      if (!_controllers.containsKey(cat.id)) {
+        // Pre-fill from existing budget override or base budget
+        final row = vm.budgetRows.where((r) => r.id == cat.id).firstOrNull;
+        final initial = row?.override ?? row?.baseBudget;
+        _controllers[cat.id] = TextEditingController(
+          text: initial != null ? initial.toStringAsFixed(0) : '',
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Color _hexColor(String hex) {
+    try {
+      return Color(int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
+    } catch (_) {
+      return const Color(0xFF888888);
+    }
+  }
+
+  Future<void> _saveAll() async {
+    setState(() => _saving = true);
+    final budgets = <int, double?>{};
+    for (final entry in _controllers.entries) {
+      budgets[entry.key] = double.tryParse(entry.value.text.trim());
+    }
+    await widget.vm.savePlanBudgets(budgets);
+    if (mounted) setState(() => _saving = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = widget.vm;
+    final l10n = AppLocalizations.of(context)!;
+
+    if (vm.allExpenseCategories.isEmpty) {
+      return Center(
+        child: Text(l10n.budgetNoCategories,
+            style: const TextStyle(color: Color(0xFF888888))),
+      );
+    }
+
+    _syncControllers();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Text(
+            l10n.budgetPlanHint,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+            children: <Widget>[
+              for (final cat in vm.allExpenseCategories) ...[
+                _buildCategoryInput(cat, _hexColor(cat.color), l10n),
+                ...cat.subCategories.map(
+                  (sub) => _buildSubCategoryInput(
+                      sub, _hexColor(sub.color), l10n),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saving ? null : _saveAll,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF667EEA),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : Text(l10n.budgetPlanSave,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryInput(
+      Category cat, Color catColor, AppLocalizations l10n) {
+    final ctrl = _controllers[cat.id]!;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 3,
+              offset: const Offset(0, 1)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: catColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Icon(iconDataFromName(cat.icon), size: 16, color: catColor),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(cat.name,
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w600)),
+          ),
+          SizedBox(
+            width: 90,
+            child: TextField(
+              controller: ctrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.end,
+              decoration: InputDecoration(
+                hintText: '—',
+                prefixText: '₪',
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 8),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFDDDDDD))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                        color: catColor, width: 1.5)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubCategoryInput(
+      Category sub, Color subColor, AppLocalizations l10n) {
+    final ctrl = _controllers.putIfAbsent(sub.id, () {
+      final row = widget.vm.budgetRows.where((r) => r.id == sub.id).firstOrNull;
+      final initial = row?.override ?? row?.baseBudget;
+      return TextEditingController(
+          text: initial != null ? initial.toStringAsFixed(0) : '');
+    });
+    return Container(
+      margin: const EdgeInsets.only(left: 20, bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: subColor.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(10),
+        border: Border(
+            left: BorderSide(color: subColor.withValues(alpha: 0.4), width: 2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: subColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Center(
+              child:
+                  Icon(iconDataFromName(sub.icon), size: 13, color: subColor),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(sub.name,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: subColor)),
+          ),
+          SizedBox(
+            width: 90,
+            child: TextField(
+              controller: ctrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.end,
+              decoration: InputDecoration(
+                hintText: '—',
+                prefixText: '₪',
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 6),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(7),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFDDDDDD))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(7),
+                    borderSide: BorderSide(
+                        color: subColor, width: 1.5)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Budget quick-add/edit bottom sheet ──────────────────────────────────────

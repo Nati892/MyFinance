@@ -228,6 +228,21 @@ class IncomesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateCategoryInList(Category updated) {
+    categories = categories.map((c) => c.id == updated.id ? updated : c).toList();
+    notifyListeners();
+  }
+
+  Future<void> deleteCategory(int id, {bool deleteRefs = false}) async {
+    try {
+      await _categoryRepo.deleteIncomeCategory(id, deleteRefs: deleteRefs);
+      categories = categories.where((c) => c.id != id).toList();
+      if (selectedCategoryId == id) selectedCategoryId = null;
+      notifyListeners();
+      loadIncomes();
+    } catch (_) {}
+  }
+
   // ── Create category ────────────────────────────────────────────────────────
 
   Future<void> createCategory(String name, String color, String icon) async {

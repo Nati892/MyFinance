@@ -201,7 +201,7 @@ class ExpenseCategoriesController {
   async appCreate(ctx) {
     try {
       const appUser = ctx.state.appUser;
-      const { name, nameHe, icon, color, monthlyBudget, householdId } = ctx.request.body;
+      const { name, nameHe, icon, color, monthlyBudget, householdId, parentCategoryId } = ctx.request.body;
 
       if (!name || !icon || !householdId) {
         ctx.status = 400;
@@ -229,7 +229,8 @@ class ExpenseCategoriesController {
         color: color || '#667eea',
         sortOrder,
         monthlyBudget: monthlyBudget ?? null,
-        householdId
+        householdId,
+        parentCategoryId: parentCategoryId || null,
       });
 
       ctx.status = 201;
@@ -320,8 +321,16 @@ class ExpenseCategoriesController {
         return;
       }
 
+      // Top-level active categories with their active sub-categories
       const categories = await ExpenseCategory.findAll({
-        where: { householdId },
+        where: { householdId, isActive: true, parentCategoryId: null },
+        include: [{
+          model: ExpenseCategory,
+          as: 'subCategories',
+          where: { isActive: true },
+          required: false,
+          order: [['sortOrder', 'ASC']]
+        }],
         order: [['sortOrder', 'ASC']]
       });
 
@@ -361,6 +370,98 @@ class ExpenseCategoriesController {
       console.error('App list expense categories error:', error);
       ctx.status = 500;
       ctx.body = { error: 'Failed to retrieve expense categories' };
+    }
+  }
+
+  /**
+   * App: PUT /app/expense-categories/:id
+   * Body: { name, nameHe, icon, color, parentCategoryId }
+   */
+  async appUpdate(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { id } = ctx.params;
+      const { name, nameHe, icon, color, parentCategoryId } = ctx.request.body;
+
+      const category = await ExpenseCategory.findByPk(id);
+      if (!category) {
+        ctx.status = 404;
+        ctx.body = { error: 'Expense category not found' };
+        return;
+      }
+
+      const membership = await HouseholdMember.findOne({
+        where: { householdId: category.householdId, appUserId: appUser.id }
+      });
+      if (!membership) {
+        ctx.status = 403;
+        ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      await category.update({
+        name: name ?? category.name,
+        nameHe: nameHe !== undefined ? nameHe || null : category.nameHe,
+        icon: icon ?? category.icon,
+        color: color ?? category.color,
+        parentCategoryId: parentCategoryId !== undefined ? parentCategoryId || null : category.parentCategoryId,
+      });
+
+      ctx.body = { success: true, category };
+    } catch (error) {
+      console.error('App update expense category error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to update expense category' };
+    }
+  }
+
+  /**
+   * App: DELETE /app/expense-categories/:id
+   * Query: deleteRefs=true → null out expenseCategoryId on related expenses
+   * Otherwise: soft-delete only (isActive = false)
+   */
+  async appDelete(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { id } = ctx.params;
+      const deleteRefs = ctx.query.deleteRefs === 'true';
+
+      const category = await ExpenseCategory.findByPk(id);
+      if (!category) {
+        ctx.status = 404;
+        ctx.body = { error: 'Expense category not found' };
+        return;
+      }
+
+      const membership = await HouseholdMember.findOne({
+        where: { householdId: category.householdId, appUserId: appUser.id }
+      });
+      if (!membership) {
+        ctx.status = 403;
+        ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      await sequelize.transaction(async (t) => {
+        if (deleteRefs) {
+          await Expense.update(
+            { expenseCategoryId: null },
+            { where: { expenseCategoryId: id }, transaction: t }
+          );
+          // Also soft-delete sub-categories
+          await ExpenseCategory.update(
+            { isActive: false },
+            { where: { parentCategoryId: id }, transaction: t }
+          );
+        }
+        await category.update({ isActive: false }, { transaction: t });
+      });
+
+      ctx.body = { success: true };
+    } catch (error) {
+      console.error('App delete expense category error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to delete expense category' };
     }
   }
 

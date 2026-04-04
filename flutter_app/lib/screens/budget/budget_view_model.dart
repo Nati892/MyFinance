@@ -1,6 +1,8 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/budget.dart';
+import 'package:household/models/category.dart';
+import 'package:household/repositories/category_repository.dart';
 import 'package:household/services/budget_service.dart';
 import 'package:household/services/household_service.dart';
 
@@ -9,13 +11,14 @@ final budgetViewModelProvider =
   return BudgetViewModel(
     ref.read(budgetServiceProvider),
     ref.read(householdServiceProvider),
+    ref.read(categoryRepositoryProvider),
   );
 });
 
 enum BudgetLoadState { idle, loading, error }
 
-/// View modes matching the Angular component: table vs. graph.
-enum BudgetViewMode { table, graph }
+/// View modes matching the Angular component: table vs. graph, plus plan.
+enum BudgetViewMode { table, graph, plan }
 
 /// Graph sub-modes: spending by week or by month.
 enum GraphMode { week, month }
@@ -26,10 +29,12 @@ enum EditMode { base, month }
 class BudgetViewModel extends ChangeNotifier {
   final BudgetService _budgetService;
   final HouseholdService _householdService;
+  final CategoryRepository _categoryRepo;
 
-  BudgetViewModel(this._budgetService, this._householdService) {
+  BudgetViewModel(this._budgetService, this._householdService, this._categoryRepo) {
     _initPeriod();
     load();
+    loadExpenseCategories();
   }
 
   // ── Period ──────────────────────────────────────────────────────────────────
@@ -80,6 +85,7 @@ class BudgetViewModel extends ChangeNotifier {
   List<MonthBudgetRow> budgetRows = [];
   List<WeekSpend> weekData = [];
   List<MonthSpend> monthData = [];
+  List<Category> allExpenseCategories = [];
 
   // ── Load state ──────────────────────────────────────────────────────────────
   BudgetLoadState state = BudgetLoadState.loading;
@@ -119,9 +125,35 @@ class BudgetViewModel extends ChangeNotifier {
 
   // ── View mode ───────────────────────────────────────────────────────────────
 
+  Future<void> loadExpenseCategories() async {
+    final hid = _householdService.currentHouseholdId;
+    if (hid == null) return;
+    try {
+      allExpenseCategories = await _categoryRepo.getExpenseCategories(hid);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> savePlanBudgets(Map<int, double?> budgets) async {
+    for (final entry in budgets.entries) {
+      final amount = entry.value;
+      if (amount == null || amount < 0) continue;
+      try {
+        await _budgetService.overrideBudget(
+          expenseCategoryId: entry.key,
+          year: currentYear,
+          month: currentMonth,
+          amount: amount,
+        );
+      } catch (_) {}
+    }
+    await load();
+  }
+
   void setViewMode(BudgetViewMode mode) {
     viewMode = mode;
     if (mode == BudgetViewMode.graph) _loadGraphData();
+    if (mode == BudgetViewMode.plan) loadExpenseCategories();
     notifyListeners();
   }
 

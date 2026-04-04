@@ -79,6 +79,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: null
     },
+    company: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: null
+    },
   }, {
     timestamps: true,
     tableName: 'assets'

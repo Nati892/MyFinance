@@ -644,6 +644,24 @@ abstract class AppLocalizations {
   /// **'No data for this period.'**
   String get budgetNoData;
 
+  /// No description provided for @budgetPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get budgetPlan;
+
+  /// No description provided for @budgetPlanSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Month Budgets'**
+  String get budgetPlanSave;
+
+  /// No description provided for @budgetPlanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Set budget for each category for this month'**
+  String get budgetPlanHint;
+
   /// No description provided for @assetsTitle.
   ///
   /// In en, this message translates to:
@@ -860,6 +878,18 @@ abstract class AppLocalizations {
   /// **'Select start date'**
   String get assetsSelectStartDate;
 
+  /// No description provided for @assetsCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get assetsCompany;
+
+  /// No description provided for @assetsCompanyPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Tesla, Apple…'**
+  String get assetsCompanyPlaceholder;
+
   /// No description provided for @boardTitle.
   ///
   /// In en, this message translates to:
@@ -1075,6 +1105,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search'**
   String get categorySearch;
+
+  /// No description provided for @categoryEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get categoryEdit;
+
+  /// No description provided for @categoryDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get categoryDelete;
+
+  /// No description provided for @categoryDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this category?'**
+  String get categoryDeleteConfirm;
+
+  /// No description provided for @categoryDeleteRefs.
+  ///
+  /// In en, this message translates to:
+  /// **'Also remove from all past expenses/incomes'**
+  String get categoryDeleteRefs;
+
+  /// No description provided for @categoryParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Category (optional)'**
+  String get categoryParent;
+
+  /// No description provided for @categorySubNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New Sub-category'**
+  String get categorySubNew;
 
   /// No description provided for @timelineTotal.
   ///

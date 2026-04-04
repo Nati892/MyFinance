@@ -284,6 +284,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get budgetNoData => 'No data for this period.';
 
   @override
+  String get budgetPlan => 'Plan';
+
+  @override
+  String get budgetPlanSave => 'Save Month Budgets';
+
+  @override
+  String get budgetPlanHint => 'Set budget for each category for this month';
+
+  @override
   String get assetsTitle => 'Assets';
 
   @override
@@ -392,6 +401,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assetsSelectStartDate => 'Select start date';
 
   @override
+  String get assetsCompany => 'Company';
+
+  @override
+  String get assetsCompanyPlaceholder => 'e.g. Tesla, Apple…';
+
+  @override
   String get boardTitle => 'Board';
 
   @override
@@ -498,6 +513,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get categorySearch => 'Search';
+
+  @override
+  String get categoryEdit => 'Edit';
+
+  @override
+  String get categoryDelete => 'Delete';
+
+  @override
+  String get categoryDeleteConfirm => 'Delete this category?';
+
+  @override
+  String get categoryDeleteRefs => 'Also remove from all past expenses/incomes';
+
+  @override
+  String get categoryParent => 'Parent Category (optional)';
+
+  @override
+  String get categorySubNew => 'New Sub-category';
 
   @override
   String get timelineTotal => 'Total';

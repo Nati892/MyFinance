@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
+import 'package:household/models/board_note.dart';
 import 'package:household/screens/board/board_view_model.dart';
 import 'package:household/screens/board/canvas_note_widget.dart';
 import 'package:household/services/auth_service.dart';
@@ -19,20 +20,6 @@ Color _hexColor(String hex, {Color fallback = const Color(0xFFFFF9C4)}) {
     return fallback;
   } catch (_) {
     return fallback;
-  }
-}
-
-String _relativeDate(String iso) {
-  try {
-    final dt = DateTime.parse(iso).toLocal();
-    final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${dt.day}/${dt.month}/${dt.year}';
-  } catch (_) {
-    return '';
   }
 }
 
@@ -155,37 +142,36 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
               Positioned.fill(
                 child: CustomPaint(painter: _DotGridPainter()),
               ),
-              // Notes
+              // Notes — each wrapped in _DraggableNoteItem which owns its own
+              // position state to avoid rebuilding the whole canvas on every frame.
               ...sortedNotes.map((note) {
                 final isSelected = vm.selectedNoteId == note.id;
                 final isOwner = currentUser?.username == note.authorUsername;
-                return Positioned(
-                  left: note.posX,
-                  top: note.posY,
-                  child: CanvasNoteWidget(
-                    note: note,
-                    isSelected: isSelected,
-                    isOwner: isOwner,
-                    onTap: () => vm.bringToFront(note.id),
-                    onDragUpdate: (delta) => vm.moveNote(note.id, delta),
-                    onDragEnd: () => vm.saveNotePosition(note.id),
-                    onScaleUpdate: (scale, baseW, baseH) =>
-                        vm.resizeNote(note.id, scale, baseW, baseH),
-                    onScaleEnd: () {},
-                    onRotateUpdate: (rot) => vm.rotateNote(note.id, rot),
-                    onRotateEnd: () {},
-                    onDelete: () => vm.deleteNote(note.id),
-                    onColorChange: (color) =>
-                        vm.updateNoteStyle(note.id, {'noteColor': color}),
-                    onBoldChange: (bold) =>
-                        vm.updateNoteStyle(note.id, {'isBold': bold}),
-                    onUnderlineChange: (ul) =>
-                        vm.updateNoteStyle(note.id, {'isUnderline': ul}),
-                    onTextSizeChange: (size) =>
-                        vm.updateNoteStyle(note.id, {'textSize': size}),
-                    onDirectionChange: (dir) =>
-                        vm.updateNoteStyle(note.id, {'textDirection': dir}),
-                  ),
+                return _DraggableNoteItem(
+                  key: ValueKey(note.id),
+                  note: note,
+                  isSelected: isSelected,
+                  isOwner: isOwner,
+                  onPositionCommit: (x, y) => vm.commitNotePosition(note.id, x, y),
+                  onTap: () => vm.bringToFront(note.id),
+                  onScaleUpdate: (scale, baseW, baseH) =>
+                      vm.resizeNote(note.id, scale, baseW, baseH),
+                  onScaleEnd: () {},
+                  onRotateUpdate: (rot) => vm.rotateNote(note.id, rot),
+                  onRotateEnd: () {},
+                  onDelete: () => vm.deleteNote(note.id),
+                  onColorChange: (color) =>
+                      vm.updateNoteStyle(note.id, {'noteColor': color}),
+                  onBoldChange: (bold) =>
+                      vm.updateNoteStyle(note.id, {'isBold': bold}),
+                  onUnderlineChange: (ul) =>
+                      vm.updateNoteStyle(note.id, {'isUnderline': ul}),
+                  onTextSizeChange: (size) =>
+                      vm.updateNoteStyle(note.id, {'textSize': size}),
+                  onDirectionChange: (dir) =>
+                      vm.updateNoteStyle(note.id, {'textDirection': dir}),
+                  onContentChange: (content) =>
+                      vm.updateNoteContent(note.id, content),
                 );
               }),
             ],
@@ -619,6 +605,111 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Draggable note item — owns position state to avoid full-canvas rebuilds ───
+
+class _DraggableNoteItem extends StatefulWidget {
+  final BoardNote note;
+  final bool isSelected;
+  final bool isOwner;
+  final void Function(double x, double y) onPositionCommit;
+  final VoidCallback onTap;
+  final void Function(double scale, double baseW, double baseH) onScaleUpdate;
+  final VoidCallback onScaleEnd;
+  final void Function(double rotation) onRotateUpdate;
+  final VoidCallback onRotateEnd;
+  final VoidCallback onDelete;
+  final void Function(String color) onColorChange;
+  final void Function(bool bold) onBoldChange;
+  final void Function(bool underline) onUnderlineChange;
+  final void Function(int size) onTextSizeChange;
+  final void Function(String dir) onDirectionChange;
+  final void Function(String content) onContentChange;
+
+  const _DraggableNoteItem({
+    required super.key,
+    required this.note,
+    required this.isSelected,
+    required this.isOwner,
+    required this.onPositionCommit,
+    required this.onTap,
+    required this.onScaleUpdate,
+    required this.onScaleEnd,
+    required this.onRotateUpdate,
+    required this.onRotateEnd,
+    required this.onDelete,
+    required this.onColorChange,
+    required this.onBoldChange,
+    required this.onUnderlineChange,
+    required this.onTextSizeChange,
+    required this.onDirectionChange,
+    required this.onContentChange,
+  });
+
+  @override
+  State<_DraggableNoteItem> createState() => _DraggableNoteItemState();
+}
+
+class _DraggableNoteItemState extends State<_DraggableNoteItem> {
+  late double _x, _y;
+  bool _isDragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _x = widget.note.posX;
+    _y = widget.note.posY;
+  }
+
+  @override
+  void didUpdateWidget(_DraggableNoteItem old) {
+    super.didUpdateWidget(old);
+    // Accept external position changes (e.g. socket updates) only when not dragging.
+    if (!_isDragging &&
+        (old.note.posX != widget.note.posX || old.note.posY != widget.note.posY)) {
+      _x = widget.note.posX;
+      _y = widget.note.posY;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: _x,
+      top: _y,
+      child: RepaintBoundary(
+        child: CanvasNoteWidget(
+          note: widget.note,
+          isSelected: widget.isSelected,
+          isOwner: widget.isOwner,
+          onTap: widget.onTap,
+          onDragUpdate: (delta) {
+            setState(() {
+              _isDragging = true;
+              _x += delta.dx;
+              _y += delta.dy;
+            });
+          },
+          onDragEnd: () {
+            _isDragging = false;
+            widget.onPositionCommit(_x, _y);
+          },
+          onScaleUpdate: widget.onScaleUpdate,
+          onScaleEnd: widget.onScaleEnd,
+          onRotateUpdate: widget.onRotateUpdate,
+          onRotateEnd: widget.onRotateEnd,
+          onDelete: widget.onDelete,
+          onColorChange: widget.onColorChange,
+          onBoldChange: widget.onBoldChange,
+          onUnderlineChange: widget.onUnderlineChange,
+          onTextSizeChange: widget.onTextSizeChange,
+          onDirectionChange: widget.onDirectionChange,
+          onContentChange: widget.onContentChange,
+        ),
       ),
     );
   }

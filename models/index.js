@@ -106,6 +106,14 @@ CategoryBudgetOverride.belongsTo(Household, { foreignKey: 'householdId' });
 ExpenseCategory.hasMany(CategoryBudgetOverride, { foreignKey: 'expenseCategoryId', onDelete: 'CASCADE' });
 CategoryBudgetOverride.belongsTo(ExpenseCategory, { foreignKey: 'expenseCategoryId' });
 
+// ExpenseCategory self-referential (sub-categories)
+ExpenseCategory.hasMany(ExpenseCategory, { as: 'subCategories', foreignKey: 'parentCategoryId' });
+ExpenseCategory.belongsTo(ExpenseCategory, { as: 'parentCategory', foreignKey: 'parentCategoryId' });
+
+// IncomeCategory self-referential (sub-categories)
+IncomeCategory.hasMany(IncomeCategory, { as: 'subCategories', foreignKey: 'parentCategoryId' });
+IncomeCategory.belongsTo(IncomeCategory, { as: 'parentCategory', foreignKey: 'parentCategoryId' });
+
 // AppUser <-> Household (many-to-many through HouseholdMember)
 AppUser.belongsToMany(Household, { through: HouseholdMember, foreignKey: 'appUserId' });
 Household.belongsToMany(AppUser, { through: HouseholdMember, foreignKey: 'householdId' });

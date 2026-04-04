@@ -282,6 +282,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get budgetNoData => 'אין נתונים לתקופה זו.';
 
   @override
+  String get budgetPlan => 'תכנון';
+
+  @override
+  String get budgetPlanSave => 'שמור תקציב חודשי';
+
+  @override
+  String get budgetPlanHint => 'הגדר תקציב לכל קטגוריה לחודש זה';
+
+  @override
   String get assetsTitle => 'נכסים';
 
   @override
@@ -390,6 +399,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get assetsSelectStartDate => 'בחר תאריך התחלה';
 
   @override
+  String get assetsCompany => 'חברה';
+
+  @override
+  String get assetsCompanyPlaceholder => 'לדוג׳ טסלה, אפל…';
+
+  @override
   String get boardTitle => 'לוח';
 
   @override
@@ -496,6 +511,24 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get categorySearch => 'חיפוש';
+
+  @override
+  String get categoryEdit => 'עריכה';
+
+  @override
+  String get categoryDelete => 'מחיקה';
+
+  @override
+  String get categoryDeleteConfirm => 'למחוק קטגוריה זו?';
+
+  @override
+  String get categoryDeleteRefs => 'גם להסיר מכל ההוצאות/הכנסות הקודמות';
+
+  @override
+  String get categoryParent => 'קטגוריית אב (אופציונלי)';
+
+  @override
+  String get categorySubNew => 'תת-קטגוריה חדשה';
 
   @override
   String get timelineTotal => 'סך הכל';

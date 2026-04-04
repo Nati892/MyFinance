@@ -55,6 +55,7 @@ class AssetsController {
         name, value, liquidity, description, householdId, sortOrder, date,
         exitType, exitDate, exitSeriesStart, exitSeriesInterval, exitSeriesUnit,
         isRepetitive, repetitiveAmount, repetitiveInterval, repetitiveUnit,
+        company,
       } = ctx.request.body;
 
       if (!name || !householdId) {
@@ -89,6 +90,7 @@ class AssetsController {
         repetitiveAmount: repetitiveAmount ?? null,
         repetitiveInterval: repetitiveInterval ?? null,
         repetitiveUnit: repetitiveUnit || null,
+        company: company || null,
       });
 
       ctx.status = 201;
@@ -112,6 +114,7 @@ class AssetsController {
         name, value, liquidity, description, sortOrder, date,
         exitType, exitDate, exitSeriesStart, exitSeriesInterval, exitSeriesUnit,
         isRepetitive, repetitiveAmount, repetitiveInterval, repetitiveUnit,
+        company,
       } = ctx.request.body;
 
       const asset = await Asset.findByPk(id);
@@ -134,6 +137,7 @@ class AssetsController {
         name, value, liquidity, description, sortOrder, date,
         exitType, exitDate, exitSeriesStart, exitSeriesInterval, exitSeriesUnit,
         isRepetitive, repetitiveAmount, repetitiveInterval, repetitiveUnit,
+        company: company ?? asset.company,
       });
 
       ctx.body = { success: true, asset };

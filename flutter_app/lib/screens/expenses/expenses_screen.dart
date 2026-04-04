@@ -54,6 +54,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 vm.onCategoryQuickAdd(id);
                 _showExpenseSheet(context);
               },
+              onEditCategory: (cat) => _showEditCategorySheet(context, vm, cat),
+              onDeleteCategory: (cat) => _confirmDeleteCategory(context, vm, cat),
             ),
             // Timeline
             Expanded(
@@ -142,6 +144,64 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             child: Text(l10n.commonDelete, style: const TextStyle(color: Colors.red)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showEditCategorySheet(BuildContext context, ExpensesViewModel vm, cat) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateCategorySheet(
+        categoryType: 'expense',
+        householdId: vm.householdId,
+        existing: cat,
+        topLevelCategories: vm.categories.where((c) => c.parentCategoryId == null).toList(),
+        onCreated: vm.updateCategoryInList,
+      ),
+    );
+  }
+
+  void _confirmDeleteCategory(BuildContext context, ExpensesViewModel vm, cat) {
+    final l10n = AppLocalizations.of(context)!;
+    bool deleteRefs = false;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.categoryDeleteConfirm),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(cat.name),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Checkbox(
+                    value: deleteRefs,
+                    onChanged: (v) => setDialogState(() => deleteRefs = v ?? false),
+                  ),
+                  Expanded(child: Text(l10n.categoryDeleteRefs, style: const TextStyle(fontSize: 13))),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.commonCancel),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                vm.deleteCategory(cat.id, deleteRefs: deleteRefs);
+              },
+              child: Text(l10n.categoryDelete, style: const TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
       ),
     );
   }

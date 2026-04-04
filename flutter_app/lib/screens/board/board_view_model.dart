@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show Offset;
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/board_note.dart';
@@ -198,30 +197,23 @@ class BoardViewModel extends ChangeNotifier {
     } catch (_) {}
   }
 
-  void moveNote(int id, Offset delta) {
-    notes = notes.map((n) {
-      if (n.id != id) return n;
-      return n.copyWith(
-        posX: n.posX + delta.dx,
-        posY: n.posY + delta.dy,
-      );
-    }).toList();
-    notifyListeners();
-
+  /// Called by _DraggableNoteItem when drag ends. Updates in-memory position
+  /// and schedules API save — no notifyListeners needed because the widget
+  /// already moved visually via local setState.
+  void commitNotePosition(int id, double x, double y) {
+    notes = notes.map((n) => n.id == id ? n.copyWith(posX: x, posY: y) : n).toList();
     _saveTimers[id]?.cancel();
-    _saveTimers[id] = Timer(const Duration(milliseconds: 500), () {
-      final note = notes.firstWhere((n) => n.id == id, orElse: () => notes.first);
-      _repo.updateNote(id, {'posX': note.posX, 'posY': note.posY});
+    _saveTimers[id] = Timer(const Duration(milliseconds: 200), () {
+      _repo.updateNote(id, {'posX': x, 'posY': y});
     });
   }
 
-  void saveNotePosition(int id) {
-    _saveTimers[id]?.cancel();
-    _saveTimers.remove(id);
-    final idx = notes.indexWhere((n) => n.id == id);
-    if (idx == -1) return;
-    final note = notes[idx];
-    _repo.updateNote(id, {'posX': note.posX, 'posY': note.posY});
+  Future<void> updateNoteContent(int id, String content) async {
+    notes = notes.map((n) => n.id == id ? n.copyWith(content: content) : n).toList();
+    notifyListeners();
+    try {
+      await _repo.updateNote(id, {'content': content});
+    } catch (_) {}
   }
 
   void resizeNote(int id, double scaleFactor, double baseWidth, double baseHeight) {

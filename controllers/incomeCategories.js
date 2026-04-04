@@ -1,4 +1,4 @@
-const { IncomeCategory, Household, HouseholdMember, sequelize } = require('../models');
+const { IncomeCategory, Income, Household, HouseholdMember, sequelize } = require('../models');
 
 class IncomeCategoriesController {
   /**
@@ -170,7 +170,7 @@ class IncomeCategoriesController {
   async appCreate(ctx) {
     try {
       const appUser = ctx.state.appUser;
-      const { name, nameHe, icon, color, householdId } = ctx.request.body;
+      const { name, nameHe, icon, color, householdId, parentCategoryId } = ctx.request.body;
 
       if (!name || !icon || !householdId) {
         ctx.status = 400;
@@ -196,7 +196,8 @@ class IncomeCategoriesController {
         icon: icon || 'label',
         color: color || '#4CAF50',
         sortOrder,
-        householdId
+        householdId,
+        parentCategoryId: parentCategoryId || null,
       });
 
       ctx.status = 201;
@@ -236,7 +237,14 @@ class IncomeCategoriesController {
       }
 
       const categories = await IncomeCategory.findAll({
-        where: { householdId },
+        where: { householdId, isActive: true, parentCategoryId: null },
+        include: [{
+          model: IncomeCategory,
+          as: 'subCategories',
+          where: { isActive: true },
+          required: false,
+          order: [['sortOrder', 'ASC']]
+        }],
         order: [['sortOrder', 'ASC']]
       });
 
@@ -248,6 +256,96 @@ class IncomeCategoriesController {
       console.error('App list income categories error:', error);
       ctx.status = 500;
       ctx.body = { error: 'Failed to retrieve income categories' };
+    }
+  }
+
+  /**
+   * App: PUT /app/income-categories/:id
+   * Body: { name, nameHe, icon, color, parentCategoryId }
+   */
+  async appUpdate(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { id } = ctx.params;
+      const { name, nameHe, icon, color, parentCategoryId } = ctx.request.body;
+
+      const category = await IncomeCategory.findByPk(id);
+      if (!category) {
+        ctx.status = 404;
+        ctx.body = { error: 'Income category not found' };
+        return;
+      }
+
+      const membership = await HouseholdMember.findOne({
+        where: { householdId: category.householdId, appUserId: appUser.id }
+      });
+      if (!membership) {
+        ctx.status = 403;
+        ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      await category.update({
+        name: name ?? category.name,
+        nameHe: nameHe !== undefined ? nameHe || null : category.nameHe,
+        icon: icon ?? category.icon,
+        color: color ?? category.color,
+        parentCategoryId: parentCategoryId !== undefined ? parentCategoryId || null : category.parentCategoryId,
+      });
+
+      ctx.body = { success: true, category };
+    } catch (error) {
+      console.error('App update income category error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to update income category' };
+    }
+  }
+
+  /**
+   * App: DELETE /app/income-categories/:id
+   * Query: deleteRefs=true → null out incomeCategoryId on related incomes
+   */
+  async appDelete(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { id } = ctx.params;
+      const deleteRefs = ctx.query.deleteRefs === 'true';
+
+      const category = await IncomeCategory.findByPk(id);
+      if (!category) {
+        ctx.status = 404;
+        ctx.body = { error: 'Income category not found' };
+        return;
+      }
+
+      const membership = await HouseholdMember.findOne({
+        where: { householdId: category.householdId, appUserId: appUser.id }
+      });
+      if (!membership) {
+        ctx.status = 403;
+        ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      await sequelize.transaction(async (t) => {
+        if (deleteRefs) {
+          await Income.update(
+            { incomeCategoryId: null },
+            { where: { incomeCategoryId: id }, transaction: t }
+          );
+          await IncomeCategory.update(
+            { isActive: false },
+            { where: { parentCategoryId: id }, transaction: t }
+          );
+        }
+        await category.update({ isActive: false }, { transaction: t });
+      });
+
+      ctx.body = { success: true };
+    } catch (error) {
+      console.error('App delete income category error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to delete income category' };
     }
   }
 }

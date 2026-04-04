@@ -75,11 +75,19 @@ class TransactionsViewModel extends ChangeNotifier {
   List<TimelineTx> get filteredTransactions {
     final List<TimelineTx> all = [];
 
+    // Build parent lookup: subcategoryId → parent Category
+    final parentLookup = <int, Category>{};
+    for (final cat in [...expenseCategories, ...incomeCategories]) {
+      for (final sub in cat.subCategories) {
+        parentLookup[sub.id] = cat;
+      }
+    }
+
     if (viewMode != 'incomes') {
-      all.addAll(expenses.map(TimelineTx.fromExpense));
+      all.addAll(expenses.map((e) => TimelineTx.fromExpense(e, parentLookup: parentLookup)));
     }
     if (viewMode != 'expenses') {
-      all.addAll(incomes.map(TimelineTx.fromIncome));
+      all.addAll(incomes.map((i) => TimelineTx.fromIncome(i, parentLookup: parentLookup)));
     }
 
     return all.where((tx) {
@@ -190,7 +198,9 @@ class TransactionsViewModel extends ChangeNotifier {
 
   void onCategoryQuickAdd(int categoryId) {
     // Determine if this category belongs to expense or income
-    final isExpense = expenseCategories.any((c) => c.id == categoryId);
+    final isExpense = expenseCategories
+        .expand((c) => c.flatList)
+        .any((c) => c.id == categoryId);
     if (isExpense) {
       openAddExpenseModal(categoryId: categoryId);
     } else {
@@ -390,7 +400,7 @@ class TransactionsViewModel extends ChangeNotifier {
     }
   }
 
-  // ── Add category (from sheet) ──────────────────────────────────────────────
+  // ── Add / edit / delete category ──────────────────────────────────────────
 
   void addExpenseCategory(Category cat) {
     expenseCategories = [...expenseCategories, cat];
@@ -400,6 +410,34 @@ class TransactionsViewModel extends ChangeNotifier {
   void addIncomeCategory(Category cat) {
     incomeCategories = [...incomeCategories, cat];
     notifyListeners();
+  }
+
+  void updateExpenseCategoryInList(Category updated) {
+    expenseCategories = expenseCategories.map((c) => c.id == updated.id ? updated : c).toList();
+    notifyListeners();
+  }
+
+  void updateIncomeCategoryInList(Category updated) {
+    incomeCategories = incomeCategories.map((c) => c.id == updated.id ? updated : c).toList();
+    notifyListeners();
+  }
+
+  Future<void> deleteExpenseCategory(int id, {bool deleteRefs = false}) async {
+    try {
+      await _categoryRepo.deleteExpenseCategory(id, deleteRefs: deleteRefs);
+      expenseCategories = expenseCategories.where((c) => c.id != id).toList();
+      if (filterCategoryId == id) filterCategoryId = null;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> deleteIncomeCategory(int id, {bool deleteRefs = false}) async {
+    try {
+      await _categoryRepo.deleteIncomeCategory(id, deleteRefs: deleteRefs);
+      incomeCategories = incomeCategories.where((c) => c.id != id).toList();
+      if (filterCategoryId == id) filterCategoryId = null;
+      notifyListeners();
+    } catch (_) {}
   }
 
   Future<void> deleteExpense(Expense expense) async {

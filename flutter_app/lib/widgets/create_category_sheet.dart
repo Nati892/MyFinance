@@ -30,30 +30,52 @@ class CreateCategorySheet extends ConsumerStatefulWidget {
   final int householdId;
   final void Function(Category) onCreated;
 
+  /// If set, the sheet will be in edit mode for this category.
+  final Category? existing;
+
+  /// Top-level categories for the parent picker (when creating sub-categories).
+  final List<Category>? topLevelCategories;
+
+  /// Pre-selects a parent category when opening the sheet for "Add Subcategory".
+  final int? preselectedParentId;
+
   const CreateCategorySheet({
     super.key,
     required this.categoryType,
     required this.householdId,
     required this.onCreated,
+    this.existing,
+    this.topLevelCategories,
+    this.preselectedParentId,
   });
 
   @override
-  ConsumerState<CreateCategorySheet> createState() => _CreateCategorySheetState();
+  ConsumerState<CreateCategorySheet> createState() =>
+      _CreateCategorySheetState();
 }
 
 class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
-  final _nameController = TextEditingController();
-  final _nameHeController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _nameHeController;
   final _iconSearchController = TextEditingController();
-  String _selectedColor = '#607D8B';
+  late String _selectedColor;
   String? _selectedIcon;
+  int? _selectedParentId;
   bool _saving = false;
   String? _error;
   List<String> _filteredIcons = _kCategoryIcons;
 
+  bool get _isEditMode => widget.existing != null;
+
   @override
   void initState() {
     super.initState();
+    final existing = widget.existing;
+    _nameController = TextEditingController(text: existing?.name ?? '');
+    _nameHeController = TextEditingController(text: existing?.nameHe ?? '');
+    _selectedColor = existing?.color ?? '#607D8B';
+    _selectedIcon = existing?.icon;
+    _selectedParentId = existing?.parentCategoryId ?? widget.preselectedParentId;
     _iconSearchController.addListener(_filterIcons);
   }
 
@@ -84,7 +106,6 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
   }
 
   IconData _iconFromName(String name) {
-    // Map icon name strings to IconData
     const map = {
       'shopping_cart': Icons.shopping_cart,
       'restaurant': Icons.restaurant,
@@ -145,26 +166,45 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
       setState(() => _error = l10n.categoryName);
       return;
     }
-    setState(() { _saving = true; _error = null; });
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       final repo = ref.read(categoryRepositoryProvider);
-      final body = {
+      final body = <String, dynamic>{
         'name': name,
-        if (_nameHeController.text.trim().isNotEmpty) 'nameHe': _nameHeController.text.trim(),
+        if (_nameHeController.text.trim().isNotEmpty)
+          'nameHe': _nameHeController.text.trim()
+        else
+          'nameHe': null,
         'color': _selectedColor,
-        if (_selectedIcon != null) 'icon': _selectedIcon,
-        'householdId': widget.householdId,
+        'icon': _selectedIcon ?? 'label',
+        if (_selectedParentId != null) 'parentCategoryId': _selectedParentId,
+        if (!_isEditMode) 'householdId': widget.householdId,
       };
-      final Category created;
-      if (widget.categoryType == 'expense') {
-        created = await repo.createExpenseCategory(body);
+
+      final Category result;
+      if (_isEditMode) {
+        if (widget.categoryType == 'expense') {
+          result = await repo.updateExpenseCategory(widget.existing!.id, body);
+        } else {
+          result = await repo.updateIncomeCategory(widget.existing!.id, body);
+        }
       } else {
-        created = await repo.createIncomeCategory(body);
+        if (widget.categoryType == 'expense') {
+          result = await repo.createExpenseCategory(body);
+        } else {
+          result = await repo.createIncomeCategory(body);
+        }
       }
-      widget.onCreated(created);
+      widget.onCreated(result);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      setState(() { _saving = false; _error = AppLocalizations.of(context)!.categoryFailed; });
+      setState(() {
+        _saving = false;
+        _error = AppLocalizations.of(context)!.categoryFailed;
+      });
     }
   }
 
@@ -172,8 +212,14 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isExpense = widget.categoryType == 'expense';
-    final accentColor = isExpense ? const Color(0xFF667EEA) : const Color(0xFF4CAF50);
-    final title = isExpense ? l10n.categoryNewExpense : l10n.categoryNewIncome;
+    final accentColor =
+        isExpense ? const Color(0xFF667EEA) : const Color(0xFF4CAF50);
+
+    final title = _isEditMode
+        ? l10n.categoryEdit
+        : (isExpense ? l10n.categoryNewExpense : l10n.categoryNewIncome);
+
+    final topLevelCats = widget.topLevelCategories ?? [];
 
     return Container(
       decoration: const BoxDecoration(
@@ -192,14 +238,18 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
             // Handle
             Center(
               child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: const Color(0xFFDDDDDD),
+                    borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 16),
-            // Title bar with color accent
+            // Title bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: accentColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
@@ -207,9 +257,19 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
               ),
               child: Row(
                 children: [
-                  Icon(isExpense ? Icons.trending_down : Icons.trending_up, color: accentColor),
+                  Icon(
+                      _isEditMode
+                          ? Icons.edit_outlined
+                          : (isExpense
+                              ? Icons.trending_down
+                              : Icons.trending_up),
+                      color: accentColor),
                   const SizedBox(width: 8),
-                  Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: accentColor, fontSize: 16)),
+                  Text(title,
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: accentColor,
+                          fontSize: 16)),
                 ],
               ),
             ),
@@ -217,25 +277,39 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(8)),
-                child: Text(_error!, style: const TextStyle(color: Color(0xFFB71C1C), fontSize: 13)),
+                decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    borderRadius: BorderRadius.circular(8)),
+                child: Text(_error!,
+                    style: const TextStyle(
+                        color: Color(0xFFB71C1C), fontSize: 13)),
               ),
             ],
             const SizedBox(height: 20),
             // Name field
-            Text(l10n.categoryName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF555555))),
+            Text(l10n.categoryName,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Color(0xFF555555))),
             const SizedBox(height: 6),
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
                 hintText: l10n.categoryNamePlaceholder,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
               ),
             ),
             const SizedBox(height: 16),
             // Hebrew name field
-            Text(l10n.categoryNameHe, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF555555))),
+            Text(l10n.categoryNameHe,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Color(0xFF555555))),
             const SizedBox(height: 6),
             TextField(
               controller: _nameHeController,
@@ -243,13 +317,51 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
               decoration: InputDecoration(
                 hintText: 'מכולת',
                 hintTextDirection: TextDirection.rtl,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
               ),
             ),
+            // Parent category picker (only when top-level cats are provided)
+            if (topLevelCats.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(l10n.categoryParent,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(0xFF555555))),
+              const SizedBox(height: 6),
+              DropdownButtonFormField<int?>(
+                value: _selectedParentId,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                ),
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text(l10n.commonOptional,
+                        style:
+                            const TextStyle(color: Color(0xFF888888))),
+                  ),
+                  ...topLevelCats.map((cat) => DropdownMenuItem<int?>(
+                        value: cat.id,
+                        child: Text(cat.name),
+                      )),
+                ],
+                onChanged: (v) => setState(() => _selectedParentId = v),
+              ),
+            ],
             const SizedBox(height: 20),
             // Color picker
-            Text(l10n.categoryColor, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF555555))),
+            Text(l10n.categoryColor,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Color(0xFF555555))),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -259,29 +371,46 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
                 return GestureDetector(
                   onTap: () => setState(() => _selectedColor = hex),
                   child: Container(
-                    width: 36, height: 36,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: _hexColor(hex),
                       shape: BoxShape.circle,
-                      border: isSelected ? Border.all(color: Colors.black54, width: 3) : null,
-                      boxShadow: isSelected ? [const BoxShadow(color: Color(0x40000000), blurRadius: 4)] : null,
+                      border: isSelected
+                          ? Border.all(color: Colors.black54, width: 3)
+                          : null,
+                      boxShadow: isSelected
+                          ? [
+                              const BoxShadow(
+                                  color: Color(0x40000000), blurRadius: 4)
+                            ]
+                          : null,
                     ),
-                    child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                    child: isSelected
+                        ? const Icon(Icons.check,
+                            color: Colors.white, size: 18)
+                        : null,
                   ),
                 );
               }).toList(),
             ),
             const SizedBox(height: 20),
             // Icon picker
-            Text(l10n.categoryIcon, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF555555))),
+            Text(l10n.categoryIcon,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Color(0xFF555555))),
             const SizedBox(height: 8),
             TextField(
               controller: _iconSearchController,
               decoration: InputDecoration(
                 hintText: l10n.categoryIconSearch,
                 prefixIcon: const Icon(Icons.search, size: 18),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
                 isDense: true,
               ),
             ),
@@ -289,24 +418,32 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
             SizedBox(
               height: 160,
               child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 6, crossAxisSpacing: 8, mainAxisSpacing: 8,
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
                 ),
                 itemCount: _filteredIcons.length,
                 itemBuilder: (ctx, i) {
                   final iconName = _filteredIcons[i];
                   final isSelected = _selectedIcon == iconName;
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedIcon = isSelected ? null : iconName),
+                    onTap: () => setState(
+                        () => _selectedIcon = isSelected ? null : iconName),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? _hexColor(_selectedColor) : const Color(0xFFF5F5F5),
+                        color: isSelected
+                            ? _hexColor(_selectedColor)
+                            : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         _iconFromName(iconName),
                         size: 20,
-                        color: isSelected ? Colors.white : const Color(0xFF666666),
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF666666),
                       ),
                     ),
                   );
@@ -319,8 +456,11 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _saving ? null : () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                    onPressed:
+                        _saving ? null : () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14)),
                     child: Text(l10n.categoryCancel),
                   ),
                 ),
@@ -332,11 +472,21 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accentColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: _saving
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : Text(l10n.categorySave, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(
+                            _isEditMode
+                                ? l10n.commonSave
+                                : l10n.categorySave,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600)),
                   ),
                 ),
               ],

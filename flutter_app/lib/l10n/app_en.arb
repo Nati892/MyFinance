@@ -99,6 +99,9 @@
   "budgetByWeek": "By week",
   "budgetByMonth": "By month",
   "budgetNoData": "No data for this period.",
+  "budgetPlan": "Plan",
+  "budgetPlanSave": "Save Month Budgets",
+  "budgetPlanHint": "Set budget for each category for this month",
 
   "assetsTitle": "Assets",
   "assetsNew": "New Asset",
@@ -136,6 +139,8 @@
   "assetsSelectDate": "Select date",
   "assetsSelectExitDate": "Select exit date",
   "assetsSelectStartDate": "Select start date",
+  "assetsCompany": "Company",
+  "assetsCompanyPlaceholder": "e.g. Tesla, Apple…",
 
   "boardTitle": "Board",
   "boardAddNote": "Add note",
@@ -174,6 +179,12 @@
   "categoryFailed": "Failed to create category",
   "categoryFilterByCategory": "Filter by category",
   "categorySearch": "Search",
+  "categoryEdit": "Edit",
+  "categoryDelete": "Delete",
+  "categoryDeleteConfirm": "Delete this category?",
+  "categoryDeleteRefs": "Also remove from all past expenses/incomes",
+  "categoryParent": "Parent Category (optional)",
+  "categorySubNew": "New Sub-category",
 
   "timelineTotal": "Total",
   "timelineMonthly": "Month",

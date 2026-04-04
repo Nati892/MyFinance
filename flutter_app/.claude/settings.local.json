@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Repos/Household/routers -name *.js)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter analyze:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(flutter gen-l10n:*)"
+    ]
+  }
+}

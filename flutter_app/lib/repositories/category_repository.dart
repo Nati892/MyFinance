@@ -44,4 +44,24 @@ class CategoryRepository {
     final res = await _dio.post('/app/income-categories', data: body);
     return Category.fromJson(res.data['category'] as Map<String, dynamic>);
   }
+
+  Future<Category> updateExpenseCategory(int id, Map<String, dynamic> body) async {
+    final res = await _dio.put('/app/expense-categories/$id', data: body);
+    return Category.fromJson(res.data['category'] as Map<String, dynamic>);
+  }
+
+  Future<void> deleteExpenseCategory(int id, {bool deleteRefs = false}) async {
+    await _dio.delete('/app/expense-categories/$id',
+        queryParameters: {'deleteRefs': deleteRefs});
+  }
+
+  Future<Category> updateIncomeCategory(int id, Map<String, dynamic> body) async {
+    final res = await _dio.put('/app/income-categories/$id', data: body);
+    return Category.fromJson(res.data['category'] as Map<String, dynamic>);
+  }
+
+  Future<void> deleteIncomeCategory(int id, {bool deleteRefs = false}) async {
+    await _dio.delete('/app/income-categories/$id',
+        queryParameters: {'deleteRefs': deleteRefs});
+  }
 }

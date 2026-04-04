@@ -20,6 +20,9 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
+  int? _expandedCategoryId;
+  double? _expandedCategoryYCenter;
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(transactionsViewModelProvider);
@@ -65,6 +68,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 vm.onCategoryQuickAdd(id);
                 _showTransactionSheet(context, vm);
               },
+              onEditCategory: (cat) => _showEditCategorySheet(context, vm, cat),
+              onDeleteCategory: (cat) => _confirmDeleteCategory(context, vm, cat),
+              onAddCategory: (parent, isExpense) =>
+                  _showAddCategorySheet(context, vm, isExpense: isExpense, parent: parent),
+              expenseCategoryIds: vm.expenseCategories
+                  .expand((c) => c.flatList)
+                  .map((c) => c.id)
+                  .toSet(),
+              expandedCategoryId: _expandedCategoryId,
+              onCategoryExpanded: (id, yCenter) => setState(() {
+                _expandedCategoryId = id;
+                _expandedCategoryYCenter = yCenter;
+              }),
             ),
             // Timeline
             Expanded(
@@ -100,6 +116,41 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ),
           ],
         ),
+
+        // ── Floating sub-categories wheel ─────────────────────────────────────
+        if (_expandedCategoryId != null)
+          Builder(builder: (ctx) {
+            final parent = vm.allCategories
+                .where((c) => c.id == _expandedCategoryId)
+                .firstOrNull;
+            if (parent == null || parent.subCategories.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            // Vertically center the wheel on the parent tile, bounded by screen
+            const wheelHeight = _SubCategoriesWheel.totalHeight;
+            final screenHeight = MediaQuery.of(context).size.height;
+            final rawTop = (_expandedCategoryYCenter ?? screenHeight / 2) - wheelHeight / 2;
+            final top = rawTop.clamp(8.0, screenHeight - wheelHeight - 8.0);
+            return Positioned(
+              left: 80,
+              top: top,
+              child: _SubCategoriesWheel(
+                parent: parent,
+                onSelected: (id) {
+                  setState(() {
+                    _expandedCategoryId = null;
+                    _expandedCategoryYCenter = null;
+                  });
+                  vm.onCategoryQuickAdd(id);
+                  _showTransactionSheet(ctx, vm);
+                },
+                onClose: () => setState(() {
+                  _expandedCategoryId = null;
+                  _expandedCategoryYCenter = null;
+                }),
+              ),
+            );
+          }),
 
         // ── FABs (stacked column, bottom-end) ────────────────────────────────
         Positioned.directional(
@@ -218,13 +269,103 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       ),
     );
   }
+
+  void _showAddCategorySheet(
+    BuildContext context,
+    TransactionsViewModel vm, {
+    required bool isExpense,
+    Category? parent,
+  }) {
+    final topLevel = isExpense
+        ? vm.expenseCategories.where((c) => c.parentCategoryId == null).toList()
+        : vm.incomeCategories.where((c) => c.parentCategoryId == null).toList();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateCategorySheet(
+        categoryType: isExpense ? 'expense' : 'income',
+        householdId: vm.householdId,
+        topLevelCategories: topLevel,
+        preselectedParentId: parent?.id,
+        onCreated: (_) => vm.loadCategories(),
+      ),
+    );
+  }
+
+  void _showEditCategorySheet(BuildContext context, TransactionsViewModel vm, Category cat) {
+    final isExpense = vm.expenseCategories.expand((c) => c.flatList).any((c) => c.id == cat.id);
+    final topLevel = isExpense
+        ? vm.expenseCategories.where((c) => c.parentCategoryId == null).toList()
+        : vm.incomeCategories.where((c) => c.parentCategoryId == null).toList();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateCategorySheet(
+        categoryType: isExpense ? 'expense' : 'income',
+        householdId: vm.householdId,
+        existing: cat,
+        topLevelCategories: topLevel,
+        onCreated: (updated) => isExpense
+            ? vm.updateExpenseCategoryInList(updated)
+            : vm.updateIncomeCategoryInList(updated),
+      ),
+    );
+  }
+
+  void _confirmDeleteCategory(BuildContext context, TransactionsViewModel vm, Category cat) {
+    final l10n = AppLocalizations.of(context)!;
+    final isExpense = vm.expenseCategories.expand((c) => c.flatList).any((c) => c.id == cat.id);
+    bool deleteRefs = false;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(l10n.categoryDeleteConfirm),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(cat.name),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Checkbox(
+                    value: deleteRefs,
+                    onChanged: (v) => setDialogState(() => deleteRefs = v ?? false),
+                  ),
+                  Expanded(child: Text(l10n.categoryDeleteRefs, style: const TextStyle(fontSize: 13))),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.commonCancel),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (isExpense) {
+                  vm.deleteExpenseCategory(cat.id, deleteRefs: deleteRefs);
+                } else {
+                  vm.deleteIncomeCategory(cat.id, deleteRefs: deleteRefs);
+                }
+              },
+              child: Text(l10n.categoryDelete, style: const TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Transactions-specific sidebar ───────────────────────────────────────────
-// Wraps CategorySidebar but overrides the filter-tile tap to open the
-// enhanced _TransactionFilterSheet.
 
-class _TransactionsSidebar extends StatelessWidget {
+class _TransactionsSidebar extends StatefulWidget {
   final List<Category> categories;
   final List<Category> favoriteCategories;
   final int? filterCategoryId;
@@ -236,6 +377,13 @@ class _TransactionsSidebar extends StatelessWidget {
   final ValueChanged<double?> onPriceMinChanged;
   final ValueChanged<double?> onPriceMaxChanged;
   final ValueChanged<int> onCategoryQuickAdd;
+  final void Function(Category)? onEditCategory;
+  final void Function(Category)? onDeleteCategory;
+  final void Function(Category? parent, bool isExpense)? onAddCategory;
+  /// IDs that belong to expense categories (used to distinguish in action sheet)
+  final Set<int> expenseCategoryIds;
+  final int? expandedCategoryId;
+  final void Function(int? id, double? yCenter) onCategoryExpanded;
 
   const _TransactionsSidebar({
     required this.categories,
@@ -249,12 +397,48 @@ class _TransactionsSidebar extends StatelessWidget {
     required this.onPriceMinChanged,
     required this.onPriceMaxChanged,
     required this.onCategoryQuickAdd,
+    this.onEditCategory,
+    this.onDeleteCategory,
+    this.onAddCategory,
+    this.expenseCategoryIds = const {},
+    required this.expandedCategoryId,
+    required this.onCategoryExpanded,
   });
 
   @override
+  State<_TransactionsSidebar> createState() => _TransactionsSidebarState();
+}
+
+class _TransactionsSidebarState extends State<_TransactionsSidebar> {
+  final Map<int, GlobalKey> _categoryKeys = {};
+
+  void _handleCategoryTap(Category cat) {
+    if (cat.subCategories.isEmpty) {
+      if (widget.expandedCategoryId != null) {
+        widget.onCategoryExpanded(null, null);
+      }
+      widget.onCategoryQuickAdd(cat.id);
+    } else if (widget.expandedCategoryId == cat.id) {
+      // Toggle off
+      widget.onCategoryExpanded(null, null);
+    } else {
+      // Open wheel — compute Y center of this tile
+      final key = _categoryKeys[cat.id];
+      final box = key?.currentContext?.findRenderObject() as RenderBox?;
+      final globalPos = box?.localToGlobal(Offset.zero);
+      final height = box?.size.height ?? 72.0;
+      final yCenter = (globalPos?.dy ?? 0) + height / 2;
+      widget.onCategoryExpanded(cat.id, yCenter);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final filterCat = filterCategoryId != null
-        ? categories.where((c) => c.id == filterCategoryId).firstOrNull
+    final filterCat = widget.filterCategoryId != null
+        ? widget.categories
+            .expand((c) => c.flatList)
+            .where((c) => c.id == widget.filterCategoryId)
+            .firstOrNull
         : null;
 
     return Container(
@@ -267,9 +451,9 @@ class _TransactionsSidebar extends StatelessWidget {
             onTap: () => _showFilterSheet(context),
             child: _FilterTileWidget(
               category: filterCat,
-              viewMode: viewMode,
-              priceMin: priceMin,
-              priceMax: priceMax,
+              viewMode: widget.viewMode,
+              priceMin: widget.priceMin,
+              priceMax: widget.priceMax,
             ),
           ),
           const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
@@ -277,28 +461,71 @@ class _TransactionsSidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 4),
               children: [
-                ...categories.map((cat) => _QuickAddTileWidget(
-                  label: cat.name,
-                  color: cat.color,
-                  icon: cat.icon,
-                  onTap: () => onCategoryQuickAdd(cat.id),
-                )),
-                if (favoriteCategories.isNotEmpty) ...[
+                ...widget.categories.map((cat) {
+                  final key = _categoryKeys.putIfAbsent(cat.id, () => GlobalKey());
+                  return Container(
+                    key: key,
+                    child: _QuickAddTileWidget(
+                      label: cat.name,
+                      color: cat.color,
+                      icon: cat.icon,
+                      hasSubCategories: cat.subCategories.isNotEmpty,
+                      isExpanded: widget.expandedCategoryId == cat.id,
+                      onTap: () => _handleCategoryTap(cat),
+                      onLongPress: (widget.onEditCategory != null ||
+                              widget.onDeleteCategory != null)
+                          ? () => _showCategoryActions(context, cat)
+                          : null,
+                    ),
+                  );
+                }),
+                if (widget.favoriteCategories.isNotEmpty) ...[
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
+                    child: Divider(
+                        height: 1, thickness: 1, indent: 8, endIndent: 8),
                   ),
                   const Center(
                     child: Text('★',
                         style: TextStyle(fontSize: 10, color: Color(0xFFAAAAAA))),
                   ),
-                  ...favoriteCategories.map((cat) => _QuickAddTileWidget(
-                    label: cat.name,
-                    color: cat.color,
-                    icon: cat.icon,
-                    onTap: () => onCategoryQuickAdd(cat.id),
-                  )),
+                  ...widget.favoriteCategories.map((cat) => _QuickAddTileWidget(
+                        label: cat.name,
+                        color: cat.color,
+                        icon: cat.icon,
+                        hasSubCategories: false,
+                        isExpanded: false,
+                        onTap: () => widget.onCategoryQuickAdd(cat.id),
+                      )),
                 ],
+                // ── Add category button ──────────────────────────────────────
+                if (widget.onAddCategory != null)
+                  GestureDetector(
+                    onTap: () => _showAddTypeDialog(context),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFFDDDDDD), width: 1),
+                      ),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 18, color: Color(0xFF888888)),
+                          SizedBox(height: 2),
+                          Text(
+                            '+',
+                            style: TextStyle(
+                                fontSize: 9, color: Color(0xFF888888)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -316,7 +543,8 @@ class _TransactionsSidebar extends StatelessWidget {
                   Text(
                     AppLocalizations.of(context)!.categorySearch,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 9, color: Color(0xFF888888)),
+                    style: const TextStyle(
+                        fontSize: 9, color: Color(0xFF888888)),
                   ),
                 ],
               ),
@@ -327,8 +555,121 @@ class _TransactionsSidebar extends StatelessWidget {
     );
   }
 
+  void _showAddTypeDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: const Color(0xFFDDDDDD),
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.categoryNewExpense.replaceAll(' Category', ''),
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+            const SizedBox(height: 4),
+            ListTile(
+              leading: const Icon(Icons.trending_down,
+                  color: Color(0xFF667EEA)),
+              title: Text(l10n.categoryNewExpense),
+              onTap: () {
+                Navigator.pop(context);
+                widget.onAddCategory!(null, true);
+              },
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.trending_up, color: Color(0xFF4CAF50)),
+              title: Text(l10n.categoryNewIncome),
+              onTap: () {
+                Navigator.pop(context);
+                widget.onAddCategory!(null, false);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCategoryActions(BuildContext context, Category cat) {
+    final l10n = AppLocalizations.of(context)!;
+    // Determine if category is expense or income to enable "Add Subcategory"
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: const Color(0xFFDDDDDD),
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 12),
+            Text(cat.name,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 15)),
+            const SizedBox(height: 8),
+            if (widget.onAddCategory != null && cat.parentCategoryId == null)
+              ListTile(
+                leading: const Icon(Icons.subdirectory_arrow_right,
+                    color: Color(0xFF888888)),
+                title: Text(l10n.categorySubNew),
+                onTap: () {
+                  Navigator.pop(context);
+                  final isExpense = widget.expenseCategoryIds.contains(cat.id);
+                  widget.onAddCategory!(cat, isExpense);
+                },
+              ),
+            if (widget.onEditCategory != null)
+              ListTile(
+                leading:
+                    const Icon(Icons.edit_outlined, color: Color(0xFF667EEA)),
+                title: Text(l10n.categoryEdit),
+                onTap: () {
+                  Navigator.pop(context);
+                  widget.onEditCategory!(cat);
+                },
+              ),
+            if (widget.onDeleteCategory != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: Text(l10n.categoryDelete,
+                    style: const TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  widget.onDeleteCategory!(cat);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showSearchSheet(BuildContext context) {
-    final allCats = [...categories, ...favoriteCategories];
+    final allCats = [
+      ...widget.categories.expand((c) => c.flatList),
+      ...widget.favoriteCategories
+    ];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -338,7 +679,7 @@ class _TransactionsSidebar extends StatelessWidget {
         categories: allCats,
         onCategorySelected: (id) {
           Navigator.pop(context);
-          onCategoryQuickAdd(id);
+          widget.onCategoryQuickAdd(id);
         },
       ),
     );
@@ -356,19 +697,19 @@ class _TransactionsSidebar extends StatelessWidget {
         maxChildSize: 0.92,
         expand: false,
         builder: (_, scrollController) => _TransactionFilterSheet(
-          categories: categories,
-          filterCategoryId: filterCategoryId,
-          viewMode: viewMode,
-          priceMin: priceMin,
-          priceMax: priceMax,
+          categories: widget.categories,
+          filterCategoryId: widget.filterCategoryId,
+          viewMode: widget.viewMode,
+          priceMin: widget.priceMin,
+          priceMax: widget.priceMax,
           scrollController: scrollController,
           onFilterChanged: (id) {
             Navigator.pop(context);
-            onFilterChanged(id);
+            widget.onFilterChanged(id);
           },
-          onViewModeChanged: onViewModeChanged,
-          onPriceMinChanged: onPriceMinChanged,
-          onPriceMaxChanged: onPriceMaxChanged,
+          onViewModeChanged: widget.onViewModeChanged,
+          onPriceMinChanged: widget.onPriceMinChanged,
+          onPriceMaxChanged: widget.onPriceMaxChanged,
         ),
       ),
     );
@@ -462,13 +803,19 @@ class _QuickAddTileWidget extends StatelessWidget {
   final String label;
   final String color;
   final String? icon;
+  final bool hasSubCategories;
+  final bool isExpanded;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const _QuickAddTileWidget({
     required this.label,
     required this.color,
     required this.icon,
+    this.hasSubCategories = false,
+    this.isExpanded = false,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -476,9 +823,10 @@ class _QuickAddTileWidget extends StatelessWidget {
     final base = _hexColor(color);
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
           color: base.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
@@ -486,7 +834,22 @@ class _QuickAddTileWidget extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(iconDataFromName(icon), size: 20, color: base),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(iconDataFromName(icon), size: 20, color: base),
+                if (hasSubCategories)
+                  Positioned(
+                    right: -6,
+                    top: -4,
+                    child: Icon(
+                      isExpanded ? Icons.expand_less : Icons.expand_more,
+                      size: 12,
+                      color: base.withValues(alpha: 0.7),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 3),
             Text(
               label,
@@ -511,6 +874,144 @@ class _QuickAddTileWidget extends StatelessWidget {
 }
 
 // ── Enhanced filter bottom sheet ─────────────────────────────────────────────
+
+// ── Sub-categories wheel ──────────────────────────────────────────────────────
+
+class _SubCategoriesWheel extends StatelessWidget {
+  final Category parent;
+  final ValueChanged<int> onSelected;
+  final VoidCallback onClose;
+
+  static const double _itemExtent = 76.0;
+  static const int _visibleItems = 3;
+  static const double totalHeight = _itemExtent * _visibleItems;
+
+  const _SubCategoriesWheel({
+    required this.parent,
+    required this.onSelected,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final base = _hexColor(parent.color);
+    // Items: General (parent) first, then subcategories
+    final items = <({int id, String? icon, String name, bool isGeneral})>[
+      (id: parent.id, icon: parent.icon, name: 'General', isGeneral: true),
+      ...parent.subCategories.map(
+        (s) => (id: s.id, icon: s.icon, name: s.name, isGeneral: false),
+      ),
+    ];
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        SizedBox(
+          width: 76,
+          height: totalHeight,
+          child: ListWheelScrollView(
+            itemExtent: _itemExtent,
+            diameterRatio: 1.4,
+            perspective: 0.004,
+            squeeze: 1.0,
+            physics: const FixedExtentScrollPhysics(),
+            children: items.map((item) {
+              return GestureDetector(
+                onTap: () => onSelected(item.id),
+                child: _WheelItem(
+                  icon: item.icon,
+                  name: item.name,
+                  color: base,
+                  isGeneral: item.isGeneral,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        // Close button
+        Positioned(
+          top: -8,
+          right: -8,
+          child: GestureDetector(
+            onTap: onClose,
+            child: Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              elevation: 2,
+              shadowColor: Colors.black26,
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: Icon(Icons.close, size: 11, color: base.withValues(alpha: 0.6)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _hexColor(String hex) {
+    try {
+      return Color(int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
+    } catch (_) {
+      return const Color(0xFF888888);
+    }
+  }
+}
+
+class _WheelItem extends StatelessWidget {
+  final String? icon;
+  final String name;
+  final Color color;
+  final bool isGeneral;
+
+  const _WheelItem({
+    required this.icon,
+    required this.name,
+    required this.color,
+    required this.isGeneral,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: isGeneral ? 38 : 32,
+          height: isGeneral ? 38 : 32,
+          decoration: BoxDecoration(
+            color: isGeneral
+                ? color.withValues(alpha: 0.25)
+                : color.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(isGeneral ? 10 : 8),
+            border: isGeneral
+                ? Border.all(color: color.withValues(alpha: 0.5), width: 1.5)
+                : null,
+          ),
+          child: Icon(
+            iconDataFromName(icon),
+            size: isGeneral ? 20 : 17,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          name,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: isGeneral ? 9 : 8,
+            fontWeight: isGeneral ? FontWeight.w700 : FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 // ── Category search sheet ─────────────────────────────────────────────────────
 

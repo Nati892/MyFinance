@@ -36,6 +36,15 @@ module.exports = (sequelize, DataTypes) => {
         model: 'households',
         key: 'id'
       }
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
+    },
+    parentCategoryId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null
     }
   }, {
     timestamps: true,

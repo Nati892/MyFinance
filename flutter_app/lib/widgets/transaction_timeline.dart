@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:household/l10n/app_localizations.dart';
+import 'package:household/models/category.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
 import 'package:household/utils/financial_calendar.dart';
@@ -17,6 +18,8 @@ class TimelineTx {
   final String? categoryName;
   final String? categoryColor;
   final String? categoryIcon;
+  final String? parentCategoryName;
+  final String? parentCategoryColor;
   final String? username;
   /// 'expense' or 'income'
   final String txType;
@@ -31,37 +34,51 @@ class TimelineTx {
     this.categoryName,
     this.categoryColor,
     this.categoryIcon,
+    this.parentCategoryName,
+    this.parentCategoryColor,
     this.username,
     this.txType = 'expense',
   });
 
-  static TimelineTx fromExpense(Expense e) => TimelineTx(
-    id: e.id,
-    amount: e.amount,
-    dateTime: e.dateTime,
-    description: e.description,
-    note: e.note,
-    paymentMethod: e.paymentMethod,
-    categoryName: e.category?.name,
-    categoryColor: e.category?.color,
-    categoryIcon: e.category?.icon,
-    username: e.appUser?.username,
-    txType: 'expense',
-  );
+  static TimelineTx fromExpense(Expense e, {Map<int, Category>? parentLookup}) {
+    final catId = e.category?.id;
+    final parent = (catId != null && parentLookup != null) ? parentLookup[catId] : null;
+    return TimelineTx(
+      id: e.id,
+      amount: e.amount,
+      dateTime: e.dateTime,
+      description: e.description,
+      note: e.note,
+      paymentMethod: e.paymentMethod,
+      categoryName: e.category?.name,
+      categoryColor: e.category?.color,
+      categoryIcon: e.category?.icon,
+      parentCategoryName: parent?.name,
+      parentCategoryColor: parent?.color,
+      username: e.appUser?.name,
+      txType: 'expense',
+    );
+  }
 
-  static TimelineTx fromIncome(Income i) => TimelineTx(
-    id: i.id,
-    amount: i.amount,
-    dateTime: i.dateTime,
-    description: i.description,
-    note: i.note,
-    paymentMethod: i.paymentMethod,
-    categoryName: i.category?.name,
-    categoryColor: i.category?.color,
-    categoryIcon: i.category?.icon,
-    username: i.appUser?.username,
-    txType: 'income',
-  );
+  static TimelineTx fromIncome(Income i, {Map<int, Category>? parentLookup}) {
+    final catId = i.category?.id;
+    final parent = (catId != null && parentLookup != null) ? parentLookup[catId] : null;
+    return TimelineTx(
+      id: i.id,
+      amount: i.amount,
+      dateTime: i.dateTime,
+      description: i.description,
+      note: i.note,
+      paymentMethod: i.paymentMethod,
+      categoryName: i.category?.name,
+      categoryColor: i.category?.color,
+      categoryIcon: i.category?.icon,
+      parentCategoryName: parent?.name,
+      parentCategoryColor: parent?.color,
+      username: i.appUser?.name,
+      txType: 'income',
+    );
+  }
 }
 
 // ─── Grouping helpers ─────────────────────────────────────────────────────────
@@ -560,11 +577,27 @@ class _TxTile extends StatelessWidget {
             child: Icon(iconDataFromName(tx.categoryIcon), size: 18, color: color),
           ),
         ),
-        title: Text(
-          tx.description?.isNotEmpty == true ? tx.description! : (tx.categoryName ?? '—'),
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        title: RichText(
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          text: TextSpan(
+            children: [
+              if (tx.parentCategoryName != null) ...[
+                TextSpan(
+                  text: '${tx.parentCategoryName} › ',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: _hexColor(tx.parentCategoryColor ?? tx.categoryColor ?? '#888888').withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+              TextSpan(
+                text: tx.description?.isNotEmpty == true ? tx.description! : (tx.categoryName ?? '—'),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF222222)),
+              ),
+            ],
+          ),
         ),
         subtitle: Text(
           '$time · ${_localizedPaymentMethod(tx.paymentMethod, l10n)}'

@@ -56,6 +56,7 @@ class AssetsViewModel extends ChangeNotifier {
   String formLiquidity = 'medium';
   String formDescription = '';
   String formDate = '';
+  String formCompany = '';
 
   // Form fields – exit
   String formExitType = 'none'; // 'none' | 'single' | 'series'
@@ -153,6 +154,7 @@ class AssetsViewModel extends ChangeNotifier {
     formLiquidity = 'medium';
     formDescription = '';
     formDate = DateTime.now().toIso8601String().split('T')[0];
+    formCompany = '';
     // Exit defaults
     formExitType = 'none';
     formExitDate = null;
@@ -177,6 +179,7 @@ class AssetsViewModel extends ChangeNotifier {
     formLiquidity = asset.liquidity;
     formDescription = asset.description ?? '';
     formDate = asset.date ?? DateTime.now().toIso8601String().split('T')[0];
+    formCompany = asset.company ?? '';
     // Exit fields
     formExitType = asset.exitType;
     formExitDate = asset.exitDate;
@@ -215,6 +218,11 @@ class AssetsViewModel extends ChangeNotifier {
 
   void setFormDescription(String v) {
     formDescription = v;
+    notifyListeners();
+  }
+
+  void setFormCompany(String v) {
+    formCompany = v;
     notifyListeners();
   }
 
@@ -295,6 +303,7 @@ class AssetsViewModel extends ChangeNotifier {
         'description': formDescription,
         'householdId': hid,
         'date': formDate,
+        if (formCompany.isNotEmpty) 'company': formCompany,
         'sortOrder': isEditMode
             ? (assets.firstWhere((a) => a.id == editingId!).sortOrder)
             : (assets.fold(0, (m, a) => m > a.sortOrder ? m : a.sortOrder) + 1),

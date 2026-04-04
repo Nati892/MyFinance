@@ -19,6 +19,7 @@ class CanvasNoteWidget extends StatefulWidget {
   final void Function(bool underline) onUnderlineChange;
   final void Function(int size) onTextSizeChange;
   final void Function(String dir) onDirectionChange;
+  final void Function(String content)? onContentChange;
 
   const CanvasNoteWidget({
     super.key,
@@ -38,6 +39,7 @@ class CanvasNoteWidget extends StatefulWidget {
     required this.onUnderlineChange,
     required this.onTextSizeChange,
     required this.onDirectionChange,
+    this.onContentChange,
   });
 
   @override
@@ -49,11 +51,71 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
   double _baseHeight = 0;
   double _startRotation = 0;
   bool _isScaling = false;
+  bool _isEditing = false;
+  TextEditingController? _textController;
+  FocusNode? _focusNode;
 
   static const _kNoteColors = [
     '#fff9c4', '#f8bbd0', '#c8e6c9', '#b3e5fc',
     '#ffe0b2', '#e1bee7', '#ffffff', '#ffccbc',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.note.type == 'text') {
+      _textController = TextEditingController(text: widget.note.content);
+      _focusNode = FocusNode();
+      _focusNode!.addListener(_onFocusChange);
+    }
+  }
+
+  @override
+  void didUpdateWidget(CanvasNoteWidget old) {
+    super.didUpdateWidget(old);
+    // Keep text controller in sync with external content changes (e.g. socket updates)
+    // but only when not actively editing.
+    if (!_isEditing && old.note.content != widget.note.content && widget.note.type == 'text') {
+      _textController?.text = widget.note.content;
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode?.removeListener(_onFocusChange);
+    _focusNode?.dispose();
+    _textController?.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (_focusNode != null && !_focusNode!.hasFocus && _isEditing) {
+      _commitEdit();
+    }
+  }
+
+  void _commitEdit() {
+    if (!_isEditing) return;
+    setState(() => _isEditing = false);
+    final content = _textController?.text ?? '';
+    if (content != widget.note.content) {
+      widget.onContentChange?.call(content);
+    }
+  }
+
+  /// Single tap: if already selected text note, enter edit mode. Otherwise select.
+  void _handleTap() {
+    if (_isEditing) {
+      _commitEdit();
+      return;
+    }
+    if (widget.isSelected && widget.note.type == 'text') {
+      setState(() => _isEditing = true);
+      _focusNode?.requestFocus();
+    } else {
+      widget.onTap();
+    }
+  }
 
   Color _hexColor(String hex, {Color fallback = const Color(0xFFFFF9C4)}) {
     try {
@@ -79,7 +141,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
     final h = _effectiveHeight();
     final isHeart = widget.note.type == 'heart';
 
-    // When selected, non-heart notes need extra height below for the toolbar.
     final toolbarExtraH = (widget.isSelected && !isHeart) ? 60.0 : 0.0;
 
     final bgColor = _hexColor(widget.note.noteColor);
@@ -90,8 +151,9 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
       angle: widget.note.rotation,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
+        onTap: _handleTap,
         onScaleStart: (details) {
+          if (_isEditing) return;
           if (details.pointerCount >= 2) {
             _isScaling = true;
             _baseWidth = w;
@@ -100,6 +162,7 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
           }
         },
         onScaleUpdate: (details) {
+          if (_isEditing) return;
           if (_isScaling && details.pointerCount >= 2) {
             widget.onScaleUpdate(details.scale, _baseWidth, _baseHeight);
             widget.onRotateUpdate(_startRotation + details.rotation);
@@ -108,6 +171,7 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
           }
         },
         onScaleEnd: (details) {
+          if (_isEditing) return;
           if (_isScaling) {
             widget.onScaleEnd();
             widget.onRotateEnd();
@@ -122,7 +186,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // Main note content
               SizedBox(
                 width: w,
                 height: h,
@@ -130,7 +193,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
                     ? _buildHeartContent(w, h)
                     : _buildNoteCard(w, h, bgColor, headerColor, textColor),
               ),
-              // Delete button for heart (overlay top-right corner)
               if (widget.isSelected && widget.isOwner && isHeart)
                 Positioned(
                   top: 4,
@@ -148,7 +210,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
                     ),
                   ),
                 ),
-              // Toolbar for text/image notes (inside GestureDetector bounds)
               if (widget.isSelected && !isHeart)
                 _buildToolbar(w, h),
             ],
@@ -158,7 +219,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
     );
   }
 
-  /// Heart notes: just the icon, no card or header.
   Widget _buildHeartContent(double w, double h) {
     final heartColor = _hexColor(widget.note.heartColor ?? '#e53935');
     final size = (w < h ? w : h) * 0.75;
@@ -167,7 +227,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
     );
   }
 
-  /// Regular note card with header + content area.
   Widget _buildNoteCard(
     double w,
     double h,
@@ -210,7 +269,12 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
                   style: const TextStyle(fontSize: 10, color: Colors.white70),
                 ),
                 const Spacer(),
-                if (widget.isOwner && widget.isSelected)
+                if (_isEditing)
+                  GestureDetector(
+                    onTap: _commitEdit,
+                    child: const Icon(Icons.check, size: 14, color: Colors.white70),
+                  )
+                else if (widget.isOwner && widget.isSelected)
                   GestureDetector(
                     onTap: widget.onDelete,
                     child: const Icon(Icons.close, size: 14, color: Colors.white70),
@@ -254,6 +318,30 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
         final td = widget.note.textDirection == 'rtl'
             ? TextDirection.rtl
             : TextDirection.ltr;
+        if (_isEditing) {
+          return Directionality(
+            textDirection: td,
+            child: TextField(
+              controller: _textController,
+              focusNode: _focusNode,
+              style: TextStyle(
+                color: textColor,
+                fontSize: widget.note.textSize.toDouble(),
+                fontWeight: widget.note.isBold ? FontWeight.bold : FontWeight.normal,
+                decoration:
+                    widget.note.isUnderline ? TextDecoration.underline : null,
+              ),
+              maxLines: null,
+              expands: true,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+              ),
+              textAlignVertical: TextAlignVertical.top,
+            ),
+          );
+        }
         return Directionality(
           textDirection: td,
           child: Text(
@@ -262,14 +350,14 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
               color: textColor,
               fontSize: widget.note.textSize.toDouble(),
               fontWeight: widget.note.isBold ? FontWeight.bold : FontWeight.normal,
-              decoration: widget.note.isUnderline ? TextDecoration.underline : null,
+              decoration:
+                  widget.note.isUnderline ? TextDecoration.underline : null,
             ),
           ),
         );
     }
   }
 
-  /// Toolbar positioned below the note card, within GestureDetector bounds.
   Widget _buildToolbar(double noteWidth, double noteHeight) {
     return Positioned(
       top: noteHeight + 6,
@@ -313,7 +401,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
                 onSelected: widget.onColorChange,
                 tooltip: 'Color',
               ),
-              // Bold, underline, text size, direction (text notes only)
               if (widget.note.type == 'text') ...[
                 _ToolbarBtn(
                   icon: Icons.format_bold,
@@ -328,12 +415,14 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
                 _ToolbarBtn(
                   icon: Icons.text_decrease,
                   active: false,
-                  onTap: () => widget.onTextSizeChange((widget.note.textSize - 2).clamp(8, 32)),
+                  onTap: () =>
+                      widget.onTextSizeChange((widget.note.textSize - 2).clamp(8, 32)),
                 ),
                 _ToolbarBtn(
                   icon: Icons.text_increase,
                   active: false,
-                  onTap: () => widget.onTextSizeChange((widget.note.textSize + 2).clamp(8, 32)),
+                  onTap: () =>
+                      widget.onTextSizeChange((widget.note.textSize + 2).clamp(8, 32)),
                 ),
                 _ToolbarBtn(
                   icon: widget.note.textDirection == 'rtl'

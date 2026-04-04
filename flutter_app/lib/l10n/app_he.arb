@@ -99,6 +99,9 @@
   "budgetByWeek": "לפי שבוע",
   "budgetByMonth": "לפי חודש",
   "budgetNoData": "אין נתונים לתקופה זו.",
+  "budgetPlan": "תכנון",
+  "budgetPlanSave": "שמור תקציב חודשי",
+  "budgetPlanHint": "הגדר תקציב לכל קטגוריה לחודש זה",
 
   "assetsTitle": "נכסים",
   "assetsNew": "נכס חדש",
@@ -136,6 +139,8 @@
   "assetsSelectDate": "בחר תאריך",
   "assetsSelectExitDate": "בחר תאריך יציאה",
   "assetsSelectStartDate": "בחר תאריך התחלה",
+  "assetsCompany": "חברה",
+  "assetsCompanyPlaceholder": "לדוג׳ טסלה, אפל…",
 
   "boardTitle": "לוח",
   "boardAddNote": "הוסף פתק",
@@ -174,6 +179,12 @@
   "categoryFailed": "יצירת הקטגוריה נכשלה",
   "categoryFilterByCategory": "סנן לפי קטגוריה",
   "categorySearch": "חיפוש",
+  "categoryEdit": "עריכה",
+  "categoryDelete": "מחיקה",
+  "categoryDeleteConfirm": "למחוק קטגוריה זו?",
+  "categoryDeleteRefs": "גם להסיר מכל ההוצאות/הכנסות הקודמות",
+  "categoryParent": "קטגוריית אב (אופציונלי)",
+  "categorySubNew": "תת-קטגוריה חדשה",
 
   "timelineTotal": "סך הכל",
   "timelineMonthly": "חודש",

@@ -28,9 +28,13 @@ router.get('/app/expense-categories/favorites', authenticateApp, expenseCategori
 router.get('/app/expense-categories', authenticateApp, expenseCategoriesController.appList);
 router.post('/app/expense-categories', authenticateApp, expenseCategoriesController.appCreate);
 router.put('/app/expense-categories/:id/budget', authenticateApp, expenseCategoriesController.appUpdateBudget);
+router.put('/app/expense-categories/:id', authenticateApp, expenseCategoriesController.appUpdate);
+router.delete('/app/expense-categories/:id', authenticateApp, expenseCategoriesController.appDelete);
 
 // ─── App: Income Categories ───────────────────────────────────────────────────
 router.get('/app/income-categories', authenticateApp, incomeCategoriesController.appList);
 router.post('/app/income-categories', authenticateApp, incomeCategoriesController.appCreate);
+router.put('/app/income-categories/:id', authenticateApp, incomeCategoriesController.appUpdate);
+router.delete('/app/income-categories/:id', authenticateApp, incomeCategoriesController.appDelete);
 
 module.exports = router;
