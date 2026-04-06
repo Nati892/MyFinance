@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/router.dart';
 import 'package:household/services/auth_service.dart';
+import 'package:household/services/household_service.dart';
 import 'package:household/services/locale_service.dart';
 
 void main() async {
@@ -26,6 +27,10 @@ class _AppStartupState extends ConsumerState<AppStartup> {
   void initState() {
     super.initState();
     ref.read(authServiceProvider).tryRestoreSession().then((_) {
+      final auth = ref.read(authServiceProvider);
+      if (auth.isLoggedIn && auth.currentUser != null) {
+        ref.read(householdServiceProvider).setHouseholds(auth.currentUser!.households);
+      }
       if (mounted) setState(() => _ready = true);
     });
   }

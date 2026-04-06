@@ -26,6 +26,7 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   int? _expandedCategoryId;
   double? _expandedCategoryYCenter;
+  final GlobalKey _stackKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +53,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
 
     return Stack(
+      key: _stackKey,
       children: [
         // ── Main layout ───────────────────────────────────────────────────────
         Row(
@@ -130,11 +132,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             if (parent == null || parent.subCategories.isEmpty) {
               return const SizedBox.shrink();
             }
-            // Vertically center the arc on the parent tile, bounded by screen
+            // Vertically center the arc on the parent tile, bounded by screen.
+            // Convert global Y center to the Stack's local coordinate system
+            // so the arc aligns correctly even when the Stack doesn't start at y=0
+            // (e.g. below AppBar / status bar).
             const arcHeight = _SubCategoriesArc.totalHeight;
             final screenHeight = MediaQuery.of(context).size.height;
-            final rawTop = (_expandedCategoryYCenter ?? screenHeight / 2) - arcHeight / 2;
-            final top = rawTop.clamp(8.0, screenHeight - arcHeight - 8.0);
+            double yCenterLocal = _expandedCategoryYCenter ?? screenHeight / 2;
+            final stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+            if (stackBox != null && _expandedCategoryYCenter != null) {
+              yCenterLocal = stackBox.globalToLocal(Offset(0, _expandedCategoryYCenter!)).dy;
+            }
+            final rawTop = yCenterLocal - arcHeight / 2;
+            final stackHeight = stackBox?.size.height ?? screenHeight;
+            final top = rawTop.clamp(8.0, stackHeight - arcHeight - 8.0);
 
             final arc = _SubCategoriesArc(
               parent: parent,
@@ -901,45 +912,47 @@ class _ArcItemLayout {
   final double xOffset; // how far the item is pushed horizontally from the sidebar edge
   final double yOffset; // signed vertical distance from the viewport center, in pixels
   final double scale;   // size multiplier: 1.0 at center, smaller toward edges
+  final double opacity; // 1.0 inside the arc, fades to 0 as item scrolls past the edge
 
   const _ArcItemLayout({
     required this.xOffset,
     required this.yOffset,
     required this.scale,
+    this.opacity = 1.0,
   });
 }
 
 // Pure function — all the math for positioning one item on the arc.
-// Edit the constants (arcRadius, minScale, visibleItems) to tune the look.
 _ArcItemLayout _calculateItemLayout({
   required int    itemIndex,
-  required double scrollOffsetPx, // current scroll in pixels (0 = first item at center)
+  required double scrollOffsetPx,
   required double itemHeight,
-  required double arcRadius,      // max horizontal extension of the center item (px)
-  required double minScale,       // size of the most-edge-visible item (0.0 – 1.0)
-  required int    visibleItems,   // total items shown in the viewport
+  required double arcRadius,
+  required double minScale,
+  required int    visibleItems,
 }) {
-  // Step 1: distance of this item from the viewport center, in item units
+  // Distance from viewport center in item-units
   final distanceInItems = (itemIndex * itemHeight - scrollOffsetPx) / itemHeight;
 
-  // Step 2: normalize so that ±(visibleItems / 2) maps to ±1
-  final halfVisible        = visibleItems / 2.0;
+  // Normalize so ±(visibleItems / 2) maps to ±1
+  final halfVisible       = visibleItems / 2.0;
   final normalizedDistance = distanceInItems / halfVisible;
 
-  // Step 3: convert normalized distance to an angle on the half-circle (±π/2)
+  // Angle on the semicircle: 0 = center, ±π/2 = edges
   final angle = (normalizedDistance * (pi / 2)).clamp(-pi / 2, pi / 2);
 
-  // Step 4: cosine of the angle drives both X extension and scale
-  //   cos(0)    = 1 → center item: fully extended, full size
-  //   cos(±π/2) = 0 → edge items:  no extension,   min size
+  // TRUE CIRCULAR PATH: both X and Y from trig functions
   final cosAngle = cos(angle);
   final xOffset  = arcRadius * cosAngle;
-  final scale    = minScale + (1.0 - minScale) * cosAngle;
+  final yOffset  = arcRadius * sin(angle);
 
-  // Step 5: Y position is plain linear scroll — no curve on the vertical axis
-  final yOffset = distanceInItems * itemHeight;
+  final scale = minScale + (1.0 - minScale) * cosAngle;
 
-  return _ArcItemLayout(xOffset: xOffset, yOffset: yOffset, scale: scale);
+  // Items beyond the visible arc are invisible (ShaderMask handles edge fading)
+  final beyond  = (normalizedDistance.abs() - 1.0).clamp(0.0, double.infinity);
+  final opacity = beyond > 0 ? 0.0 : 1.0;
+
+  return _ArcItemLayout(xOffset: xOffset, yOffset: yOffset, scale: scale, opacity: opacity);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -952,13 +965,13 @@ class _SubCategoriesArc extends StatefulWidget {
   final VoidCallback onClose;
 
   // ── Tune these to change the feel of the arc ─────────────────────────────
-  static const double itemHeight   = 72.0;
-  static const double arcRadius    = 84.0; // px the center item sticks out
-  static const double minScale     = 0.50; // size ratio of the most-edge item
+  static const double itemHeight   = 48.0;
+  static const double arcRadius    = 60.0; // px – also the semicircle radius
+  static const double minScale     = 0.55; // size ratio of the most-edge item
   static const int    visibleItems = 5;    // items visible at once
   // ─────────────────────────────────────────────────────────────────────────
 
-  static const double totalHeight = itemHeight * visibleItems; // 360 px
+  static const double totalHeight = itemHeight * visibleItems; // 240 px
 
   const _SubCategoriesArc({
     required this.parent,
@@ -1062,9 +1075,11 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
         + layout.yOffset
         - _SubCategoriesArc.itemHeight / 2;
 
-    // Skip items that are scrolled fully outside the viewport
-    final isOutsideViewport = itemTop < -_SubCategoriesArc.itemHeight ||
-        itemTop > _SubCategoriesArc.totalHeight;
+    // Skip items that are scrolled fully outside the viewport.
+    // Use 0 (not -itemHeight) as the upper bound so items don't escape the
+    // half-oval background at the top. Items below the arc are similarly culled.
+    final isOutsideViewport = itemTop < -_SubCategoriesArc.itemHeight * 0.5 ||
+        itemTop > _SubCategoriesArc.totalHeight - _SubCategoriesArc.itemHeight * 0.5;
     if (isOutsideViewport) return const SizedBox.shrink();
 
     // In RTL the arc fans to the left, so we negate the X offset
@@ -1078,13 +1093,20 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
         offset: Offset(translationX, 0),
         child: Transform.scale(
           scale: layout.scale,
-          child: GestureDetector(
-            onTap: () => widget.onSelected(item.id),
-            child: _WheelItem(
-              icon:      item.icon,
-              name:      item.name,
-              color:     color,
-              isGeneral: item.isGeneral,
+          child: Opacity(
+            opacity: layout.opacity,
+            child: GestureDetector(
+              onTap: layout.opacity > 0.05 ? () => widget.onSelected(item.id) : null,
+              child: SizedBox(
+                width: _SubCategoriesArc.itemHeight,
+                height: _SubCategoriesArc.itemHeight,
+                child: _WheelItem(
+                  icon:      item.icon,
+                  name:      item.name,
+                  color:     color,
+                  isGeneral: item.isGeneral,
+                ),
+              ),
             ),
           ),
         ),
@@ -1099,15 +1121,33 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
       width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.itemHeight,
       height: _SubCategoriesArc.totalHeight,
       child: GestureDetector(
+        behavior:             HitTestBehavior.opaque,
         onVerticalDragUpdate: _onDragUpdate,
         onVerticalDragEnd:    _onDragEnd,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Items fan out to the right
-            for (int i = 0; i < items.length; i++)
-              _buildItem(item: items[i], index: i, color: color, isRTL: false),
-          ],
+        child: ClipRect(
+          child: ShaderMask(
+            shaderCallback: (Rect bounds) {
+              return const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.white, Colors.white, Colors.white, Colors.transparent],
+                stops: [0.0, 0.20, 0.50, 0.80, 1.0],
+              ).createShader(bounds);
+            },
+            blendMode: BlendMode.dstIn,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _HalfOvalPainter(color: color, isRTL: false),
+                  ),
+                ),
+                for (int i = 0; i < items.length; i++)
+                  _buildItem(item: items[i], index: i, color: color, isRTL: false),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1120,15 +1160,33 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
       width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.itemHeight,
       height: _SubCategoriesArc.totalHeight,
       child: GestureDetector(
+        behavior:             HitTestBehavior.opaque,
         onVerticalDragUpdate: _onDragUpdate,
         onVerticalDragEnd:    _onDragEnd,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Items fan out to the left (xOffset is negated inside _buildItem)
-            for (int i = 0; i < items.length; i++)
-              _buildItem(item: items[i], index: i, color: color, isRTL: true),
-          ],
+        child: ClipRect(
+          child: ShaderMask(
+            shaderCallback: (Rect bounds) {
+              return const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.white, Colors.white, Colors.white, Colors.transparent],
+                stops: [0.0, 0.20, 0.50, 0.80, 1.0],
+              ).createShader(bounds);
+            },
+            blendMode: BlendMode.dstIn,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _HalfOvalPainter(color: color, isRTL: true),
+                  ),
+                ),
+                for (int i = 0; i < items.length; i++)
+                  _buildItem(item: items[i], index: i, color: color, isRTL: true),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1158,6 +1216,49 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
   }
 }
 
+// Paints the half-oval background behind the subcategory arc.
+// For LTR: flat edge on the left (sidebar side), bulge to the right.
+// For RTL: flat edge on the right, bulge to the left.
+class _HalfOvalPainter extends CustomPainter {
+  final Color color;
+  final bool  isRTL;
+
+  const _HalfOvalPainter({required this.color, required this.isRTL});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill;
+
+    // Draw a D-shaped half-circle centered vertically, with radius = arcRadius.
+    const r = _SubCategoriesArc.arcRadius;
+    final cy = size.height / 2;
+
+    if (!isRTL) {
+      // Right-facing D: flat edge on left (x=0), bulge to the right.
+      final rect = Rect.fromLTWH(-r, cy - r, r * 2, r * 2);
+      final path = Path()
+        ..moveTo(0, cy - r)
+        ..arcTo(rect, -pi / 2, pi, false)
+        ..close();
+      canvas.drawPath(path, paint);
+    } else {
+      // Left-facing D: flat edge on right (x=width), bulge to the left.
+      final rect = Rect.fromLTWH(size.width - r, cy - r, r * 2, r * 2);
+      final path = Path()
+        ..moveTo(size.width, cy - r)
+        ..arcTo(rect, -pi / 2, -pi, false)
+        ..close();
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_HalfOvalPainter old) =>
+      old.color != color || old.isRTL != isRTL;
+}
+
 class _WheelItem extends StatelessWidget {
   final String? icon;
   final String name;
@@ -1178,21 +1279,16 @@ class _WheelItem extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          width: isGeneral ? 38 : 32,
-          height: isGeneral ? 38 : 32,
+          width: isGeneral ? 34 : 28,
+          height: isGeneral ? 34 : 28,
           decoration: BoxDecoration(
-            color: isGeneral
-                ? color.withValues(alpha: 0.25)
-                : color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(isGeneral ? 10 : 8),
-            border: isGeneral
-                ? Border.all(color: color.withValues(alpha: 0.5), width: 1.5)
-                : null,
+            color: color,
+            borderRadius: BorderRadius.circular(isGeneral ? 9 : 7),
           ),
           child: Icon(
             iconDataFromName(icon),
-            size: isGeneral ? 20 : 17,
-            color: color,
+            size: isGeneral ? 18 : 15,
+            color: Colors.white,
           ),
         ),
         const SizedBox(height: 4),
