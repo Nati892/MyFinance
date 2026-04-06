@@ -29,6 +29,7 @@ const Expense = require('./expense')(sequelize, Sequelize.DataTypes);
 const Income = require('./income')(sequelize, Sequelize.DataTypes);
 const Note = require('./note')(sequelize, Sequelize.DataTypes);
 const Asset = require('./asset')(sequelize, Sequelize.DataTypes);
+const Card = require('./card')(sequelize, Sequelize.DataTypes);
 const CategoryBudgetOverride = require('./categoryBudgetOverride')(sequelize, Sequelize.DataTypes);
 
 // Define associations
@@ -98,6 +99,18 @@ Note.belongsTo(AppUser, { foreignKey: 'appUserId' });
 Household.hasMany(Asset, { foreignKey: 'householdId', onDelete: 'CASCADE' });
 Asset.belongsTo(Household, { foreignKey: 'householdId' });
 
+// Household <-> Card
+Household.hasMany(Card, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+Card.belongsTo(Household, { foreignKey: 'householdId' });
+
+// Card <-> Expense
+Card.hasMany(Expense, { foreignKey: 'cardId' });
+Expense.belongsTo(Card, { foreignKey: 'cardId', as: 'card' });
+
+// Card <-> Income
+Card.hasMany(Income, { foreignKey: 'cardId' });
+Income.belongsTo(Card, { foreignKey: 'cardId', as: 'card' });
+
 // Household <-> CategoryBudgetOverride
 Household.hasMany(CategoryBudgetOverride, { foreignKey: 'householdId', onDelete: 'CASCADE' });
 CategoryBudgetOverride.belongsTo(Household, { foreignKey: 'householdId' });
@@ -134,6 +147,7 @@ const db = {
   Income,
   Note,
   Asset,
+  Card,
   CategoryBudgetOverride
 };
 

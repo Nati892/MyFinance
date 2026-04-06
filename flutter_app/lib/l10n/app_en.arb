@@ -222,5 +222,16 @@
   "commonToday": "Today",
   "commonYesterday": "Yesterday",
   "commonExpense": "Expense",
-  "commonIncome": "Income"
+  "commonIncome": "Income",
+
+  "cardsPageTitle": "Cards",
+  "cardsNone": "None",
+  "cardsAddCard": "Add Card",
+  "cardsEditCard": "Edit Card",
+  "cardsLastFour": "Last 4 digits",
+  "cardsNickname": "Nickname",
+  "cardsBankName": "Bank name",
+  "cardsTypeCredit": "Credit",
+  "cardsTypeDebit": "Debit",
+  "cardsDeleteConfirm": "Delete this card?"
 }

@@ -22,8 +22,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     paymentMethod: {
-      type: DataTypes.ENUM('credit_card', 'debit_card', 'cash', 'bank_transfer'),
-      defaultValue: 'credit_card'
+      type: DataTypes.ENUM('card', 'cash', 'bank_transfer'),
+      defaultValue: 'card'
+    },
+    cardId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+      references: { model: 'cards', key: 'id' }
     },
     incomeCategoryId: {
       type: DataTypes.INTEGER,

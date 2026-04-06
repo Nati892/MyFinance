@@ -119,11 +119,26 @@
         <button
           *ngFor="let pm of paymentMethods"
           class="method-chip"
-          [class.selected]="form.paymentMethod === pm.value"
-          (click)="form.paymentMethod = pm.value"
+          [class.selected]="form.paymentMethod === pm.key"
+          (click)="onPaymentMethodChange(pm.key)"
           type="button">
+          <span class="method-emoji">{{ pm.emoji }}</span>
           {{ pm.label }}
         </button>
+      </div>
+      <!-- Card picker -->
+      <div class="card-picker" *ngIf="form.paymentMethod === 'card'">
+        <button
+          class="card-chip"
+          [class.card-chip--active]="form.cardId === null"
+          (click)="selectCard(null)"
+          type="button">None</button>
+        <button
+          *ngFor="let c of cards"
+          class="card-chip"
+          [class.card-chip--active]="form.cardId === c.id"
+          (click)="selectCard(c.id)"
+          type="button">{{ getCardLabel(c) }}</button>
       </div>
     </div>
 

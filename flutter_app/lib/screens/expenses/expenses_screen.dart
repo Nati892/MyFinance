@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
+import 'package:household/models/credit_card.dart';
 import 'package:household/models/expense.dart';
+import 'package:household/services/credit_card_service.dart';
+import 'package:household/services/household_service.dart';
 import 'package:household/utils/icon_helper.dart';
 import 'package:household/screens/expenses/expenses_view_model.dart';
 import 'package:household/widgets/category_sidebar.dart';
@@ -225,8 +229,7 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   static const _purple = Color(0xFF667EEA);
 
   static const _paymentMethodKeys = [
-    ('credit_card', '💳'),
-    ('debit_card', '💳'),
+    ('card', '💳'),
     ('cash', '💵'),
     ('bank_transfer', '🏦'),
   ];
@@ -658,40 +661,98 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   }
 
   Widget _buildPaymentSegment(ExpensesViewModel vm, AppLocalizations l10n) {
-    final labels = [l10n.paymentCard, l10n.paymentDebit, l10n.paymentCash, l10n.paymentTransfer];
-    return Row(
-      children: _paymentMethodKeys.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final pm = entry.value;
-        final active = vm.formPaymentMethod == pm.$1;
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => vm.setFormPayment(pm.$1),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: active ? const Color(0xFF667EEA) : const Color(0xFFF0F0F0),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Text(pm.$2, style: const TextStyle(fontSize: 16)),
-                  const SizedBox(height: 2),
-                  Text(
-                    labels[idx],
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: active ? Colors.white : const Color(0xFF666666),
-                      fontWeight: FontWeight.w600,
-                    ),
+    final labels = [l10n.paymentCard, l10n.paymentCash, l10n.paymentTransfer];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: _paymentMethodKeys.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final pm = entry.value;
+            final active = vm.formPaymentMethod == pm.$1;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => vm.setFormPayment(pm.$1),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: active ? const Color(0xFF667EEA) : const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                  child: Column(
+                    children: [
+                      Text(pm.$2, style: const TextStyle(fontSize: 16)),
+                      const SizedBox(height: 2),
+                      Text(
+                        labels[idx],
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: active ? Colors.white : const Color(0xFF666666),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+            );
+          }).toList(),
+        ),
+        if (vm.formPaymentMethod == 'card') ...[
+          const SizedBox(height: 10),
+          _buildCardPicker(vm, l10n),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCardPicker(ExpensesViewModel vm, AppLocalizations l10n) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        // None chip
+        _CardChip(
+          label: l10n.cardsNone,
+          active: vm.formCardId == null,
+          onTap: () => vm.setFormCardId(null),
+        ),
+        // Saved card chips
+        ...vm.cards.map((card) => _CardChip(
+          label: card.displayLabel,
+          active: vm.formCardId == card.id,
+          onTap: () => vm.setFormCardId(card.id),
+        )),
+        // Add card button
+        GestureDetector(
+          onTap: () => _showCardFormSheet(context, vm),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFF667EEA), width: 1.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 14, color: Color(0xFF667EEA)),
+                SizedBox(width: 2),
+                Text('+', style: TextStyle(fontSize: 13, color: Color(0xFF667EEA), fontWeight: FontWeight.w600)),
+              ],
             ),
           ),
-        );
-      }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _showCardFormSheet(BuildContext context, ExpensesViewModel vm, {CreditCard? card}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CardFormSheet(card: card, vm: vm),
     );
   }
 
@@ -731,4 +792,238 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
       return const Color(0xFF888888);
     }
   }
+}
+
+// ── Card chip ─────────────────────────────────────────────────────────────────
+
+class _CardChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _CardChip({required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF667EEA) : const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: active ? const Color(0xFF667EEA) : const Color(0xFFDDDDDD),
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: active ? Colors.white : const Color(0xFF333333),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Card form sheet ───────────────────────────────────────────────────────────
+
+class _CardFormSheet extends ConsumerStatefulWidget {
+  final CreditCard? card;
+  final ExpensesViewModel vm;
+
+  const _CardFormSheet({this.card, required this.vm});
+
+  @override
+  ConsumerState<_CardFormSheet> createState() => _CardFormSheetState();
+}
+
+class _CardFormSheetState extends ConsumerState<_CardFormSheet> {
+  late TextEditingController _lastFourCtrl;
+  late TextEditingController _nicknameCtrl;
+  late TextEditingController _bankCtrl;
+  String? _cardType; // 'credit' | 'debit' | null
+  bool _saving = false;
+  String? _error;
+
+  static const _purple = Color(0xFF667EEA);
+
+  @override
+  void initState() {
+    super.initState();
+    _lastFourCtrl = TextEditingController(text: widget.card?.lastFourDigits ?? '');
+    _nicknameCtrl = TextEditingController(text: widget.card?.nickname ?? '');
+    _bankCtrl     = TextEditingController(text: widget.card?.bankName ?? '');
+    _cardType     = widget.card?.cardType;
+  }
+
+  @override
+  void dispose() {
+    _lastFourCtrl.dispose();
+    _nicknameCtrl.dispose();
+    _bankCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final digits = _lastFourCtrl.text.trim();
+    if (digits.length != 4 || !RegExp(r'^\d{4}$').hasMatch(digits)) {
+      setState(() => _error = 'Enter exactly 4 digits.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; });
+
+    final hid = ref.read(householdServiceProvider).currentHouseholdId;
+    if (hid == null) { setState(() => _saving = false); return; }
+
+    final body = <String, dynamic>{
+      'lastFourDigits': digits,
+      if (_nicknameCtrl.text.trim().isNotEmpty) 'nickname': _nicknameCtrl.text.trim(),
+      if (_bankCtrl.text.trim().isNotEmpty) 'bankName': _bankCtrl.text.trim(),
+      if (_cardType != null) 'cardType': _cardType,
+      'householdId': hid,
+    };
+
+    try {
+      if (widget.card == null) {
+        await widget.vm.createCard(body);
+      } else {
+        await widget.vm.updateCard(widget.card!.id, body);
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      setState(() { _saving = false; _error = 'Failed to save. Please try again.'; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    final isEdit = widget.card != null;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPad),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isEdit ? l10n.cardsEditCard : l10n.cardsAddCard,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+
+          // Last 4 digits
+          Text(l10n.cardsLastFour, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444))),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _lastFourCtrl,
+            keyboardType: TextInputType.number,
+            maxLength: 4,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: _inputDeco('1234'),
+          ),
+          const SizedBox(height: 12),
+
+          // Nickname
+          Text(
+            '${l10n.cardsNickname} ',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444)),
+          ),
+          const SizedBox(height: 6),
+          TextField(controller: _nicknameCtrl, decoration: _inputDeco('e.g. My Visa')),
+          const SizedBox(height: 12),
+
+          // Bank name
+          Text(
+            '${l10n.cardsBankName} ',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444)),
+          ),
+          const SizedBox(height: 6),
+          TextField(controller: _bankCtrl, decoration: _inputDeco('e.g. Leumi')),
+          const SizedBox(height: 12),
+
+          // Card type
+          Row(
+            children: [
+              _typeBtn(l10n.cardsTypeCredit, 'credit'),
+              const SizedBox(width: 8),
+              _typeBtn(l10n.cardsTypeDebit, 'debit'),
+              const SizedBox(width: 8),
+              _typeBtn('—', null),
+            ],
+          ),
+
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+          ],
+
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saving ? null : _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _purple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: _saving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _typeBtn(String label, String? type) {
+    final active = _cardType == type;
+    return GestureDetector(
+      onTap: () => setState(() => _cardType = type),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF667EEA) : const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: active ? const Color(0xFF667EEA) : const Color(0xFFDDDDDD)),
+        ),
+        child: Text(label, style: TextStyle(
+          fontSize: 12, fontWeight: FontWeight.w600,
+          color: active ? Colors.white : const Color(0xFF555555),
+        )),
+      ),
+    );
+  }
+
+  InputDecoration _inputDeco(String hint) => InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(color: Color(0xFFAAAAAA)),
+    filled: true,
+    fillColor: const Color(0xFFFAFAFA),
+    counterText: '',
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF667EEA), width: 1.5)),
+  );
 }

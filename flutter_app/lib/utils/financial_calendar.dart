@@ -95,8 +95,9 @@ String formatNIS(double amount) {
 
 String formatPaymentMethod(String method) {
   switch (method) {
-    case 'credit_card':   return 'Credit card';
-    case 'debit_card':    return 'Debit card';
+    case 'card':
+    case 'credit_card':   return 'Card';
+    case 'debit_card':    return 'Card';
     case 'cash':          return 'Cash';
     case 'bank_transfer': return 'Bank transfer';
     default:              return method;

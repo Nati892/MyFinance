@@ -10,6 +10,7 @@ import 'package:household/screens/incomes/incomes_screen.dart';
 import 'package:household/screens/budget/budget_screen.dart';
 import 'package:household/screens/assets/assets_screen.dart';
 import 'package:household/screens/board/board_screen.dart';
+import 'package:household/screens/credit_cards/credit_cards_screen.dart';
 import 'package:household/screens/transactions/transactions_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -65,6 +66,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/board',
             builder: (context, state) => const BoardScreen(),
+          ),
+          GoRoute(
+            path: '/credit-cards',
+            builder: (context, state) => const CreditCardsScreen(),
           ),
         ],
       ),

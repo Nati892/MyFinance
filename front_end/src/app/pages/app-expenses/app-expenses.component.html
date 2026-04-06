@@ -125,6 +125,23 @@
       </button>
     </div>
 
+    <!-- Card sub-picker (shown when 'card' is selected) -->
+    <div class="card-picker" *ngIf="form.paymentMethod === 'card'">
+      <button
+        class="card-chip"
+        [class.card-chip--active]="form.cardId === null"
+        (click)="selectCard(null)"
+        type="button"
+      >None</button>
+      <button
+        *ngFor="let c of cards"
+        class="card-chip"
+        [class.card-chip--active]="form.cardId === c.id"
+        (click)="selectCard(c.id)"
+        type="button"
+      >{{ getCardLabel(c) }}</button>
+    </div>
+
     <!-- Description -->
     <div class="field-label">{{ 'EXPENSES.DESCRIPTION' | translate }} <span class="field-optional">(optional)</span></div>
     <div class="field-group">

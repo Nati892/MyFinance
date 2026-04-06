@@ -1357,6 +1357,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Income'**
   String get commonIncome;
+
+  /// No description provided for @cardsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cards'**
+  String get cardsPageTitle;
+
+  /// No description provided for @cardsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get cardsNone;
+
+  /// No description provided for @cardsAddCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Card'**
+  String get cardsAddCard;
+
+  /// No description provided for @cardsEditCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Card'**
+  String get cardsEditCard;
+
+  /// No description provided for @cardsLastFour.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 4 digits'**
+  String get cardsLastFour;
+
+  /// No description provided for @cardsNickname.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname'**
+  String get cardsNickname;
+
+  /// No description provided for @cardsBankName.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank name'**
+  String get cardsBankName;
+
+  /// No description provided for @cardsTypeCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit'**
+  String get cardsTypeCredit;
+
+  /// No description provided for @cardsTypeDebit.
+  ///
+  /// In en, this message translates to:
+  /// **'Debit'**
+  String get cardsTypeDebit;
+
+  /// No description provided for @cardsDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this card?'**
+  String get cardsDeleteConfirm;
 }
 
 class _AppLocalizationsDelegate

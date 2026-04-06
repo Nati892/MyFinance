@@ -25,7 +25,16 @@ import { TranslateModule } from '@ngx-translate/core';
 import { HouseholdStateService } from '../../services/household-state.service';
 import { CategoryService } from '../../services/category.service';
 import { TransactionService } from '../../services/transaction.service';
+import { CardService, Card } from '../../services/card.service';
 import { LanguageService } from '../../services/language.service';
+
+function toLocalDateTimeInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
 
 @Component({
   selector: 'app-app-incomes',
@@ -64,21 +73,31 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
   saveError = '';
 
   // ── Form model ───────────────────────────────────────────────────────────────
-  form = {
-    amount: null as number | null,
-    incomeCategoryId: null as number | null,
-    dateTime: '',
-    paymentMethod: 'credit_card',
+  form: {
+    amount: number | null;
+    incomeCategoryId: number | null;
+    dateTime: string;
+    paymentMethod: 'card' | 'cash' | 'bank_transfer';
+    cardId: number | null;
+    description: string;
+    note: string;
+  } = {
+    amount: null,
+    incomeCategoryId: null,
+    dateTime: toLocalDateTimeInput(new Date()),
+    paymentMethod: 'card',
+    cardId: null,
     description: '',
     note: '',
   };
 
-  readonly paymentMethods = [
-    { value: 'credit_card',   label: 'Credit Card' },
-    { value: 'debit_card',    label: 'Debit Card'  },
-    { value: 'cash',          label: 'Cash'        },
-    { value: 'bank_transfer', label: 'Bank Transfer' },
+  readonly paymentMethods: { key: 'card' | 'cash' | 'bank_transfer'; label: string; emoji: string }[] = [
+    { key: 'card',          label: 'Card',     emoji: '💳' },
+    { key: 'cash',          label: 'Cash',     emoji: '💵' },
+    { key: 'bank_transfer', label: 'Transfer', emoji: '🏦' },
   ];
+
+  cards: Card[] = [];
 
   private sub = new Subscription();
 
@@ -86,6 +105,7 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
     private householdState: HouseholdStateService,
     private categoryService: CategoryService,
     private transactionService: TransactionService,
+    private cardService: CardService,
     private cdr: ChangeDetectorRef,
     private languageService: LanguageService,
   ) {}
@@ -102,6 +122,7 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
       this.householdName = household.householdName;
       this.loadCategories();
       this.loadIncomes();
+      this.loadCards();
     }
 
     this.sub.add(
@@ -113,6 +134,7 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
           this.selectedCategoryId = null;
           this.loadCategories();
           this.loadIncomes();
+          this.loadCards();
         }
       })
     );
@@ -123,6 +145,17 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
   }
 
   // ── Data loading ─────────────────────────────────────────────────────────────
+
+  private loadCards(): void {
+    if (this.householdId == null) return;
+    this.cardService.getCards(this.householdId).subscribe({
+      next: res => {
+        this.cards = res.cards ?? [];
+        this.cdr.markForCheck();
+      },
+      error: () => {}
+    });
+  }
 
   private loadCategories(): void {
     if (!this.householdId) return;
@@ -202,18 +235,16 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
     this.editingId   = tx.id;
     this.saveError   = '';
 
-    // Format dateTime for datetime-local input (YYYY-MM-DDTHH:mm)
-    const dt = new Date(tx.dateTime);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const localDT =
-      `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}` +
-      `T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    const pm = (tx.paymentMethod === 'credit_card' || tx.paymentMethod === 'debit_card')
+      ? 'card' as const
+      : tx.paymentMethod as 'card' | 'cash' | 'bank_transfer';
 
     this.form = {
       amount:           tx.amount,
       incomeCategoryId: tx.category?.id ?? null,
-      dateTime:         localDT,
-      paymentMethod:    tx.paymentMethod,
+      dateTime:         toLocalDateTimeInput(new Date(tx.dateTime)),
+      paymentMethod:    pm,
+      cardId:           (tx as any).cardId ?? null,
       description:      tx.description ?? '',
       note:             tx.note ?? '',
     };
@@ -236,17 +267,12 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
     this.editingId   = null;
     this.saveError   = '';
 
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const localDT =
-      `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-      `T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
     this.form = {
       amount:           null,
       incomeCategoryId: categoryId ?? this.selectedCategoryId ?? this.categories[0]?.id ?? null,
-      dateTime:         localDT,
-      paymentMethod:    'credit_card',
+      dateTime:         toLocalDateTimeInput(new Date()),
+      paymentMethod:    'card',
+      cardId:           null,
       description:      '',
       note:             '',
     };
@@ -280,12 +306,13 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
     this.saveError = '';
     this.cdr.markForCheck();
 
-    const payload = {
+    const payload: any = {
       amount:           this.form.amount,
       dateTime:         new Date(this.form.dateTime).toISOString(),
       description:      this.form.description || undefined,
       note:             this.form.note || undefined,
       paymentMethod:    this.form.paymentMethod,
+      cardId:           this.form.paymentMethod === 'card' ? this.form.cardId : null,
       incomeCategoryId: this.form.incomeCategoryId!,
       householdId:      this.householdId,
     };
@@ -312,6 +339,19 @@ export class AppIncomesComponent implements OnInit, OnDestroy {
 
   selectChipCategory(id: number): void {
     this.form.incomeCategoryId = id;
+  }
+
+  selectCard(cardId: number | null): void {
+    this.form.cardId = cardId;
+  }
+
+  getCardLabel(card: Card): string {
+    return card.nickname ?? `••••${card.lastFourDigits}`;
+  }
+
+  onPaymentMethodChange(key: 'card' | 'cash' | 'bank_transfer'): void {
+    this.form.paymentMethod = key;
+    if (key !== 'card') this.form.cardId = null;
   }
 
   getCategoryById(id: number | null): Category | undefined {

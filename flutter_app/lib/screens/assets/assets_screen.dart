@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/asset.dart';
 import 'package:household/screens/assets/assets_view_model.dart';
@@ -50,17 +51,28 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
             ),
           ],
         ),
-        // ── FAB ───────────────────────────────────────────────────────────
+        // ── FABs ──────────────────────────────────────────────────────────
         Positioned(
           bottom: 16,
           right: 16,
           child: FloatingActionButton(
+            heroTag: 'addAsset',
             onPressed: () {
               vm.openAddModal();
               _showAssetSheet(context);
             },
             backgroundColor: _purple,
             child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ),
+        Positioned(
+          bottom: 16,
+          right: 84,
+          child: FloatingActionButton(
+            heroTag: 'viewCards',
+            onPressed: () => context.push('/credit-cards'),
+            backgroundColor: _purple,
+            child: const Icon(Icons.credit_card, color: Colors.white),
           ),
         ),
       ],

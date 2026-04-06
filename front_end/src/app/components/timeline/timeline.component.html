@@ -198,7 +198,7 @@
 
     <!-- Amount + payment + menu -->
     <div class="tx-right">
-      <span class="tx-payment-inline">{{ formatPayment(tx.paymentMethod) }}</span>
+      <span class="tx-payment-inline">{{ formatPayment(tx) }}</span>
       <span class="tx-amount" [class.income]="tx.type === 'income'">
         {{ formatNIS(tx.amount) }}
       </span>

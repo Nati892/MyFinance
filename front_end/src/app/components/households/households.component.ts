@@ -7,6 +7,15 @@ import { LoggerService } from '../../services/logger.service';
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
 
+interface Card {
+  id: number;
+  lastFourDigits: string;
+  nickname: string | null;
+  bankName: string | null;
+  cardType: 'credit' | 'debit' | null;
+  householdId: number;
+}
+
 interface Household {
   id: number;
   name: string;
@@ -121,7 +130,7 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
 
   // ── View state ─────────────────────────────────────────────────────────────
   mode: 'list' | 'detail' = 'list';
-  currentTab: 'members' | 'expense-cats' | 'income-cats' = 'members';
+  currentTab: 'members' | 'expense-cats' | 'income-cats' | 'cards' = 'members';
 
   // ── List state ─────────────────────────────────────────────────────────────
   households: Household[] = [];
@@ -171,6 +180,14 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
   editingIncomeCat: CategoryForm = this.emptyCategory();
   showIncomeIconPicker = false;
   showIncomeEditIconPicker = false;
+
+  // ── Cards tab ──────────────────────────────────────────────────────────────
+  cards: Card[] = [];
+  cardsLoading = false;
+  showCardNewForm = false;
+  editingCardId: number | null = null;
+  newCard = { lastFourDigits: '', nickname: '', bankName: '', cardType: '' };
+  editingCard = { lastFourDigits: '', nickname: '', bankName: '', cardType: '' };
 
   // ── Shared constants exposed to template ──────────────────────────────────
   readonly iconList = ICON_LIST;
@@ -328,7 +345,7 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     });
   }
 
-  switchTab(tab: 'members' | 'expense-cats' | 'income-cats'): void {
+  switchTab(tab: 'members' | 'expense-cats' | 'income-cats' | 'cards'): void {
     this.currentTab = tab;
     this.closeAllForms();
     if (!this.selectedHousehold) return;
@@ -337,6 +354,9 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     }
     if (tab === 'income-cats' && this.incomeCategories.length === 0) {
       this.loadIncomeCategories();
+    }
+    if (tab === 'cards') {
+      this.loadCards();
     }
   }
 
@@ -349,6 +369,8 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     this.showExpenseEditIconPicker = false;
     this.showIncomeIconPicker = false;
     this.showIncomeEditIconPicker = false;
+    this.showCardNewForm = false;
+    this.editingCardId = null;
   }
 
   // ── Inline household edit ──────────────────────────────────────────────────
@@ -750,6 +772,115 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
         this.loadIncomeCategories();
       }
     });
+  }
+
+  // ── Cards ──────────────────────────────────────────────────────────────────
+
+  loadCards(): void {
+    if (!this.selectedHousehold) return;
+    this.cardsLoading = true;
+    this.householdsService.getCards(this.selectedHousehold.id).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res) => {
+        this.cards = res.cards ?? [];
+        this.cardsLoading = false;
+      },
+      error: (err) => {
+        this.cardsLoading = false;
+        this.logger.err('CARDS_LOAD_ERROR', 'Failed to load cards', err);
+      }
+    });
+  }
+
+  openCardNewForm(): void {
+    this.showCardNewForm = true;
+    this.editingCardId = null;
+    this.newCard = { lastFourDigits: '', nickname: '', bankName: '', cardType: '' };
+  }
+
+  cancelCardNew(): void {
+    this.showCardNewForm = false;
+  }
+
+  saveCardNew(): void {
+    if (!this.selectedHousehold || !this.newCard.lastFourDigits.trim()) {
+      alert('Last 4 digits are required.');
+      return;
+    }
+    const data: any = {
+      lastFourDigits: this.newCard.lastFourDigits,
+      householdId: this.selectedHousehold.id,
+    };
+    if (this.newCard.nickname.trim()) data.nickname = this.newCard.nickname.trim();
+    if (this.newCard.bankName.trim()) data.bankName = this.newCard.bankName.trim();
+    if (this.newCard.cardType) data.cardType = this.newCard.cardType;
+
+    this.householdsService.createCard(data).subscribe({
+      next: () => {
+        this.logger.info('CARD_CREATED', 'Created card');
+        this.showCardNewForm = false;
+        this.loadCards();
+      },
+      error: (err) => {
+        this.logger.err('CARD_CREATE_ERROR', 'Failed to create card', err);
+        alert(err.error?.error || 'Failed to create card.');
+      }
+    });
+  }
+
+  startEditCard(card: Card): void {
+    this.editingCardId = card.id;
+    this.editingCard = {
+      lastFourDigits: card.lastFourDigits,
+      nickname: card.nickname ?? '',
+      bankName: card.bankName ?? '',
+      cardType: card.cardType ?? ''
+    };
+    this.showCardNewForm = false;
+  }
+
+  cancelEditCard(): void {
+    this.editingCardId = null;
+  }
+
+  saveEditCard(card: Card): void {
+    if (!this.editingCard.lastFourDigits.trim()) {
+      alert('Last 4 digits are required.');
+      return;
+    }
+    const data: any = { lastFourDigits: this.editingCard.lastFourDigits };
+    data.nickname = this.editingCard.nickname.trim() || null;
+    data.bankName = this.editingCard.bankName.trim() || null;
+    data.cardType = this.editingCard.cardType || null;
+
+    this.householdsService.updateCard(card.id, data).subscribe({
+      next: () => {
+        this.logger.info('CARD_UPDATED', `Updated card id=${card.id}`);
+        this.editingCardId = null;
+        this.loadCards();
+      },
+      error: (err) => {
+        this.logger.err('CARD_UPDATE_ERROR', 'Failed to update card', err);
+        alert(err.error?.error || 'Failed to update card.');
+      }
+    });
+  }
+
+  deleteCard(id: number): void {
+    if (!confirm('Delete this card?')) return;
+    this.householdsService.deleteCard(id).subscribe({
+      next: () => {
+        this.logger.warn('CARD_DELETED', `Deleted card id=${id}`);
+        this.loadCards();
+      },
+      error: (err) => {
+        this.logger.err('CARD_DELETE_ERROR', 'Failed to delete card', err);
+        alert(err.error?.error || 'Failed to delete card.');
+      }
+    });
+  }
+
+  getCardDisplayLabel(card: Card): string {
+    return card.nickname ?? `••••${card.lastFourDigits}`;
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

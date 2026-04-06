@@ -261,10 +261,13 @@ export function toLocalDate(isoString: string): Date {
 /**
  * Format a payment method key to a human-readable string.
  */
-export function formatPaymentMethod(method: string): string {
+export function formatPaymentMethod(method: string, card?: { lastFourDigits: string; nickname?: string | null } | null): string {
   switch (method) {
-    case 'credit_card':   return 'Credit Card';
-    case 'debit_card':    return 'Debit Card';
+    case 'card':
+      if (card) return card.nickname ?? `••••${card.lastFourDigits}`;
+      return 'Card';
+    case 'credit_card':   return 'Card'; // legacy fallback
+    case 'debit_card':    return 'Card'; // legacy fallback
     case 'cash':          return 'Cash';
     case 'bank_transfer': return 'Bank Transfer';
     default:              return method;

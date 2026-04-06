@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/category.dart';
+import 'package:household/models/credit_card.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/repositories/category_repository.dart';
+import 'package:household/services/credit_card_service.dart';
 import 'package:household/services/household_service.dart';
 import 'package:household/services/transaction_service.dart';
 
@@ -12,6 +14,7 @@ final expensesViewModelProvider =
     ref.read(transactionServiceProvider),
     ref.read(categoryRepositoryProvider),
     ref.read(householdServiceProvider),
+    ref.read(creditCardServiceProvider),
   );
 });
 
@@ -21,8 +24,9 @@ class ExpensesViewModel extends ChangeNotifier {
   final TransactionService _txService;
   final CategoryRepository _categoryRepo;
   final HouseholdService _householdService;
+  final CreditCardService _cardService;
 
-  ExpensesViewModel(this._txService, this._categoryRepo, this._householdService) {
+  ExpensesViewModel(this._txService, this._categoryRepo, this._householdService, this._cardService) {
     load();
   }
 
@@ -30,6 +34,7 @@ class ExpensesViewModel extends ChangeNotifier {
   List<Expense> expenses = [];
   List<Category> categories = [];
   List<Category> favoriteCategories = [];
+  List<CreditCard> get cards => _cardService.cards;
 
   // ── State ──────────────────────────────────────────────────────────────────
   ExpensesLoadState state = ExpensesLoadState.loading;
@@ -53,7 +58,8 @@ class ExpensesViewModel extends ChangeNotifier {
   double? formAmount;
   int? formCategoryId;
   DateTime formDateTime = DateTime.now();
-  String formPaymentMethod = 'credit_card';
+  String formPaymentMethod = 'card';
+  int? formCardId;
   String formDescription = '';
   String formNote = '';
 
@@ -65,6 +71,28 @@ class ExpensesViewModel extends ChangeNotifier {
   void load() {
     loadCategories();
     loadExpenses();
+    loadCards();
+  }
+
+  Future<void> loadCards() async {
+    final hid = _householdService.currentHouseholdId;
+    if (hid == null) return;
+    try {
+      await _cardService.load(hid);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<CreditCard> createCard(Map<String, dynamic> body) async {
+    final card = await _cardService.create(body);
+    notifyListeners();
+    return card;
+  }
+
+  Future<CreditCard> updateCard(int id, Map<String, dynamic> body) async {
+    final card = await _cardService.update(id, body);
+    notifyListeners();
+    return card;
   }
 
   Future<void> loadCategories() async {
@@ -134,7 +162,8 @@ class ExpensesViewModel extends ChangeNotifier {
     formAmount = null;
     formCategoryId = categoryId ?? selectedCategoryId;
     formDateTime = DateTime.now();
-    formPaymentMethod = 'credit_card';
+    formPaymentMethod = 'card';
+    formCardId = null;
     formDescription = '';
     formNote = '';
     modalOpen = true;
@@ -149,6 +178,7 @@ class ExpensesViewModel extends ChangeNotifier {
     formCategoryId = expense.category?.id;
     formDateTime = DateTime.parse(expense.dateTime).toLocal();
     formPaymentMethod = expense.paymentMethod;
+    formCardId = expense.cardId;
     formDescription = expense.description ?? '';
     formNote = expense.note ?? '';
     modalOpen = true;
@@ -164,7 +194,12 @@ class ExpensesViewModel extends ChangeNotifier {
   void setFormAmount(double? v)       { formAmount = v; notifyListeners(); }
   void setFormCategory(int? id)        { formCategoryId = id; notifyListeners(); }
   void setFormDateTime(DateTime dt)    { formDateTime = dt; notifyListeners(); }
-  void setFormPayment(String method)   { formPaymentMethod = method; notifyListeners(); }
+  void setFormPayment(String method)   {
+    formPaymentMethod = method;
+    if (method != 'card') formCardId = null;
+    notifyListeners();
+  }
+  void setFormCardId(int? id)          { formCardId = id; notifyListeners(); }
   void setFormDescription(String v)    { formDescription = v; notifyListeners(); }
   void setFormNote(String v)           { formNote = v; notifyListeners(); }
 
@@ -192,6 +227,7 @@ class ExpensesViewModel extends ChangeNotifier {
           amount: formAmount!,
           dateTime: isoDateTime,
           paymentMethod: formPaymentMethod,
+          cardId: formPaymentMethod == 'card' ? formCardId : null,
           expenseCategoryId: formCategoryId!,
           description: formDescription.isNotEmpty ? formDescription : null,
           note: formNote.isNotEmpty ? formNote : null,
@@ -201,6 +237,7 @@ class ExpensesViewModel extends ChangeNotifier {
           'amount': formAmount,
           'dateTime': isoDateTime,
           'paymentMethod': formPaymentMethod,
+          'cardId': formPaymentMethod == 'card' ? formCardId : null,
           'expenseCategoryId': formCategoryId,
           'description': formDescription,
           'note': formNote,

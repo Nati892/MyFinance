@@ -1,4 +1,4 @@
-const { Income, IncomeCategory, AppUser, HouseholdMember, sequelize } = require('../models');
+const { Income, IncomeCategory, AppUser, HouseholdMember, Card, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const {
   getCurrentFinancialPeriod,
@@ -120,6 +120,11 @@ class IncomesController {
           {
             model:      AppUser,
             attributes: ['id', 'username']
+          },
+          {
+            model: Card,
+            as:    'card',
+            required: false
           }
         ],
         order: [['dateTime', 'DESC']]
@@ -168,7 +173,8 @@ class IncomesController {
         note,
         paymentMethod,
         incomeCategoryId,
-        householdId
+        householdId,
+        cardId
       } = ctx.request.body;
 
       // --- Required fields ---
@@ -208,6 +214,7 @@ class IncomesController {
         description: description || null,
         note:        note        || null,
         paymentMethod,
+        cardId:           cardId ? Number(cardId) : null,
         incomeCategoryId: Number(incomeCategoryId),
         appUserId,
         householdId: Number(householdId)
@@ -223,6 +230,11 @@ class IncomesController {
           {
             model:      AppUser,
             attributes: ['id', 'username']
+          },
+          {
+            model: Card,
+            as:    'card',
+            required: false
           }
         ]
       });
@@ -268,7 +280,8 @@ class IncomesController {
         description,
         note,
         paymentMethod,
-        incomeCategoryId
+        incomeCategoryId,
+        cardId
       } = ctx.request.body;
 
       // --- Validate new category if provided ---
@@ -291,6 +304,7 @@ class IncomesController {
         description:      description      !== undefined ? description      : income.description,
         note:             note             !== undefined ? note             : income.note,
         paymentMethod:    paymentMethod    !== undefined ? paymentMethod    : income.paymentMethod,
+        cardId:           cardId           !== undefined ? (cardId ? Number(cardId) : null) : income.cardId,
         incomeCategoryId: incomeCategoryId !== undefined ? Number(incomeCategoryId) : income.incomeCategoryId
       });
 
@@ -304,6 +318,11 @@ class IncomesController {
           {
             model:      AppUser,
             attributes: ['id', 'username']
+          },
+          {
+            model: Card,
+            as:    'card',
+            required: false
           }
         ]
       });

@@ -30,7 +30,8 @@ export interface TransactionItem {
   dateTime: string;
   description: string | null;
   note: string | null;
-  paymentMethod: 'credit_card' | 'debit_card' | 'cash' | 'bank_transfer';
+  paymentMethod: 'card' | 'cash' | 'bank_transfer' | 'credit_card' | 'debit_card';
+  card?: { id: number; lastFourDigits: string; nickname?: string | null; bankName?: string | null; cardType?: string | null } | null;
   category: {
     id: number;
     name: string;
@@ -445,8 +446,8 @@ export class TimelineComponent implements OnChanges {
     return formatNIS(amount);
   }
 
-  formatPayment(method: string): string {
-    return formatPaymentMethod(method);
+  formatPayment(tx: TransactionItem): string {
+    return formatPaymentMethod(tx.paymentMethod, tx.card);
   }
 
   getPaymentIcon(method: string): string {

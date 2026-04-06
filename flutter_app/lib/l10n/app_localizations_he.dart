@@ -637,4 +637,34 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get commonIncome => 'הכנסה';
+
+  @override
+  String get cardsPageTitle => 'כרטיסים';
+
+  @override
+  String get cardsNone => 'ללא';
+
+  @override
+  String get cardsAddCard => 'הוסף כרטיס';
+
+  @override
+  String get cardsEditCard => 'ערוך כרטיס';
+
+  @override
+  String get cardsLastFour => '4 ספרות אחרונות';
+
+  @override
+  String get cardsNickname => 'כינוי';
+
+  @override
+  String get cardsBankName => 'שם הבנק';
+
+  @override
+  String get cardsTypeCredit => 'אשראי';
+
+  @override
+  String get cardsTypeDebit => 'דביט';
+
+  @override
+  String get cardsDeleteConfirm => 'למחוק כרטיס זה?';
 }

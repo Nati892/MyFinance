@@ -1,4 +1,4 @@
-const { Expense, ExpenseCategory, AppUser, HouseholdMember, sequelize } = require('../models');
+const { Expense, ExpenseCategory, AppUser, HouseholdMember, Card, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const {
   getCurrentFinancialPeriod,
@@ -120,6 +120,12 @@ class ExpensesController {
           {
             model:      AppUser,
             attributes: ['id', 'username']
+          },
+          {
+            model:      Card,
+            as:         'card',
+            attributes: ['id', 'lastFourDigits', 'nickname', 'bankName', 'cardType'],
+            required:   false
           }
         ],
         order: [['dateTime', 'DESC']]
@@ -167,6 +173,7 @@ class ExpensesController {
         description,
         note,
         paymentMethod,
+        cardId,
         expenseCategoryId,
         householdId
       } = ctx.request.body;
@@ -208,6 +215,7 @@ class ExpensesController {
         description: description || null,
         note:        note        || null,
         paymentMethod,
+        cardId:      cardId ? Number(cardId) : null,
         expenseCategoryId: Number(expenseCategoryId),
         appUserId,
         householdId: Number(householdId)
@@ -268,6 +276,7 @@ class ExpensesController {
         description,
         note,
         paymentMethod,
+        cardId,
         expenseCategoryId
       } = ctx.request.body;
 
@@ -291,6 +300,7 @@ class ExpensesController {
         description:       description       !== undefined ? description       : expense.description,
         note:              note              !== undefined ? note              : expense.note,
         paymentMethod:     paymentMethod     !== undefined ? paymentMethod     : expense.paymentMethod,
+        cardId:            cardId            !== undefined ? (cardId ? Number(cardId) : null) : expense.cardId,
         expenseCategoryId: expenseCategoryId !== undefined ? Number(expenseCategoryId) : expense.expenseCategoryId
       });
 

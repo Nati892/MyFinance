@@ -15,6 +15,7 @@ class TimelineTx {
   final String? description;
   final String? note;
   final String paymentMethod;
+  final String? cardLabel; // card nickname or ••••XXXX
   final String? categoryName;
   final String? categoryColor;
   final String? categoryIcon;
@@ -31,6 +32,7 @@ class TimelineTx {
     this.description,
     this.note,
     required this.paymentMethod,
+    this.cardLabel,
     this.categoryName,
     this.categoryColor,
     this.categoryIcon,
@@ -50,6 +52,7 @@ class TimelineTx {
       description: e.description,
       note: e.note,
       paymentMethod: e.paymentMethod,
+      cardLabel: e.card?.displayLabel,
       categoryName: e.category?.name,
       categoryColor: e.category?.color,
       categoryIcon: e.category?.icon,
@@ -70,6 +73,7 @@ class TimelineTx {
       description: i.description,
       note: i.note,
       paymentMethod: i.paymentMethod,
+      cardLabel: i.card?.displayLabel,
       categoryName: i.category?.name,
       categoryColor: i.category?.color,
       categoryIcon: i.category?.icon,
@@ -541,13 +545,14 @@ class _TxTile extends StatelessWidget {
   final ValueChanged<TimelineTx> onDelete;
   const _TxTile({required this.tx, required this.onEdit, required this.onDelete});
 
-  String _localizedPaymentMethod(String method, AppLocalizations l10n) {
-    switch (method) {
-      case 'credit_card':   return l10n.paymentCard;
-      case 'debit_card':    return l10n.paymentDebit;
+  String _localizedPaymentMethod(TimelineTx tx, AppLocalizations l10n) {
+    if (tx.paymentMethod == 'card' || tx.paymentMethod == 'credit_card' || tx.paymentMethod == 'debit_card') {
+      return tx.cardLabel ?? l10n.paymentCard;
+    }
+    switch (tx.paymentMethod) {
       case 'cash':          return l10n.paymentCash;
       case 'bank_transfer': return l10n.paymentTransfer;
-      default:              return method;
+      default:              return tx.paymentMethod;
     }
   }
 
@@ -600,7 +605,7 @@ class _TxTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          '$time · ${_localizedPaymentMethod(tx.paymentMethod, l10n)}'
+          '$time · ${_localizedPaymentMethod(tx, l10n)}'
           '${tx.username != null ? ' · ${tx.username}' : ''}',
           style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
         ),

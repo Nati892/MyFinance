@@ -222,5 +222,16 @@
   "commonToday": "היום",
   "commonYesterday": "אתמול",
   "commonExpense": "הוצאה",
-  "commonIncome": "הכנסה"
+  "commonIncome": "הכנסה",
+
+  "cardsPageTitle": "כרטיסים",
+  "cardsNone": "ללא",
+  "cardsAddCard": "הוסף כרטיס",
+  "cardsEditCard": "ערוך כרטיס",
+  "cardsLastFour": "4 ספרות אחרונות",
+  "cardsNickname": "כינוי",
+  "cardsBankName": "שם הבנק",
+  "cardsTypeCredit": "אשראי",
+  "cardsTypeDebit": "דביט",
+  "cardsDeleteConfirm": "למחוק כרטיס זה?"
 }

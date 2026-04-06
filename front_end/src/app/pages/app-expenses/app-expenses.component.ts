@@ -19,13 +19,15 @@ import { TranslateModule } from '@ngx-translate/core';
 import { HouseholdStateService } from '../../services/household-state.service';
 import { CategoryService } from '../../services/category.service';
 import { TransactionService } from '../../services/transaction.service';
+import { CardService, Card } from '../../services/card.service';
 import { LanguageService } from '../../services/language.service';
 
 interface ExpenseForm {
   amount: number | null;
   categoryId: number | null;
   dateTime: string;
-  paymentMethod: 'credit_card' | 'debit_card' | 'cash' | 'bank_transfer';
+  paymentMethod: 'card' | 'cash' | 'bank_transfer';
+  cardId: number | null;
   description: string;
   note: string;
 }
@@ -78,17 +80,19 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
     amount: null,
     categoryId: null,
     dateTime: toLocalDateTimeInput(new Date()),
-    paymentMethod: 'credit_card',
+    paymentMethod: 'card',
+    cardId: null,
     description: '',
     note: '',
   };
 
-  readonly paymentMethods: { key: 'credit_card' | 'debit_card' | 'cash' | 'bank_transfer'; label: string; emoji: string }[] = [
-    { key: 'credit_card',   label: 'Card',     emoji: '💳' },
-    { key: 'debit_card',    label: 'Debit',    emoji: '💳' },
+  readonly paymentMethods: { key: 'card' | 'cash' | 'bank_transfer'; label: string; emoji: string }[] = [
+    { key: 'card',          label: 'Card',     emoji: '💳' },
     { key: 'cash',          label: 'Cash',     emoji: '💵' },
     { key: 'bank_transfer', label: 'Transfer', emoji: '🏦' },
   ];
+
+  cards: Card[] = [];
 
   private subs = new Subscription();
 
@@ -96,6 +100,7 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
     private householdState: HouseholdStateService,
     private categoryService: CategoryService,
     private transactionService: TransactionService,
+    private cardService: CardService,
     private cdr: ChangeDetectorRef,
     private languageService: LanguageService,
   ) {}
@@ -114,6 +119,7 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
     this.householdId = household.householdId;
     this.loadCategories();
     this.loadExpenses();
+    this.loadCards();
 
     // React to household changes
     this.subs.add(
@@ -124,6 +130,7 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
           this.selectedCategoryId = null;
           this.loadCategories();
           this.loadExpenses();
+          this.loadCards();
           this.cdr.markForCheck();
         }
       })
@@ -135,6 +142,17 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
   }
 
   // ── Data loading ───────────────────────────────────────────────────────────
+
+  private loadCards(): void {
+    if (this.householdId == null) return;
+    this.cardService.getCards(this.householdId).subscribe({
+      next: res => {
+        this.cards = res.cards ?? [];
+        this.cdr.markForCheck();
+      },
+      error: () => {}
+    });
+  }
 
   private loadCategories(): void {
     if (this.householdId == null) return;
@@ -218,11 +236,13 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
     this.editingExpenseId = item.id;
     this.modalMode = 'edit';
     this.modalError = null;
+    const pm = (item.paymentMethod === 'credit_card' || item.paymentMethod === 'debit_card') ? 'card' : item.paymentMethod as 'card' | 'cash' | 'bank_transfer';
     this.form = {
       amount: item.amount,
       categoryId: item.category?.id ?? null,
       dateTime: toLocalDateTimeInput(new Date(item.dateTime)),
-      paymentMethod: item.paymentMethod,
+      paymentMethod: pm,
+      cardId: (item as any).cardId ?? null,
       description: item.description ?? '',
       note: item.note ?? '',
     };
@@ -252,7 +272,8 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
       amount: null,
       categoryId: this.selectedCategoryId,
       dateTime: toLocalDateTimeInput(new Date()),
-      paymentMethod: 'credit_card',
+      paymentMethod: 'card',
+      cardId: null,
       description: '',
       note: '',
     };
@@ -268,8 +289,17 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
     this.form.categoryId = id;
   }
 
-  selectPayment(key: 'credit_card' | 'debit_card' | 'cash' | 'bank_transfer'): void {
+  selectPayment(key: 'card' | 'cash' | 'bank_transfer'): void {
     this.form.paymentMethod = key;
+    if (key !== 'card') this.form.cardId = null;
+  }
+
+  selectCard(cardId: number | null): void {
+    this.form.cardId = cardId;
+  }
+
+  getCardLabel(card: Card): string {
+    return card.nickname ?? `••••${card.lastFourDigits}`;
   }
 
   saveExpense(): void {
@@ -293,12 +323,13 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
     const isoDateTime = new Date(this.form.dateTime).toISOString();
 
     if (this.modalMode === 'add') {
-      const payload = {
+      const payload: any = {
         amount: this.form.amount,
         dateTime: isoDateTime,
         description: this.form.description || undefined,
         note: this.form.note || undefined,
         paymentMethod: this.form.paymentMethod,
+        cardId: this.form.cardId ?? null,
         expenseCategoryId: this.form.categoryId,
         householdId: this.householdId,
       };
@@ -323,6 +354,7 @@ export class AppExpensesComponent implements OnInit, OnDestroy {
         description: this.form.description,
         note: this.form.note,
         paymentMethod: this.form.paymentMethod,
+        cardId: this.form.cardId ?? null,
         expenseCategoryId: this.form.categoryId,
       };
       this.transactionService.updateExpense(this.editingExpenseId, payload).subscribe({

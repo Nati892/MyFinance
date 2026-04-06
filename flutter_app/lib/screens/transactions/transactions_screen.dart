@@ -1,9 +1,13 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/category.dart';
+import 'package:household/models/credit_card.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
+import 'package:household/services/household_service.dart';
 import 'package:household/utils/icon_helper.dart';
 import 'package:household/screens/transactions/transactions_view_model.dart';
 import 'package:household/widgets/create_category_sheet.dart';
@@ -117,7 +121,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           ],
         ),
 
-        // ── Floating sub-categories wheel ─────────────────────────────────────
+        // ── Floating sub-categories arc ───────────────────────────────────────
         if (_expandedCategoryId != null)
           Builder(builder: (ctx) {
             final parent = vm.allCategories
@@ -126,30 +130,45 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             if (parent == null || parent.subCategories.isEmpty) {
               return const SizedBox.shrink();
             }
-            // Vertically center the wheel on the parent tile, bounded by screen
-            const wheelHeight = _SubCategoriesWheel.totalHeight;
+            // Vertically center the arc on the parent tile, bounded by screen
+            const arcHeight = _SubCategoriesArc.totalHeight;
             final screenHeight = MediaQuery.of(context).size.height;
-            final rawTop = (_expandedCategoryYCenter ?? screenHeight / 2) - wheelHeight / 2;
-            final top = rawTop.clamp(8.0, screenHeight - wheelHeight - 8.0);
-            return Positioned(
-              left: 80,
-              top: top,
-              child: _SubCategoriesWheel(
-                parent: parent,
-                onSelected: (id) {
-                  setState(() {
-                    _expandedCategoryId = null;
-                    _expandedCategoryYCenter = null;
-                  });
-                  vm.onCategoryQuickAdd(id);
-                  _showTransactionSheet(ctx, vm);
-                },
-                onClose: () => setState(() {
+            final rawTop = (_expandedCategoryYCenter ?? screenHeight / 2) - arcHeight / 2;
+            final top = rawTop.clamp(8.0, screenHeight - arcHeight - 8.0);
+
+            final arc = _SubCategoriesArc(
+              parent: parent,
+              onSelected: (id) {
+                setState(() {
                   _expandedCategoryId = null;
                   _expandedCategoryYCenter = null;
-                }),
-              ),
+                });
+                vm.onCategoryQuickAdd(id);
+                _showTransactionSheet(ctx, vm);
+              },
+              onClose: () => setState(() {
+                _expandedCategoryId = null;
+                _expandedCategoryYCenter = null;
+              }),
             );
+
+            final isRTL = Directionality.of(context) == TextDirection.rtl;
+
+            if (isRTL) {
+              // Hebrew: sidebar is on the right, arc fans out to the left
+              return Positioned(
+                right: 80,
+                top: top,
+                child: arc,
+              );
+            } else {
+              // English: sidebar is on the left, arc fans out to the right
+              return Positioned(
+                left: 80,
+                top: top,
+                child: arc,
+              );
+            }
           }),
 
         // ── FABs (stacked column, bottom-end) ────────────────────────────────
@@ -875,79 +894,259 @@ class _QuickAddTileWidget extends StatelessWidget {
 
 // ── Enhanced filter bottom sheet ─────────────────────────────────────────────
 
-// ── Sub-categories wheel ──────────────────────────────────────────────────────
+// ── Sub-categories arc ────────────────────────────────────────────────────────
 
-class _SubCategoriesWheel extends StatelessWidget {
+// Layout result for a single arc item — produced by _calculateItemLayout().
+class _ArcItemLayout {
+  final double xOffset; // how far the item is pushed horizontally from the sidebar edge
+  final double yOffset; // signed vertical distance from the viewport center, in pixels
+  final double scale;   // size multiplier: 1.0 at center, smaller toward edges
+
+  const _ArcItemLayout({
+    required this.xOffset,
+    required this.yOffset,
+    required this.scale,
+  });
+}
+
+// Pure function — all the math for positioning one item on the arc.
+// Edit the constants (arcRadius, minScale, visibleItems) to tune the look.
+_ArcItemLayout _calculateItemLayout({
+  required int    itemIndex,
+  required double scrollOffsetPx, // current scroll in pixels (0 = first item at center)
+  required double itemHeight,
+  required double arcRadius,      // max horizontal extension of the center item (px)
+  required double minScale,       // size of the most-edge-visible item (0.0 – 1.0)
+  required int    visibleItems,   // total items shown in the viewport
+}) {
+  // Step 1: distance of this item from the viewport center, in item units
+  final distanceInItems = (itemIndex * itemHeight - scrollOffsetPx) / itemHeight;
+
+  // Step 2: normalize so that ±(visibleItems / 2) maps to ±1
+  final halfVisible        = visibleItems / 2.0;
+  final normalizedDistance = distanceInItems / halfVisible;
+
+  // Step 3: convert normalized distance to an angle on the half-circle (±π/2)
+  final angle = (normalizedDistance * (pi / 2)).clamp(-pi / 2, pi / 2);
+
+  // Step 4: cosine of the angle drives both X extension and scale
+  //   cos(0)    = 1 → center item: fully extended, full size
+  //   cos(±π/2) = 0 → edge items:  no extension,   min size
+  final cosAngle = cos(angle);
+  final xOffset  = arcRadius * cosAngle;
+  final scale    = minScale + (1.0 - minScale) * cosAngle;
+
+  // Step 5: Y position is plain linear scroll — no curve on the vertical axis
+  final yOffset = distanceInItems * itemHeight;
+
+  return _ArcItemLayout(xOffset: xOffset, yOffset: yOffset, scale: scale);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+typedef _ArcItem = ({int id, String? icon, String name, bool isGeneral});
+
+class _SubCategoriesArc extends StatefulWidget {
   final Category parent;
   final ValueChanged<int> onSelected;
   final VoidCallback onClose;
 
-  static const double _itemExtent = 76.0;
-  static const int _visibleItems = 3;
-  static const double totalHeight = _itemExtent * _visibleItems;
+  // ── Tune these to change the feel of the arc ─────────────────────────────
+  static const double itemHeight   = 72.0;
+  static const double arcRadius    = 84.0; // px the center item sticks out
+  static const double minScale     = 0.50; // size ratio of the most-edge item
+  static const int    visibleItems = 5;    // items visible at once
+  // ─────────────────────────────────────────────────────────────────────────
 
-  const _SubCategoriesWheel({
+  static const double totalHeight = itemHeight * visibleItems; // 360 px
+
+  const _SubCategoriesArc({
     required this.parent,
     required this.onSelected,
     required this.onClose,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final base = _hexColor(parent.color);
-    // Items: General (parent) first, then subcategories
-    final items = <({int id, String? icon, String name, bool isGeneral})>[
-      (id: parent.id, icon: parent.icon, name: 'General', isGeneral: true),
-      ...parent.subCategories.map(
+  State<_SubCategoriesArc> createState() => _SubCategoriesArcState();
+}
+
+class _SubCategoriesArcState extends State<_SubCategoriesArc>
+    with SingleTickerProviderStateMixin {
+
+  late final AnimationController _snapController;
+  late Animation<double>         _snapAnimation;
+  double _scrollOffsetPx = 0.0; // current scroll position in pixels
+
+  @override
+  void initState() {
+    super.initState();
+    _snapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _snapAnimation = const AlwaysStoppedAnimation(0);
+  }
+
+  @override
+  void dispose() {
+    _snapController.dispose();
+    super.dispose();
+  }
+
+  // ── Scroll + snap logic ──────────────────────────────────────────────────
+
+  int get _itemCount => _buildItemList().length;
+
+  double get _maxScrollPx =>
+      (_itemCount - 1) * _SubCategoriesArc.itemHeight;
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    setState(() {
+      _scrollOffsetPx =
+          (_scrollOffsetPx - details.delta.dy).clamp(0.0, _maxScrollPx);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    // Find the nearest item index and snap to it
+    final nearestIndex =
+        (_scrollOffsetPx / _SubCategoriesArc.itemHeight).round()
+            .clamp(0, _itemCount - 1);
+    _snapTo(nearestIndex * _SubCategoriesArc.itemHeight);
+  }
+
+  void _snapTo(double targetPx) {
+    final fromPx = _scrollOffsetPx;
+    _snapAnimation = Tween<double>(begin: fromPx, end: targetPx).animate(
+      CurvedAnimation(parent: _snapController, curve: Curves.easeOut),
+    )..addListener(() {
+        setState(() => _scrollOffsetPx = _snapAnimation.value);
+      });
+    _snapController.forward(from: 0);
+  }
+
+  // ── Item list ─────────────────────────────────────────────────────────────
+
+  List<_ArcItem> _buildItemList() {
+    return [
+      (
+        id: widget.parent.id,
+        icon: widget.parent.icon,
+        name: '${widget.parent.name} - General',
+        isGeneral: true,
+      ),
+      ...widget.parent.subCategories.map(
         (s) => (id: s.id, icon: s.icon, name: s.name, isGeneral: false),
       ),
     ];
+  }
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        SizedBox(
-          width: 76,
-          height: totalHeight,
-          child: ListWheelScrollView(
-            itemExtent: _itemExtent,
-            diameterRatio: 1.4,
-            perspective: 0.004,
-            squeeze: 1.0,
-            physics: const FixedExtentScrollPhysics(),
-            children: items.map((item) {
-              return GestureDetector(
-                onTap: () => onSelected(item.id),
-                child: _WheelItem(
-                  icon: item.icon,
-                  name: item.name,
-                  color: base,
-                  isGeneral: item.isGeneral,
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        // Close button
-        Positioned(
-          top: -8,
-          right: -8,
+  // ── Per-item widget (shared between LTR and RTL) ─────────────────────────
+
+  Widget _buildItem({
+    required _ArcItem item,
+    required int index,
+    required Color color,
+    required bool isRTL,
+  }) {
+    final layout = _calculateItemLayout(
+      itemIndex:      index,
+      scrollOffsetPx: _scrollOffsetPx,
+      itemHeight:     _SubCategoriesArc.itemHeight,
+      arcRadius:      _SubCategoriesArc.arcRadius,
+      minScale:       _SubCategoriesArc.minScale,
+      visibleItems:   _SubCategoriesArc.visibleItems,
+    );
+
+    final itemTop = _SubCategoriesArc.totalHeight / 2
+        + layout.yOffset
+        - _SubCategoriesArc.itemHeight / 2;
+
+    // Skip items that are scrolled fully outside the viewport
+    final isOutsideViewport = itemTop < -_SubCategoriesArc.itemHeight ||
+        itemTop > _SubCategoriesArc.totalHeight;
+    if (isOutsideViewport) return const SizedBox.shrink();
+
+    // In RTL the arc fans to the left, so we negate the X offset
+    final translationX = isRTL ? -layout.xOffset : layout.xOffset;
+
+    return Positioned(
+      top:   itemTop,
+      left:  isRTL ? null : 0,
+      right: isRTL ? 0 : null,
+      child: Transform.translate(
+        offset: Offset(translationX, 0),
+        child: Transform.scale(
+          scale: layout.scale,
           child: GestureDetector(
-            onTap: onClose,
-            child: Material(
-              color: Colors.white,
-              shape: const CircleBorder(),
-              elevation: 2,
-              shadowColor: Colors.black26,
-              child: Padding(
-                padding: const EdgeInsets.all(3),
-                child: Icon(Icons.close, size: 11, color: base.withValues(alpha: 0.6)),
-              ),
+            onTap: () => widget.onSelected(item.id),
+            child: _WheelItem(
+              icon:      item.icon,
+              name:      item.name,
+              color:     color,
+              isGeneral: item.isGeneral,
             ),
           ),
         ),
-      ],
+      ),
     );
+  }
+
+  // ── LTR build (English) ──────────────────────────────────────────────────
+
+  Widget _buildLTR(List<_ArcItem> items, Color color) {
+    return SizedBox(
+      width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.itemHeight,
+      height: _SubCategoriesArc.totalHeight,
+      child: GestureDetector(
+        onVerticalDragUpdate: _onDragUpdate,
+        onVerticalDragEnd:    _onDragEnd,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Items fan out to the right
+            for (int i = 0; i < items.length; i++)
+              _buildItem(item: items[i], index: i, color: color, isRTL: false),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── RTL build (Hebrew) ───────────────────────────────────────────────────
+
+  Widget _buildRTL(List<_ArcItem> items, Color color) {
+    return SizedBox(
+      width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.itemHeight,
+      height: _SubCategoriesArc.totalHeight,
+      child: GestureDetector(
+        onVerticalDragUpdate: _onDragUpdate,
+        onVerticalDragEnd:    _onDragEnd,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Items fan out to the left (xOffset is negated inside _buildItem)
+            for (int i = 0; i < items.length; i++)
+              _buildItem(item: items[i], index: i, color: color, isRTL: true),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Main build ────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final isRTL  = Directionality.of(context) == TextDirection.rtl;
+    final items  = _buildItemList();
+    final color  = _hexColor(widget.parent.color);
+
+    if (isRTL) {
+      return _buildRTL(items, color);
+    } else {
+      return _buildLTR(items, color);
+    }
   }
 
   Color _hexColor(String hex) {
@@ -1358,9 +1557,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   int? _selectedParentId;
 
   static const _paymentMethodKeys = [
-    ('credit_card', '💳'),
-    ('debit_card',  '💳'),
-    ('cash',        '💵'),
+    ('card',         '💳'),
+    ('cash',         '💵'),
     ('bank_transfer','🏦'),
   ];
 
@@ -1770,40 +1968,97 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   }
 
   Widget _buildPaymentSegment(TransactionsViewModel vm, Color activeColor, AppLocalizations l10n) {
-    final labels = [l10n.paymentCard, l10n.paymentDebit, l10n.paymentCash, l10n.paymentTransfer];
-    return Row(
-      children: _paymentMethodKeys.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final pm = entry.value;
-        final active = vm.formPaymentMethod == pm.$1;
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => vm.setFormPayment(pm.$1),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: active ? activeColor : const Color(0xFFF0F0F0),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Text(pm.$2, style: const TextStyle(fontSize: 16)),
-                  const SizedBox(height: 2),
-                  Text(
-                    labels[idx],
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: active ? Colors.white : const Color(0xFF666666),
-                      fontWeight: FontWeight.w600,
-                    ),
+    final labels = [l10n.paymentCard, l10n.paymentCash, l10n.paymentTransfer];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: _paymentMethodKeys.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final pm = entry.value;
+            final active = vm.formPaymentMethod == pm.$1;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => vm.setFormPayment(pm.$1),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: active ? activeColor : const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                  child: Column(
+                    children: [
+                      Text(pm.$2, style: const TextStyle(fontSize: 16)),
+                      const SizedBox(height: 2),
+                      Text(
+                        labels[idx],
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: active ? Colors.white : const Color(0xFF666666),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+            );
+          }).toList(),
+        ),
+        if (vm.formPaymentMethod == 'card') ...[
+          const SizedBox(height: 10),
+          _buildCardPicker(vm, activeColor, l10n),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCardPicker(TransactionsViewModel vm, Color activeColor, AppLocalizations l10n) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        _TxCardChip(
+          label: l10n.cardsNone,
+          active: vm.formCardId == null,
+          color: activeColor,
+          onTap: () => vm.setFormCardId(null),
+        ),
+        ...vm.cards.map((card) => _TxCardChip(
+          label: card.displayLabel,
+          active: vm.formCardId == card.id,
+          color: activeColor,
+          onTap: () => vm.setFormCardId(card.id),
+        )),
+        GestureDetector(
+          onTap: () => _showCardFormSheet(context, vm, activeColor),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(color: activeColor, width: 1.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 14, color: activeColor),
+                const SizedBox(width: 2),
+                Text('+', style: TextStyle(fontSize: 13, color: activeColor, fontWeight: FontWeight.w600)),
+              ],
             ),
           ),
-        );
-      }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _showCardFormSheet(BuildContext context, TransactionsViewModel vm, Color activeColor, {CreditCard? card}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TxCardFormSheet(card: card, vm: vm, activeColor: activeColor),
     );
   }
 
@@ -1913,8 +2168,7 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
   int? _selectedParentId;
 
   static const _paymentMethodKeys = [
-    ('credit_card',  '💳'),
-    ('debit_card',   '💳'),
+    ('card',         '💳'),
     ('cash',         '💵'),
     ('bank_transfer','🏦'),
   ];
@@ -2322,40 +2576,97 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
   }
 
   Widget _buildPaymentSegment(TransactionsViewModel vm, Color activeColor, AppLocalizations l10n) {
-    final labels = [l10n.paymentCard, l10n.paymentDebit, l10n.paymentCash, l10n.paymentTransfer];
-    return Row(
-      children: _paymentMethodKeys.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final pm = entry.value;
-        final active = vm.formPaymentMethod == pm.$1;
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => vm.setFormPayment(pm.$1),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: active ? activeColor : const Color(0xFFF0F0F0),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Text(pm.$2, style: const TextStyle(fontSize: 16)),
-                  const SizedBox(height: 2),
-                  Text(
-                    labels[idx],
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: active ? Colors.white : const Color(0xFF666666),
-                      fontWeight: FontWeight.w600,
-                    ),
+    final labels = [l10n.paymentCard, l10n.paymentCash, l10n.paymentTransfer];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: _paymentMethodKeys.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final pm = entry.value;
+            final active = vm.formPaymentMethod == pm.$1;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => vm.setFormPayment(pm.$1),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: active ? activeColor : const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                  child: Column(
+                    children: [
+                      Text(pm.$2, style: const TextStyle(fontSize: 16)),
+                      const SizedBox(height: 2),
+                      Text(
+                        labels[idx],
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: active ? Colors.white : const Color(0xFF666666),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+            );
+          }).toList(),
+        ),
+        if (vm.formPaymentMethod == 'card') ...[
+          const SizedBox(height: 10),
+          _buildCardPicker(vm, activeColor, l10n),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCardPicker(TransactionsViewModel vm, Color activeColor, AppLocalizations l10n) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        _TxCardChip(
+          label: l10n.cardsNone,
+          active: vm.formCardId == null,
+          color: activeColor,
+          onTap: () => vm.setFormCardId(null),
+        ),
+        ...vm.cards.map((card) => _TxCardChip(
+          label: card.displayLabel,
+          active: vm.formCardId == card.id,
+          color: activeColor,
+          onTap: () => vm.setFormCardId(card.id),
+        )),
+        GestureDetector(
+          onTap: () => _showCardFormSheet(context, vm, activeColor),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              border: Border.all(color: activeColor, width: 1.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 14, color: activeColor),
+                const SizedBox(width: 2),
+                Text('+', style: TextStyle(fontSize: 13, color: activeColor, fontWeight: FontWeight.w600)),
+              ],
             ),
           ),
-        );
-      }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _showCardFormSheet(BuildContext context, TransactionsViewModel vm, Color activeColor, {CreditCard? card}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TxCardFormSheet(card: card, vm: vm, activeColor: activeColor),
     );
   }
 
@@ -2432,4 +2743,228 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
       return const Color(0xFF888888);
     }
   }
+}
+
+// ── Card chip ─────────────────────────────────────────────────────────────────
+
+class _TxCardChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TxCardChip({required this.label, required this.active, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? color : const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: active ? color : const Color(0xFFDDDDDD),
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: active ? Colors.white : const Color(0xFF333333),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Card form sheet ───────────────────────────────────────────────────────────
+
+class _TxCardFormSheet extends ConsumerStatefulWidget {
+  final CreditCard? card;
+  final TransactionsViewModel vm;
+  final Color activeColor;
+
+  const _TxCardFormSheet({this.card, required this.vm, required this.activeColor});
+
+  @override
+  ConsumerState<_TxCardFormSheet> createState() => _TxCardFormSheetState();
+}
+
+class _TxCardFormSheetState extends ConsumerState<_TxCardFormSheet> {
+  late TextEditingController _lastFourCtrl;
+  late TextEditingController _nicknameCtrl;
+  late TextEditingController _bankCtrl;
+  String? _cardType;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastFourCtrl = TextEditingController(text: widget.card?.lastFourDigits ?? '');
+    _nicknameCtrl = TextEditingController(text: widget.card?.nickname ?? '');
+    _bankCtrl     = TextEditingController(text: widget.card?.bankName ?? '');
+    _cardType     = widget.card?.cardType;
+  }
+
+  @override
+  void dispose() {
+    _lastFourCtrl.dispose();
+    _nicknameCtrl.dispose();
+    _bankCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final digits = _lastFourCtrl.text.trim();
+    if (digits.length != 4 || !RegExp(r'^\d{4}$').hasMatch(digits)) {
+      setState(() => _error = 'Enter exactly 4 digits.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; });
+
+    final hid = ref.read(householdServiceProvider).currentHouseholdId;
+    if (hid == null) { setState(() => _saving = false); return; }
+
+    final body = <String, dynamic>{
+      'lastFourDigits': digits,
+      if (_nicknameCtrl.text.trim().isNotEmpty) 'nickname': _nicknameCtrl.text.trim(),
+      if (_bankCtrl.text.trim().isNotEmpty) 'bankName': _bankCtrl.text.trim(),
+      if (_cardType != null) 'cardType': _cardType,
+      'householdId': hid,
+    };
+
+    try {
+      if (widget.card == null) {
+        await widget.vm.createCard(body);
+      } else {
+        await widget.vm.updateCard(widget.card!.id, body);
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      setState(() { _saving = false; _error = 'Failed to save. Please try again.'; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    final isEdit = widget.card != null;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPad),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isEdit ? l10n.cardsEditCard : l10n.cardsAddCard,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+
+          Text(l10n.cardsLastFour, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444))),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _lastFourCtrl,
+            keyboardType: TextInputType.number,
+            maxLength: 4,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: _inputDeco('1234', widget.activeColor),
+          ),
+          const SizedBox(height: 12),
+
+          Text('${l10n.cardsNickname} ', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444))),
+          const SizedBox(height: 6),
+          TextField(controller: _nicknameCtrl, decoration: _inputDeco('e.g. My Visa', widget.activeColor)),
+          const SizedBox(height: 12),
+
+          Text('${l10n.cardsBankName} ', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444))),
+          const SizedBox(height: 6),
+          TextField(controller: _bankCtrl, decoration: _inputDeco('e.g. Leumi', widget.activeColor)),
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              _typeBtn(l10n.cardsTypeCredit, 'credit'),
+              const SizedBox(width: 8),
+              _typeBtn(l10n.cardsTypeDebit, 'debit'),
+              const SizedBox(width: 8),
+              _typeBtn('—', null),
+            ],
+          ),
+
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+          ],
+
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saving ? null : _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.activeColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: _saving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _typeBtn(String label, String? type) {
+    final active = _cardType == type;
+    return GestureDetector(
+      onTap: () => setState(() => _cardType = type),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? widget.activeColor : const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: active ? widget.activeColor : const Color(0xFFDDDDDD)),
+        ),
+        child: Text(label, style: TextStyle(
+          fontSize: 12, fontWeight: FontWeight.w600,
+          color: active ? Colors.white : const Color(0xFF555555),
+        )),
+      ),
+    );
+  }
+
+  InputDecoration _inputDeco(String hint, Color focusColor) => InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(color: Color(0xFFAAAAAA)),
+    filled: true,
+    fillColor: const Color(0xFFFAFAFA),
+    counterText: '',
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: focusColor, width: 1.5)),
+  );
 }

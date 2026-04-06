@@ -640,4 +640,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonIncome => 'Income';
+
+  @override
+  String get cardsPageTitle => 'Cards';
+
+  @override
+  String get cardsNone => 'None';
+
+  @override
+  String get cardsAddCard => 'Add Card';
+
+  @override
+  String get cardsEditCard => 'Edit Card';
+
+  @override
+  String get cardsLastFour => 'Last 4 digits';
+
+  @override
+  String get cardsNickname => 'Nickname';
+
+  @override
+  String get cardsBankName => 'Bank name';
+
+  @override
+  String get cardsTypeCredit => 'Credit';
+
+  @override
+  String get cardsTypeDebit => 'Debit';
+
+  @override
+  String get cardsDeleteConfirm => 'Delete this card?';
 }

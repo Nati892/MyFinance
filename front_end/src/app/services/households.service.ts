@@ -113,4 +113,23 @@ export class HouseholdsService {
   reorderIncomeCategories(items: { id: number; sortOrder: number }[]): Observable<any> {
     return this.http.put(`${this.apiUrl}/admin/income-categories/reorder`, { items }, { headers: this.getHeaders() });
   }
+
+  // ── Cards ─────────────────────────────────────────────────────────────────
+
+  getCards(householdId: number): Observable<any> {
+    const params = new HttpParams().set('householdId', householdId.toString());
+    return this.http.get(`${this.apiUrl}/admin/cards`, { headers: this.getHeaders(), params });
+  }
+
+  createCard(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/admin/cards`, data, { headers: this.getHeaders() });
+  }
+
+  updateCard(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/admin/cards/${id}`, data, { headers: this.getHeaders() });
+  }
+
+  deleteCard(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/admin/cards/${id}`, { headers: this.getHeaders() });
+  }
 }

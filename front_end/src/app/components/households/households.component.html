@@ -139,6 +139,9 @@
       <button class="tab-btn" [class.active]="currentTab === 'income-cats'" (click)="switchTab('income-cats')">
         <i class="fa-solid fa-arrow-trend-up"></i> Income Categories
       </button>
+      <button class="tab-btn" [class.active]="currentTab === 'cards'" (click)="switchTab('cards')">
+        <i class="fa-solid fa-credit-card"></i> Cards
+      </button>
     </div>
 
     <!-- ── MEMBERS TAB ────────────────────────────────────────────────────── -->
@@ -494,6 +497,94 @@
           <div class="form-actions">
             <button class="btn-primary" (click)="saveIncomeNew()">Save</button>
             <button class="btn-secondary" (click)="cancelIncomeNew()">Cancel</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── CARDS TAB ─────────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="currentTab === 'cards' && !detailLoading">
+
+      <div class="section-card">
+        <div class="section-header">
+          <h4 class="section-title">Cards</h4>
+          <button class="btn-primary" (click)="openCardNewForm()" [disabled]="showCardNewForm">
+            + Add Card
+          </button>
+        </div>
+
+        <div class="loading-inline" *ngIf="cardsLoading">
+          <div class="spinner-sm"></div>
+        </div>
+
+        <!-- Add new card form -->
+        <div class="inline-form" *ngIf="showCardNewForm">
+          <div class="form-row">
+            <input class="form-input" type="text" placeholder="Last 4 digits *" [(ngModel)]="newCard.lastFourDigits" maxlength="4" pattern="\d{4}" />
+            <input class="form-input" type="text" placeholder="Nickname (optional)" [(ngModel)]="newCard.nickname" />
+            <input class="form-input" type="text" placeholder="Bank name (optional)" [(ngModel)]="newCard.bankName" />
+            <select class="form-input" [(ngModel)]="newCard.cardType">
+              <option value="">Type (optional)</option>
+              <option value="credit">Credit</option>
+              <option value="debit">Debit</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button class="btn-primary" (click)="saveCardNew()">Save</button>
+            <button class="btn-secondary" (click)="cancelCardNew()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Cards list -->
+        <div class="cat-list" *ngIf="!cardsLoading">
+          <div class="cat-item" *ngFor="let card of cards">
+
+            <!-- View mode -->
+            <ng-container *ngIf="editingCardId !== card.id">
+              <div class="cat-info">
+                <span class="cat-icon"><i class="fa-solid fa-credit-card"></i></span>
+                <div>
+                  <div class="cat-name">{{ getCardDisplayLabel(card) }}</div>
+                  <div class="cat-meta" *ngIf="card.bankName || card.cardType">
+                    <span *ngIf="card.bankName">{{ card.bankName }}</span>
+                    <span *ngIf="card.bankName && card.cardType"> · </span>
+                    <span *ngIf="card.cardType" class="card-type-badge">{{ card.cardType | titlecase }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="cat-actions">
+                <button class="btn-icon" title="Edit" (click)="startEditCard(card)">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="btn-icon btn-icon--danger" title="Delete" (click)="deleteCard(card.id)">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </ng-container>
+
+            <!-- Edit mode -->
+            <ng-container *ngIf="editingCardId === card.id">
+              <div class="inline-edit-row">
+                <input class="form-input" type="text" placeholder="Last 4 digits *" [(ngModel)]="editingCard.lastFourDigits" maxlength="4" />
+                <input class="form-input" type="text" placeholder="Nickname" [(ngModel)]="editingCard.nickname" />
+                <input class="form-input" type="text" placeholder="Bank name" [(ngModel)]="editingCard.bankName" />
+                <select class="form-input" [(ngModel)]="editingCard.cardType">
+                  <option value="">Type</option>
+                  <option value="credit">Credit</option>
+                  <option value="debit">Debit</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button class="btn-primary" (click)="saveEditCard(card)">Save</button>
+                <button class="btn-secondary" (click)="cancelEditCard()">Cancel</button>
+              </div>
+            </ng-container>
+
+          </div>
+
+          <div class="empty-state" *ngIf="cards.length === 0 && !showCardNewForm">
+            No cards added yet.
           </div>
         </div>
 

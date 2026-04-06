@@ -1,5 +1,6 @@
 import 'package:household/models/category.dart';
 import 'package:household/models/app_user.dart';
+import 'package:household/models/credit_card.dart';
 
 class Expense {
   final int id;
@@ -8,6 +9,8 @@ class Expense {
   final String? description;
   final String? note;
   final String paymentMethod;
+  final int? cardId;
+  final CreditCard? card;
   final int householdId;
   final Category? category;
   final AppUser? appUser;
@@ -19,6 +22,8 @@ class Expense {
     this.description,
     this.note,
     required this.paymentMethod,
+    this.cardId,
+    this.card,
     required this.householdId,
     this.category,
     this.appUser,
@@ -31,6 +36,10 @@ class Expense {
     description:   json['description'] as String?,
     note:          json['note'] as String?,
     paymentMethod: json['paymentMethod'] as String,
+    cardId:        json['cardId'] as int?,
+    card: (json['card']) != null
+        ? CreditCard.fromJson(json['card'] as Map<String, dynamic>)
+        : null,
     householdId:   json['householdId'] as int,
     category: (json['ExpenseCategory'] ?? json['expenseCategory']) != null
         ? Category.fromJson(json['ExpenseCategory'] ?? json['expenseCategory'])
@@ -49,6 +58,7 @@ class Expense {
     if (description != null && description!.isNotEmpty) 'description': description,
     if (note != null && note!.isNotEmpty) 'note': note,
     'paymentMethod': paymentMethod,
+    'cardId': cardId,
     'expenseCategoryId': expenseCategoryId,
     'householdId': householdId,
   };

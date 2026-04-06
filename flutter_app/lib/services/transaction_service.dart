@@ -45,6 +45,7 @@ class TransactionService {
     required String dateTime,
     required String paymentMethod,
     required int expenseCategoryId,
+    int? cardId,
     String? description,
     String? note,
   }) {
@@ -52,6 +53,7 @@ class TransactionService {
       'amount': amount,
       'dateTime': dateTime,
       'paymentMethod': paymentMethod,
+      'cardId': cardId,
       'expenseCategoryId': expenseCategoryId,
       'householdId': _householdId,
       if (description != null && description.isNotEmpty) 'description': description,
@@ -90,6 +92,7 @@ class TransactionService {
     required int incomeCategoryId,
     String? description,
     String? note,
+    int? cardId,
   }) {
     return _repo.createIncome({
       'amount': amount,
@@ -99,6 +102,7 @@ class TransactionService {
       'householdId': _householdId,
       if (description != null && description.isNotEmpty) 'description': description,
       if (note != null && note.isNotEmpty) 'note': note,
+      if (cardId != null) 'cardId': cardId,
     });
   }
 
