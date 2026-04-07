@@ -966,9 +966,10 @@ class _SubCategoriesArc extends StatefulWidget {
 
   // ── Tune these to change the feel of the arc ─────────────────────────────
   static const double itemHeight   = 48.0;
-  static const double arcRadius    = 60.0; // px – also the semicircle radius
+  static const double arcRadius    = 72.0; // semicircle radius – engulfs the icons
   static const double minScale     = 0.55; // size ratio of the most-edge item
   static const int    visibleItems = 5;    // items visible at once
+  static const double textZone     = 56.0; // extra width for labels outside the arc
   // ─────────────────────────────────────────────────────────────────────────
 
   static const double totalHeight = itemHeight * visibleItems; // 240 px
@@ -1097,15 +1098,12 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
             opacity: layout.opacity,
             child: GestureDetector(
               onTap: layout.opacity > 0.05 ? () => widget.onSelected(item.id) : null,
-              child: SizedBox(
-                width: _SubCategoriesArc.itemHeight,
-                height: _SubCategoriesArc.itemHeight,
-                child: _WheelItem(
-                  icon:      item.icon,
-                  name:      item.name,
-                  color:     color,
-                  isGeneral: item.isGeneral,
-                ),
+              child: _WheelItem(
+                icon:      item.icon,
+                name:      item.name,
+                color:     color,
+                isGeneral: item.isGeneral,
+                isRTL:     isRTL,
               ),
             ),
           ),
@@ -1118,7 +1116,7 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
 
   Widget _buildLTR(List<_ArcItem> items, Color color) {
     return SizedBox(
-      width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.itemHeight,
+      width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.textZone,
       height: _SubCategoriesArc.totalHeight,
       child: GestureDetector(
         behavior:             HitTestBehavior.opaque,
@@ -1157,7 +1155,7 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
 
   Widget _buildRTL(List<_ArcItem> items, Color color) {
     return SizedBox(
-      width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.itemHeight,
+      width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.textZone,
       height: _SubCategoriesArc.totalHeight,
       child: GestureDetector(
         behavior:             HitTestBehavior.opaque,
@@ -1264,46 +1262,57 @@ class _WheelItem extends StatelessWidget {
   final String name;
   final Color color;
   final bool isGeneral;
+  final bool isRTL;
 
   const _WheelItem({
     required this.icon,
     required this.name,
     required this.color,
     required this.isGeneral,
+    required this.isRTL,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final iconBox = Container(
+      width: isGeneral ? 36 : 32,
+      height: isGeneral ? 36 : 32,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(isGeneral ? 9 : 8),
+      ),
+      child: Icon(
+        iconDataFromName(icon),
+        size: isGeneral ? 19 : 16,
+        color: Colors.white,
+      ),
+    );
+
+    final label = Flexible(
+      child: Text(
+        name,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: isGeneral ? 12 : 11,
+          fontWeight: isGeneral ? FontWeight.w700 : FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+
+    // Icon inside the circle, text extending outward:
+    // LTR (arc fans right): icon left, text right
+    // RTL (arc fans left):  icon right, text left
+    final children = isRTL
+        ? [label, const SizedBox(width: 4), iconBox]
+        : [iconBox, const SizedBox(width: 4), label];
+
+    return Row(
       mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: isGeneral ? 34 : 28,
-          height: isGeneral ? 34 : 28,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(isGeneral ? 9 : 7),
-          ),
-          child: Icon(
-            iconDataFromName(icon),
-            size: isGeneral ? 18 : 15,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          name,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: isGeneral ? 9 : 8,
-            fontWeight: isGeneral ? FontWeight.w700 : FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
+      crossAxisAlignment: CrossAxisAlignment.center,
+      textDirection: TextDirection.ltr, // prevent Flutter's auto-RTL reversal
+      children: children,
     );
   }
 }
