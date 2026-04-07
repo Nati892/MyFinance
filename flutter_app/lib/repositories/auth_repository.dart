@@ -22,9 +22,10 @@ class AuthRepository {
   }
 
   /// POST /api/app/auth/refresh
-  Future<Map<String, dynamic>> refresh(String refreshToken) async {
+  Future<Map<String, dynamic>> refresh(String refreshToken, int userId) async {
     final res = await _dio.post('/app/auth/refresh', data: {
       'refreshToken': refreshToken,
+      'userId': userId,
     });
     return res.data as Map<String, dynamic>;
   }

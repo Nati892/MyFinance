@@ -31,6 +31,13 @@ const Note = require('./note')(sequelize, Sequelize.DataTypes);
 const Asset = require('./asset')(sequelize, Sequelize.DataTypes);
 const Card = require('./card')(sequelize, Sequelize.DataTypes);
 const CategoryBudgetOverride = require('./categoryBudgetOverride')(sequelize, Sequelize.DataTypes);
+const ShoppingCategory = require('./shopping-category')(sequelize, Sequelize.DataTypes);
+const ShoppingStore = require('./shopping-store')(sequelize, Sequelize.DataTypes);
+const ShoppingItem = require('./shopping-item')(sequelize, Sequelize.DataTypes);
+const ShoppingList = require('./shopping-list')(sequelize, Sequelize.DataTypes);
+const ShoppingListItem = require('./shopping-list-item')(sequelize, Sequelize.DataTypes);
+const ShoppingSession = require('./shopping-session')(sequelize, Sequelize.DataTypes);
+const ShoppingSessionItem = require('./shopping-session-item')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 User.hasMany(Log, {
@@ -119,6 +126,66 @@ CategoryBudgetOverride.belongsTo(Household, { foreignKey: 'householdId' });
 ExpenseCategory.hasMany(CategoryBudgetOverride, { foreignKey: 'expenseCategoryId', onDelete: 'CASCADE' });
 CategoryBudgetOverride.belongsTo(ExpenseCategory, { foreignKey: 'expenseCategoryId' });
 
+// ShoppingCategory <-> ShoppingItem
+ShoppingCategory.hasMany(ShoppingItem, { foreignKey: 'categoryId', as: 'items' });
+ShoppingItem.belongsTo(ShoppingCategory, { foreignKey: 'categoryId', as: 'category' });
+
+// Household <-> ShoppingCategory
+Household.hasMany(ShoppingCategory, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+ShoppingCategory.belongsTo(Household, { foreignKey: 'householdId' });
+
+// Household <-> ShoppingStore
+Household.hasMany(ShoppingStore, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+ShoppingStore.belongsTo(Household, { foreignKey: 'householdId' });
+
+// Household <-> ShoppingItem
+Household.hasMany(ShoppingItem, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+ShoppingItem.belongsTo(Household, { foreignKey: 'householdId' });
+
+// AppUser <-> ShoppingItem (creator)
+AppUser.hasMany(ShoppingItem, { foreignKey: 'createdBy' });
+ShoppingItem.belongsTo(AppUser, { foreignKey: 'createdBy', as: 'creator' });
+
+// Household <-> ShoppingList
+Household.hasMany(ShoppingList, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+ShoppingList.belongsTo(Household, { foreignKey: 'householdId' });
+
+// AppUser <-> ShoppingList
+AppUser.hasMany(ShoppingList, { foreignKey: 'createdBy' });
+ShoppingList.belongsTo(AppUser, { foreignKey: 'createdBy', as: 'creator' });
+
+// ShoppingList <-> ShoppingListItem
+ShoppingList.hasMany(ShoppingListItem, { foreignKey: 'listId', as: 'listItems', onDelete: 'CASCADE' });
+ShoppingListItem.belongsTo(ShoppingList, { foreignKey: 'listId' });
+
+// ShoppingItem <-> ShoppingListItem
+ShoppingItem.hasMany(ShoppingListItem, { foreignKey: 'itemId' });
+ShoppingListItem.belongsTo(ShoppingItem, { foreignKey: 'itemId', as: 'item' });
+
+// Household <-> ShoppingSession
+Household.hasMany(ShoppingSession, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+ShoppingSession.belongsTo(Household, { foreignKey: 'householdId' });
+
+// AppUser <-> ShoppingSession
+AppUser.hasMany(ShoppingSession, { foreignKey: 'createdBy' });
+ShoppingSession.belongsTo(AppUser, { foreignKey: 'createdBy', as: 'creator' });
+
+// ShoppingList <-> ShoppingSession (optional template source)
+ShoppingList.hasMany(ShoppingSession, { foreignKey: 'listId' });
+ShoppingSession.belongsTo(ShoppingList, { foreignKey: 'listId', as: 'sourceList' });
+
+// ShoppingSession <-> ShoppingSessionItem
+ShoppingSession.hasMany(ShoppingSessionItem, { foreignKey: 'sessionId', as: 'sessionItems', onDelete: 'CASCADE' });
+ShoppingSessionItem.belongsTo(ShoppingSession, { foreignKey: 'sessionId' });
+
+// ShoppingItem <-> ShoppingSessionItem
+ShoppingItem.hasMany(ShoppingSessionItem, { foreignKey: 'itemId' });
+ShoppingSessionItem.belongsTo(ShoppingItem, { foreignKey: 'itemId', as: 'item' });
+
+// ShoppingStore <-> ShoppingSessionItem
+ShoppingStore.hasMany(ShoppingSessionItem, { foreignKey: 'storeId' });
+ShoppingSessionItem.belongsTo(ShoppingStore, { foreignKey: 'storeId', as: 'store' });
+
 // ExpenseCategory self-referential (sub-categories)
 ExpenseCategory.hasMany(ExpenseCategory, { as: 'subCategories', foreignKey: 'parentCategoryId' });
 ExpenseCategory.belongsTo(ExpenseCategory, { as: 'parentCategory', foreignKey: 'parentCategoryId' });
@@ -148,7 +215,14 @@ const db = {
   Note,
   Asset,
   Card,
-  CategoryBudgetOverride
+  CategoryBudgetOverride,
+  ShoppingCategory,
+  ShoppingStore,
+  ShoppingItem,
+  ShoppingList,
+  ShoppingListItem,
+  ShoppingSession,
+  ShoppingSessionItem
 };
 
 module.exports = db;

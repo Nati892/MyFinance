@@ -1,0 +1,622 @@
+import 'package:flutter/material.dart';
+import 'package:household/models/shopping_session.dart';
+import 'package:household/models/shopping_session_item.dart';
+import 'package:household/models/shopping_store.dart';
+
+// ── Color helper ───────────────────────────────────────────────────────────────
+
+Color _hexColor(String hex, {Color fallback = const Color(0xFFFFF9C4)}) {
+  try {
+    final h = hex.trim().replaceFirst('#', '');
+    if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
+    if (h.length == 8) return Color(int.parse(h, radix: 16));
+    return fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class CanvasShoppingSessionWidget extends StatefulWidget {
+  final ShoppingSession session;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final void Function(Offset delta) onDragUpdate;
+  final VoidCallback onDragEnd;
+  final void Function(double scale, double baseW, double baseH) onScaleUpdate;
+  final VoidCallback onScaleEnd;
+  final void Function(double rotation) onRotateUpdate;
+  final VoidCallback onRotateEnd;
+  final VoidCallback onDelete;
+  final void Function(int sessionItemId, Map<String, dynamic> patch) onPatchItem;
+  final List<ShoppingStore> stores;
+  final Future<ShoppingStore?> Function(String name) onCreateStore;
+
+  const CanvasShoppingSessionWidget({
+    required super.key,
+    required this.session,
+    required this.isSelected,
+    required this.onTap,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.onScaleUpdate,
+    required this.onScaleEnd,
+    required this.onRotateUpdate,
+    required this.onRotateEnd,
+    required this.onDelete,
+    required this.onPatchItem,
+    required this.stores,
+    required this.onCreateStore,
+  });
+
+  @override
+  State<CanvasShoppingSessionWidget> createState() =>
+      _CanvasShoppingSessionWidgetState();
+}
+
+class _CanvasShoppingSessionWidgetState
+    extends State<CanvasShoppingSessionWidget> {
+  double _baseWidth = 0;
+  double _baseHeight = 0;
+  double _rotation = 0;
+  double _lastScale = 1.0;
+  int? _expandedItemId;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotation = widget.session.rotation;
+  }
+
+  @override
+  void didUpdateWidget(CanvasShoppingSessionWidget old) {
+    super.didUpdateWidget(old);
+    if (old.session.rotation != widget.session.rotation) {
+      _rotation = widget.session.rotation;
+    }
+  }
+
+  Color get _headerColor {
+    final base = _hexColor(widget.session.noteColor);
+    final hsl = HSLColor.fromColor(base);
+    return hsl.withLightness((hsl.lightness - 0.1).clamp(0.0, 1.0)).toColor();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+    final w = session.width.toDouble();
+    final h = session.height.toDouble();
+    final bgColor = _hexColor(session.noteColor);
+
+    return Transform.rotate(
+      angle: _rotation,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onScaleStart: (d) {
+          _baseWidth = w;
+          _baseHeight = h;
+          _lastScale = 1.0;
+        },
+        onScaleUpdate: (d) {
+          if (d.pointerCount == 1) {
+            // Single finger — drag
+            widget.onDragUpdate(d.focalPointDelta);
+          } else {
+            // Multi-finger — resize + rotate
+            widget.onScaleUpdate(d.scale, _baseWidth, _baseHeight);
+            if (d.rotation != 0) {
+              setState(() => _rotation += d.rotation);
+              widget.onRotateUpdate(_rotation);
+            }
+            _lastScale = d.scale;
+          }
+        },
+        onScaleEnd: (_) {
+          widget.onDragEnd();
+          widget.onScaleEnd();
+          widget.onRotateEnd();
+        },
+        child: Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: [
+              BoxShadow(
+                color: widget.isSelected
+                    ? const Color(0x66667EEA)
+                    : const Color(0x26000000),
+                blurRadius: widget.isSelected ? 12 : 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+            border: widget.isSelected
+                ? Border.all(color: const Color(0xFF667EEA), width: 2)
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Header ─────────────────────────────────────────────────
+                _buildHeader(session),
+                // ── Items list ─────────────────────────────────────────────
+                Expanded(
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: session.sessionItems.length,
+                    itemBuilder: (ctx, i) {
+                      final item = session.sessionItems[i];
+                      return _ShoppingSessionItemRow(
+                        key: ValueKey(item.id),
+                        item: item,
+                        isExpanded: _expandedItemId == item.id,
+                        onToggleExpand: () {
+                          setState(() {
+                            _expandedItemId =
+                                _expandedItemId == item.id ? null : item.id;
+                          });
+                        },
+                        stores: widget.stores,
+                        onPatch: (patch) => widget.onPatchItem(item.id, patch),
+                        onCreateStore: widget.onCreateStore,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(ShoppingSession session) {
+    return Container(
+      height: 28,
+      color: _headerColor,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.shopping_cart, size: 12, color: Color(0xFF5D4037)),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              session.name,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF5D4037),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          GestureDetector(
+            onDoubleTap: widget.onDelete,
+            child: const Icon(Icons.close, size: 14, color: Color(0xFF9E9E9E)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ShoppingSessionItemRow extends StatefulWidget {
+  final ShoppingSessionItem item;
+  final bool isExpanded;
+  final VoidCallback onToggleExpand;
+  final List<ShoppingStore> stores;
+  final void Function(Map<String, dynamic> patch) onPatch;
+  final Future<ShoppingStore?> Function(String name) onCreateStore;
+
+  const _ShoppingSessionItemRow({
+    required super.key,
+    required this.item,
+    required this.isExpanded,
+    required this.onToggleExpand,
+    required this.stores,
+    required this.onPatch,
+    required this.onCreateStore,
+  });
+
+  @override
+  State<_ShoppingSessionItemRow> createState() =>
+      _ShoppingSessionItemRowState();
+}
+
+class _ShoppingSessionItemRowState extends State<_ShoppingSessionItemRow> {
+  late String _status;
+  late double? _price;
+  late int? _storeId;
+  late String? _note;
+  final _priceCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.item.status;
+    _price = widget.item.price;
+    _storeId = widget.item.storeId;
+    _note = widget.item.note;
+    _priceCtrl.text = _price?.toString() ?? '';
+    _noteCtrl.text = _note ?? '';
+  }
+
+  @override
+  void dispose() {
+    _priceCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  Color get _statusColor {
+    switch (_status) {
+      case 'got':
+        return const Color(0xFF4CAF50);
+      case 'not_got':
+        return const Color(0xFFE53935);
+      case 'partial':
+        return const Color(0xFFFF9800);
+      default:
+        return const Color(0xFFBBBBBB);
+    }
+  }
+
+  String get _displayName {
+    final item = widget.item.item;
+    if (item == null) return '?';
+    final locale = WidgetsBinding.instance.platformDispatcher.locale;
+    if (locale.languageCode == 'he' && item.nameHe != null && item.nameHe!.isNotEmpty) {
+      return item.nameHe!;
+    }
+    return item.name;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // ── Collapsed row ──────────────────────────────────────────────────
+        GestureDetector(
+          onTap: widget.onToggleExpand,
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
+              ),
+            ),
+            child: Row(
+              children: [
+                // Status dot
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: _statusColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Icon
+                if (widget.item.item?.icon != null) ...[
+                  Text(widget.item.item!.icon!, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 4),
+                ],
+                // Name
+                Expanded(
+                  child: Text(
+                    _displayName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF333333),
+                      decoration: _status == 'got'
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // Amount + unit
+                Text(
+                  '${widget.item.amount % 1 == 0 ? widget.item.amount.toInt() : widget.item.amount} ${widget.item.unit}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF888888),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  widget.isExpanded ? Icons.expand_less : Icons.expand_more,
+                  size: 14,
+                  color: const Color(0xFF888888),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // ── Expanded detail ────────────────────────────────────────────────
+        if (widget.isExpanded)
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.6),
+              border: Border(
+                bottom: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Status buttons
+                Row(
+                  children: [
+                    _StatusBtn(
+                      label: '✓',
+                      active: _status == 'got',
+                      color: const Color(0xFF4CAF50),
+                      onTap: () => _setStatus('got'),
+                    ),
+                    const SizedBox(width: 4),
+                    _StatusBtn(
+                      label: '~',
+                      active: _status == 'partial',
+                      color: const Color(0xFFFF9800),
+                      onTap: () => _setStatus('partial'),
+                    ),
+                    const SizedBox(width: 4),
+                    _StatusBtn(
+                      label: '✗',
+                      active: _status == 'not_got',
+                      color: const Color(0xFFE53935),
+                      onTap: () => _setStatus('not_got'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Price
+                TextField(
+                  controller: _priceCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(fontSize: 11),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    hintText: 'Price',
+                    hintStyle: TextStyle(fontSize: 11, color: Color(0xFFBBBBBB)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                      borderSide: BorderSide(color: Color(0xFFDDD5CB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                      borderSide: BorderSide(color: Color(0xFFDDD5CB)),
+                    ),
+                  ),
+                  onChanged: (v) => _price = double.tryParse(v),
+                ),
+                const SizedBox(height: 4),
+                // Store picker
+                _StorePicker(
+                  stores: widget.stores,
+                  selectedId: _storeId,
+                  onSelected: (id) => setState(() => _storeId = id),
+                  onCreateStore: widget.onCreateStore,
+                ),
+                const SizedBox(height: 4),
+                // Note
+                TextField(
+                  controller: _noteCtrl,
+                  style: const TextStyle(fontSize: 11),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    hintText: 'Note',
+                    hintStyle: TextStyle(fontSize: 11, color: Color(0xFFBBBBBB)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                      borderSide: BorderSide(color: Color(0xFFDDD5CB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                      borderSide: BorderSide(color: Color(0xFFDDD5CB)),
+                    ),
+                  ),
+                  onChanged: (v) => _note = v,
+                ),
+                const SizedBox(height: 6),
+                // Confirm button
+                SizedBox(
+                  height: 26,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF5D4037),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6)),
+                    ),
+                    onPressed: _confirm,
+                    child: const Text('OK', style: TextStyle(fontSize: 11)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _setStatus(String status) {
+    setState(() => _status = status);
+  }
+
+  void _confirm() {
+    widget.onPatch({
+      'status': _status,
+      'price': _priceCtrl.text.isEmpty ? null : double.tryParse(_priceCtrl.text),
+      'storeId': _storeId,
+      'note': _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
+    });
+    widget.onToggleExpand(); // collapse
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StatusBtn extends StatelessWidget {
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _StatusBtn({
+    required this.label,
+    required this.active,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 28,
+        height: 22,
+        decoration: BoxDecoration(
+          color: active ? color : color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: active ? Colors.white : color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StorePicker extends StatefulWidget {
+  final List<ShoppingStore> stores;
+  final int? selectedId;
+  final void Function(int? id) onSelected;
+  final Future<ShoppingStore?> Function(String name) onCreateStore;
+
+  const _StorePicker({
+    required this.stores,
+    required this.selectedId,
+    required this.onSelected,
+    required this.onCreateStore,
+  });
+
+  @override
+  State<_StorePicker> createState() => _StorePickerState();
+}
+
+class _StorePickerState extends State<_StorePicker> {
+  bool _adding = false;
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_adding) {
+      return Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _ctrl,
+              autofocus: true,
+              style: const TextStyle(fontSize: 11),
+              decoration: const InputDecoration(
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                hintText: 'Store name',
+                hintStyle: TextStyle(fontSize: 11, color: Color(0xFFBBBBBB)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(6)),
+                  borderSide: BorderSide(color: Color(0xFFDDD5CB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(6)),
+                  borderSide: BorderSide(color: Color(0xFFDDD5CB)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () async {
+              final store = await widget.onCreateStore(_ctrl.text);
+              if (store != null) {
+                widget.onSelected(store.id);
+              }
+              setState(() => _adding = false);
+            },
+            child: const Icon(Icons.check, size: 16, color: Color(0xFF4CAF50)),
+          ),
+          const SizedBox(width: 2),
+          GestureDetector(
+            onTap: () => setState(() => _adding = false),
+            child: const Icon(Icons.close, size: 16, color: Color(0xFFE53935)),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int?>(
+              value: widget.selectedId,
+              hint: const Text('Store', style: TextStyle(fontSize: 11, color: Color(0xFFBBBBBB))),
+              isDense: true,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF333333)),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('No store', style: TextStyle(fontSize: 11)),
+                ),
+                ...widget.stores.map((s) => DropdownMenuItem<int?>(
+                      value: s.id,
+                      child: Text(s.name, style: const TextStyle(fontSize: 11)),
+                    )),
+              ],
+              onChanged: widget.onSelected,
+            ),
+          ),
+        ),
+        GestureDetector(
+          onTap: () => setState(() { _adding = true; _ctrl.clear(); }),
+          child: const Icon(Icons.add, size: 14, color: Color(0xFF888888)),
+        ),
+      ],
+    );
+  }
+}

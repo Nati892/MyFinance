@@ -1022,6 +1022,156 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get boardTryAgain;
 
+  /// No description provided for @shoppingTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping'**
+  String get shoppingTab;
+
+  /// No description provided for @shoppingNewList.
+  ///
+  /// In en, this message translates to:
+  /// **'New list'**
+  String get shoppingNewList;
+
+  /// No description provided for @shoppingPickTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Use existing list as template'**
+  String get shoppingPickTemplate;
+
+  /// No description provided for @shoppingAddItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Add item'**
+  String get shoppingAddItem;
+
+  /// No description provided for @shoppingItemName.
+  ///
+  /// In en, this message translates to:
+  /// **'Item name (English)'**
+  String get shoppingItemName;
+
+  /// No description provided for @shoppingItemNameHe.
+  ///
+  /// In en, this message translates to:
+  /// **'Item name (Hebrew)'**
+  String get shoppingItemNameHe;
+
+  /// No description provided for @shoppingUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get shoppingUnit;
+
+  /// No description provided for @shoppingAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get shoppingAmount;
+
+  /// No description provided for @shoppingCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get shoppingCategory;
+
+  /// No description provided for @shoppingStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Store'**
+  String get shoppingStore;
+
+  /// No description provided for @shoppingAddStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Add store'**
+  String get shoppingAddStore;
+
+  /// No description provided for @shoppingGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get shoppingGotIt;
+
+  /// No description provided for @shoppingPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get shoppingPartial;
+
+  /// No description provided for @shoppingNope.
+  ///
+  /// In en, this message translates to:
+  /// **'Nope'**
+  String get shoppingNope;
+
+  /// No description provided for @shoppingPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get shoppingPrice;
+
+  /// No description provided for @shoppingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get shoppingNote;
+
+  /// No description provided for @shoppingListName.
+  ///
+  /// In en, this message translates to:
+  /// **'List name'**
+  String get shoppingListName;
+
+  /// No description provided for @shoppingSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save list'**
+  String get shoppingSave;
+
+  /// No description provided for @shoppingSearchItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Search items…'**
+  String get shoppingSearchItems;
+
+  /// No description provided for @shoppingNewItemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Shopping Item'**
+  String get shoppingNewItemTitle;
+
+  /// No description provided for @shoppingSelectItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Select items for this list'**
+  String get shoppingSelectItems;
+
+  /// No description provided for @shoppingNoItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No items yet. Create one!'**
+  String get shoppingNoItems;
+
+  /// No description provided for @shoppingSessionCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping List'**
+  String get shoppingSessionCardTitle;
+
+  /// No description provided for @shoppingDeleteSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete list'**
+  String get shoppingDeleteSession;
+
+  /// No description provided for @shoppingAddNewCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'New category'**
+  String get shoppingAddNewCategory;
+
   /// No description provided for @categoryNewExpense.
   ///
   /// In en, this message translates to:
@@ -1141,6 +1291,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New Sub-category'**
   String get categorySubNew;
+
+  /// No description provided for @categoryGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get categoryGeneral;
 
   /// No description provided for @timelineTotal.
   ///

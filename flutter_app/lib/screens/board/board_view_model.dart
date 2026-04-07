@@ -2,13 +2,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/board_note.dart';
+import 'package:household/models/shopping_session.dart';
 import 'package:household/repositories/board_repository.dart';
+import 'package:household/repositories/shopping_repository.dart';
 import 'package:household/services/household_service.dart';
 
 final boardViewModelProvider =
     ChangeNotifierProvider.autoDispose<BoardViewModel>((ref) {
   return BoardViewModel(
     ref.read(boardRepositoryProvider),
+    ref.read(shoppingRepositoryProvider),
     ref.read(householdServiceProvider),
   );
 });
@@ -17,15 +20,17 @@ enum BoardLoadState { idle, loading, error }
 
 class BoardViewModel extends ChangeNotifier {
   final BoardRepository _repo;
+  final ShoppingRepository _shoppingRepo;
   final HouseholdService _householdService;
 
-  BoardViewModel(this._repo, this._householdService) {
+  BoardViewModel(this._repo, this._shoppingRepo, this._householdService) {
     load();
   }
 
   // ── Data ─────────────────────────────────────────────────────────────────
 
   List<BoardNote> notes = [];
+  List<ShoppingSession> sessions = [];
 
   // ── Canvas interaction ────────────────────────────────────────────────────
 
@@ -63,7 +68,12 @@ class BoardViewModel extends ChangeNotifier {
     state = BoardLoadState.loading;
     notifyListeners();
     try {
-      notes = await _repo.getNotes(hid);
+      final results = await Future.wait([
+        _repo.getNotes(hid),
+        _shoppingRepo.getSessions(hid),
+      ]);
+      notes = results[0] as List<BoardNote>;
+      sessions = results[1] as List<ShoppingSession>;
       state = BoardLoadState.idle;
     } catch (e) {
       state = BoardLoadState.error;
@@ -253,6 +263,82 @@ class BoardViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       await _repo.updateNote(id, props);
+    } catch (_) {}
+  }
+
+  // ── Shopping session canvas helpers ───────────────────────────────────────
+
+  int? selectedSessionId;
+
+  void selectSession(int? id) {
+    selectedSessionId = id;
+    selectedNoteId = null;
+    notifyListeners();
+  }
+
+  Future<void> addSession(ShoppingSession session) async {
+    sessions = [session, ...sessions];
+    notifyListeners();
+  }
+
+  Future<void> deleteSession(int id) async {
+    try {
+      await _shoppingRepo.deleteSession(id);
+      sessions = sessions.where((s) => s.id != id).toList();
+      if (selectedSessionId == id) selectedSessionId = null;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void commitSessionPosition(int id, double x, double y) {
+    sessions = sessions.map((s) => s.id == id ? s.copyWith(posX: x, posY: y) : s).toList();
+    _saveTimers[id + 100000]?.cancel();
+    _saveTimers[id + 100000] = Timer(const Duration(milliseconds: 200), () {
+      _shoppingRepo.updateSession(id, {'posX': x, 'posY': y});
+    });
+  }
+
+  void resizeSession(int id, double scaleFactor, double baseWidth, double baseHeight) {
+    final newW = (baseWidth * scaleFactor).clamp(150.0, 500.0).toInt();
+    final newH = (baseHeight * scaleFactor).clamp(150.0, 600.0).toInt();
+    sessions = sessions.map((s) => s.id == id ? s.copyWith(width: newW, height: newH) : s).toList();
+    notifyListeners();
+    _saveTimers[id + 100000]?.cancel();
+    _saveTimers[id + 100000] = Timer(const Duration(milliseconds: 500), () {
+      _shoppingRepo.updateSession(id, {'width': newW, 'height': newH});
+    });
+  }
+
+  void rotateSession(int id, double rotation) {
+    sessions = sessions.map((s) => s.id == id ? s.copyWith(rotation: rotation) : s).toList();
+    notifyListeners();
+    _saveTimers[id + 100000]?.cancel();
+    _saveTimers[id + 100000] = Timer(const Duration(milliseconds: 500), () {
+      _shoppingRepo.updateSession(id, {'rotation': rotation});
+    });
+  }
+
+  Future<void> bringSessionToFront(int id) async {
+    final maxZ = sessions.isEmpty ? 1 : sessions.map((s) => s.zIndex).reduce((a, b) => a > b ? a : b);
+    final newZ = maxZ + 1;
+    sessions = sessions.map((s) => s.id == id ? s.copyWith(zIndex: newZ) : s).toList();
+    selectedSessionId = id;
+    notifyListeners();
+    try {
+      await _shoppingRepo.updateSession(id, {'zIndex': newZ});
+    } catch (_) {}
+  }
+
+  Future<void> patchSessionItem(
+      int sessionId, int sessionItemId, Map<String, dynamic> body) async {
+    try {
+      final updated = await _shoppingRepo.patchSessionItem(sessionId, sessionItemId, body);
+      sessions = sessions.map((s) {
+        if (s.id != sessionId) return s;
+        final newItems = s.sessionItems.map((it) => it.id == sessionItemId ? updated : it).toList();
+        return s.copyWith(sessionItems: newItems);
+      }).toList();
+      notifyListeners();
     } catch (_) {}
   }
 }

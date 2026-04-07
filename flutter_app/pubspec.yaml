@@ -31,6 +31,9 @@ dependencies:
   # Image picker (for board image notes)
   image_picker: ^1.1.2
 
+  # Color picker (full HSV palette for board notes)
+  flutter_colorpicker: ^1.1.0
+
   # Utilities
   intl: ^0.20.2
 

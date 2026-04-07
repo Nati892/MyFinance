@@ -965,11 +965,11 @@ class _SubCategoriesArc extends StatefulWidget {
   final VoidCallback onClose;
 
   // ── Tune these to change the feel of the arc ─────────────────────────────
-  static const double itemHeight   = 48.0;
-  static const double arcRadius    = 72.0; // semicircle radius – engulfs the icons
+  static const double itemHeight   = 52.0;
+  static const double arcRadius    = 80.0; // semicircle radius – engulfs the icons
   static const double minScale     = 0.55; // size ratio of the most-edge item
   static const int    visibleItems = 5;    // items visible at once
-  static const double textZone     = 56.0; // extra width for labels outside the arc
+  static const double textZone     = 115.0; // extra width for labels outside the arc
   // ─────────────────────────────────────────────────────────────────────────
 
   static const double totalHeight = itemHeight * visibleItems; // 240 px
@@ -1002,6 +1002,15 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
   }
 
   @override
+  void didUpdateWidget(covariant _SubCategoriesArc oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.parent.id != widget.parent.id) {
+      _snapController.stop();
+      _scrollOffsetPx = 0.0;
+    }
+  }
+
+  @override
   void dispose() {
     _snapController.dispose();
     super.dispose();
@@ -1009,7 +1018,7 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
 
   // ── Scroll + snap logic ──────────────────────────────────────────────────
 
-  int get _itemCount => _buildItemList().length;
+  int get _itemCount => 1 + widget.parent.subCategories.length;
 
   double get _maxScrollPx =>
       (_itemCount - 1) * _SubCategoriesArc.itemHeight;
@@ -1041,17 +1050,22 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
 
   // ── Item list ─────────────────────────────────────────────────────────────
 
-  List<_ArcItem> _buildItemList() {
+  List<_ArcItem> _buildItemList(Locale locale, String generalLabel) {
+    final isHe = locale.languageCode == 'he';
+    final parentName = (isHe && widget.parent.nameHe?.isNotEmpty == true)
+        ? widget.parent.nameHe!
+        : widget.parent.name;
     return [
       (
         id: widget.parent.id,
         icon: widget.parent.icon,
-        name: '${widget.parent.name} - General',
+        name: '$parentName - $generalLabel',
         isGeneral: true,
       ),
-      ...widget.parent.subCategories.map(
-        (s) => (id: s.id, icon: s.icon, name: s.name, isGeneral: false),
-      ),
+      ...widget.parent.subCategories.map((s) {
+        final subName = (isHe && s.nameHe?.isNotEmpty == true) ? s.nameHe! : s.name;
+        return (id: s.id, icon: s.icon, name: subName, isGeneral: false);
+      }),
     ];
   }
 
@@ -1094,6 +1108,10 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
         offset: Offset(translationX, 0),
         child: Transform.scale(
           scale: layout.scale,
+          // Pin scale to the icon's side so the icon stays on the arc as items
+          // shrink toward the edges. LTR: icon is leftmost → scale from left.
+          // RTL: icon is rightmost → scale from right.
+          alignment: isRTL ? Alignment.centerRight : Alignment.centerLeft,
           child: Opacity(
             opacity: layout.opacity,
             child: GestureDetector(
@@ -1194,8 +1212,10 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
 
   @override
   Widget build(BuildContext context) {
-    final isRTL  = Directionality.of(context) == TextDirection.rtl;
-    final items  = _buildItemList();
+    final isRTL       = Directionality.of(context) == TextDirection.rtl;
+    final locale      = Localizations.localeOf(context);
+    final generalLabel = AppLocalizations.of(context)!.categoryGeneral;
+    final items  = _buildItemList(locale, generalLabel);
     final color  = _hexColor(widget.parent.color);
 
     if (isRTL) {
@@ -1225,31 +1245,44 @@ class _HalfOvalPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.15)
-      ..style = PaintingStyle.fill;
-
-    // Draw a D-shaped half-circle centered vertically, with radius = arcRadius.
     const r = _SubCategoriesArc.arcRadius;
     final cy = size.height / 2;
 
+    final Path path;
     if (!isRTL) {
       // Right-facing D: flat edge on left (x=0), bulge to the right.
       final rect = Rect.fromLTWH(-r, cy - r, r * 2, r * 2);
-      final path = Path()
+      path = Path()
         ..moveTo(0, cy - r)
         ..arcTo(rect, -pi / 2, pi, false)
         ..close();
-      canvas.drawPath(path, paint);
     } else {
       // Left-facing D: flat edge on right (x=width), bulge to the left.
       final rect = Rect.fromLTWH(size.width - r, cy - r, r * 2, r * 2);
-      final path = Path()
+      path = Path()
         ..moveTo(size.width, cy - r)
         ..arcTo(rect, -pi / 2, -pi, false)
         ..close();
-      canvas.drawPath(path, paint);
     }
+
+    // White frosted glow layer — soft blur gives a cool glass/halo feel.
+    final glowPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.55)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
+    canvas.drawPath(path, glowPaint);
+
+    // Solid white base — crisp fill inside the D-shape.
+    final whitePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.30)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, whitePaint);
+
+    // Category color tint on top.
+    final colorPaint = Paint()
+      ..color = color.withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, colorPaint);
   }
 
   @override
@@ -1275,20 +1308,20 @@ class _WheelItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconBox = Container(
-      width: isGeneral ? 36 : 32,
-      height: isGeneral ? 36 : 32,
+      width: isGeneral ? 44 : 40,
+      height: isGeneral ? 44 : 40,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(isGeneral ? 9 : 8),
+        borderRadius: BorderRadius.circular(isGeneral ? 11 : 10),
       ),
       child: Icon(
         iconDataFromName(icon),
-        size: isGeneral ? 19 : 16,
+        size: isGeneral ? 24 : 21,
         color: Colors.white,
       ),
     );
 
-    final label = Flexible(
+    final label = Expanded(
       child: Text(
         name,
         maxLines: 2,
@@ -1308,11 +1341,16 @@ class _WheelItem extends StatelessWidget {
         ? [label, const SizedBox(width: 4), iconBox]
         : [iconBox, const SizedBox(width: 4), label];
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      textDirection: TextDirection.ltr, // prevent Flutter's auto-RTL reversal
-      children: children,
+    // Constrain the Row to exactly textZone so Flexible gets a bounded max
+    // width and ellipsis works correctly without overflowing the ClipRect.
+    return SizedBox(
+      width: _SubCategoriesArc.textZone,
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        textDirection: TextDirection.ltr, // prevent Flutter's auto-RTL reversal
+        children: children,
+      ),
     );
   }
 }

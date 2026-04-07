@@ -471,6 +471,81 @@ class AppLocalizationsHe extends AppLocalizations {
   String get boardTryAgain => 'נסה שוב';
 
   @override
+  String get shoppingTab => 'קניות';
+
+  @override
+  String get shoppingNewList => 'רשימה חדשה';
+
+  @override
+  String get shoppingPickTemplate => 'השתמש ברשימה קיימת כתבנית';
+
+  @override
+  String get shoppingAddItem => 'הוסף פריט';
+
+  @override
+  String get shoppingItemName => 'שם הפריט (אנגלית)';
+
+  @override
+  String get shoppingItemNameHe => 'שם הפריט (עברית)';
+
+  @override
+  String get shoppingUnit => 'יחידה';
+
+  @override
+  String get shoppingAmount => 'כמות';
+
+  @override
+  String get shoppingCategory => 'קטגוריה';
+
+  @override
+  String get shoppingStore => 'חנות';
+
+  @override
+  String get shoppingAddStore => 'הוסף חנות';
+
+  @override
+  String get shoppingGotIt => 'יש';
+
+  @override
+  String get shoppingPartial => 'חלקית';
+
+  @override
+  String get shoppingNope => 'אין';
+
+  @override
+  String get shoppingPrice => 'מחיר';
+
+  @override
+  String get shoppingNote => 'הערה';
+
+  @override
+  String get shoppingListName => 'שם הרשימה';
+
+  @override
+  String get shoppingSave => 'שמור רשימה';
+
+  @override
+  String get shoppingSearchItems => 'חיפוש פריטים…';
+
+  @override
+  String get shoppingNewItemTitle => 'פריט קניות חדש';
+
+  @override
+  String get shoppingSelectItems => 'בחר פריטים לרשימה זו';
+
+  @override
+  String get shoppingNoItems => 'אין פריטים עדיין. צור אחד!';
+
+  @override
+  String get shoppingSessionCardTitle => 'רשימת קניות';
+
+  @override
+  String get shoppingDeleteSession => 'מחק רשימה';
+
+  @override
+  String get shoppingAddNewCategory => 'קטגוריה חדשה';
+
+  @override
   String get categoryNewExpense => 'קטגוריית הוצאה חדשה';
 
   @override
@@ -529,6 +604,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get categorySubNew => 'תת-קטגוריה חדשה';
+
+  @override
+  String get categoryGeneral => 'כללי';
 
   @override
   String get timelineTotal => 'סך הכל';

@@ -473,6 +473,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get boardTryAgain => 'Try again';
 
   @override
+  String get shoppingTab => 'Shopping';
+
+  @override
+  String get shoppingNewList => 'New list';
+
+  @override
+  String get shoppingPickTemplate => 'Use existing list as template';
+
+  @override
+  String get shoppingAddItem => 'Add item';
+
+  @override
+  String get shoppingItemName => 'Item name (English)';
+
+  @override
+  String get shoppingItemNameHe => 'Item name (Hebrew)';
+
+  @override
+  String get shoppingUnit => 'Unit';
+
+  @override
+  String get shoppingAmount => 'Amount';
+
+  @override
+  String get shoppingCategory => 'Category';
+
+  @override
+  String get shoppingStore => 'Store';
+
+  @override
+  String get shoppingAddStore => 'Add store';
+
+  @override
+  String get shoppingGotIt => 'Got it';
+
+  @override
+  String get shoppingPartial => 'Partial';
+
+  @override
+  String get shoppingNope => 'Nope';
+
+  @override
+  String get shoppingPrice => 'Price';
+
+  @override
+  String get shoppingNote => 'Note';
+
+  @override
+  String get shoppingListName => 'List name';
+
+  @override
+  String get shoppingSave => 'Save list';
+
+  @override
+  String get shoppingSearchItems => 'Search items…';
+
+  @override
+  String get shoppingNewItemTitle => 'New Shopping Item';
+
+  @override
+  String get shoppingSelectItems => 'Select items for this list';
+
+  @override
+  String get shoppingNoItems => 'No items yet. Create one!';
+
+  @override
+  String get shoppingSessionCardTitle => 'Shopping List';
+
+  @override
+  String get shoppingDeleteSession => 'Delete list';
+
+  @override
+  String get shoppingAddNewCategory => 'New category';
+
+  @override
   String get categoryNewExpense => 'New Expense Category';
 
   @override
@@ -531,6 +606,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get categorySubNew => 'New Sub-category';
+
+  @override
+  String get categoryGeneral => 'General';
 
   @override
   String get timelineTotal => 'Total';

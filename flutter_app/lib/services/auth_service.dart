@@ -33,8 +33,15 @@ class AuthService extends ChangeNotifier {
     try {
       // Try the stored access token first.
       final data = await _repo.getProfile(token: storedToken);
-      final userJson = data['appUser'] ?? data['user'] ?? data;
-      currentUser = AppUser.fromJson(userJson as Map<String, dynamic>);
+      final userJson = Map<String, dynamic>.from(
+        (data['appUser'] ?? data['user'] ?? data) as Map<String, dynamic>,
+      );
+      // Profile endpoint returns households at the top level rather than
+      // nested inside the user object (unlike sign-in).
+      if (userJson['households'] == null && data['households'] != null) {
+        userJson['households'] = data['households'];
+      }
+      currentUser = AppUser.fromJson(userJson);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
         // Access token expired — try the refresh token.
@@ -42,8 +49,13 @@ class AuthService extends ChangeNotifier {
         if (refreshed) {
           try {
             final data = await _repo.getProfile(token: accessToken!);
-            final userJson = data['appUser'] ?? data['user'] ?? data;
-            currentUser = AppUser.fromJson(userJson as Map<String, dynamic>);
+            final userJson = Map<String, dynamic>.from(
+              (data['appUser'] ?? data['user'] ?? data) as Map<String, dynamic>,
+            );
+            if (userJson['households'] == null && data['households'] != null) {
+              userJson['households'] = data['households'];
+            }
+            currentUser = AppUser.fromJson(userJson);
           } catch (_) {
             // Profile fetch failed even after refresh — force sign-out.
             await signOut();
@@ -66,29 +78,34 @@ class AuthService extends ChangeNotifier {
     final data = await _repo.signIn(username, password);
     accessToken = data['accessToken'] as String;
     final refreshToken = data['refreshToken'] as String;
+    final userJson = data['user'] ?? data['appUser'];
+    currentUser = AppUser.fromJson(userJson as Map<String, dynamic>);
     await _storage.saveTokens(
       accessToken: accessToken!,
       refreshToken: refreshToken,
+      userId: currentUser!.id,
     );
-    final userJson = data['user'] ?? data['appUser'];
-    currentUser = AppUser.fromJson(userJson as Map<String, dynamic>);
     notifyListeners(); // triggers GoRouter redirect
   }
 
   /// Called by AuthInterceptor on 401.
   Future<bool> tryRefresh() async {
     final refreshToken = await _storage.getRefreshToken();
-    if (refreshToken == null) return false;
+    final userId = await _storage.getUserId();
+    if (refreshToken == null || userId == null) return false;
     try {
-      final data = await _repo.refresh(refreshToken);
+      final data = await _repo.refresh(refreshToken, userId);
       accessToken = data['accessToken'] as String;
       await _storage.saveTokens(
         accessToken: accessToken!,
         refreshToken: data['refreshToken'] as String? ?? refreshToken,
+        userId: userId,
       );
       return true;
     } on DioException catch (e) {
-      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+      if (e.response?.statusCode == 400 ||
+          e.response?.statusCode == 401 ||
+          e.response?.statusCode == 403) {
         // Refresh token is definitively rejected — clear everything.
         await signOut();
       }
