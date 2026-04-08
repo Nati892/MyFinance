@@ -57,6 +57,16 @@ module.exports = (sequelize, DataTypes) => {
         model: 'households',
         key: 'id'
       }
+    },
+    installmentTotal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null
+    },
+    installmentCurrent: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null
     }
   }, {
     timestamps: true,

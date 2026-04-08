@@ -311,6 +311,16 @@ class BudgetViewModel extends ChangeNotifier {
   double planMaxTotalForCategory(int categoryId) =>
       planItemsForCategory(categoryId).fold(0.0, (sum, i) => sum + i.maxAmount);
 
+  /// Sum of min amounts for a parent category AND all its subcategories.
+  double planMinTotalForCategoryTree(Category cat) =>
+      planMinTotalForCategory(cat.id) +
+      cat.subCategories.fold(0.0, (sum, sub) => sum + planMinTotalForCategory(sub.id));
+
+  /// Sum of max amounts for a parent category AND all its subcategories.
+  double planMaxTotalForCategoryTree(Category cat) =>
+      planMaxTotalForCategory(cat.id) +
+      cat.subCategories.fold(0.0, (sum, sub) => sum + planMaxTotalForCategory(sub.id));
+
   double get planGrandMin => planItems.fold(0.0, (sum, i) => sum + i.minAmount);
   double get planGrandMax => planItems.fold(0.0, (sum, i) => sum + i.maxAmount);
 

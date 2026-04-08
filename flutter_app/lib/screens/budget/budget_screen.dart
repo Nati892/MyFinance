@@ -199,7 +199,6 @@ class _MonthNav extends StatelessWidget {
           _NavArrow(
             icon: Icons.chevron_right,
             onTap: onNext,
-            muted: isCurrentMonth,
           ),
         ],
       ),
@@ -210,9 +209,7 @@ class _MonthNav extends StatelessWidget {
 class _NavArrow extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  final bool muted;
-
-  const _NavArrow({required this.icon, required this.onTap, this.muted = false});
+  const _NavArrow({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +224,7 @@ class _NavArrow extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: muted ? const Color(0xFFCCCCCC) : const Color(0xFF444444),
+          color: const Color(0xFF444444),
           size: 20,
         ),
       ),
@@ -1076,8 +1073,9 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
       BuildContext context, BudgetViewModel vm, Category cat) {
     final catColor = _hexColor(cat.color);
     final catItems = vm.planItemsForCategory(cat.id);
-    final minT = vm.planMinTotalForCategory(cat.id);
-    final maxT = vm.planMaxTotalForCategory(cat.id);
+    final minT = vm.planMinTotalForCategoryTree(cat);
+    final maxT = vm.planMaxTotalForCategoryTree(cat);
+    final expanded = vm.expandedPlanCategories.contains(cat.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1095,60 +1093,105 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Category header row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: catColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+          // Category header row — tap to expand/collapse
+          GestureDetector(
+            onTap: () => vm.togglePlanCategoryExpanded(cat.id),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: catColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(iconDataFromName(cat.icon),
+                          size: 15, color: catColor),
+                    ),
                   ),
-                  child: Center(
-                    child: Icon(iconDataFromName(cat.icon),
-                        size: 15, color: catColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(cat.name,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w700)),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(cat.name,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700)),
-                ),
-                _TotalBadge(min: minT, max: maxT, color: catColor),
-                const SizedBox(width: 4),
-                _AddButton(
-                    color: catColor,
-                    onTap: () => vm.addPlanItem(categoryId: cat.id)),
-              ],
+                  _TotalBadge(min: minT, max: maxT, color: catColor),
+                  const SizedBox(width: 4),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                    color: const Color(0xFFAAAAAA),
+                  ),
+                  const SizedBox(width: 2),
+                  _AddButton(
+                      color: catColor,
+                      onTap: () => vm.addPlanItem(categoryId: cat.id)),
+                ],
+              ),
             ),
           ),
-          if (catItems.isNotEmpty)
-            Divider(
-                height: 1,
-                color: const Color(0xFFF0F0F0),
-                indent: 12,
-                endIndent: 12),
-          // Expense lines
-          for (final item in catItems)
-            _PlanExpenseLine(
-              key: ValueKey('plan_${item.id}'),
-              item: item,
-              color: catColor,
-              onSave: (d, mn, mx) => vm.updatePlanItem(
-                  id: item.id,
-                  description: d,
-                  minAmount: mn,
-                  maxAmount: mx),
-              onDelete: () => vm.deletePlanItem(item.id),
-            ),
-          // Subcategory sections
-          for (final sub in cat.subCategories)
-            _buildSubCategorySection(context, vm, sub),
+          if (expanded) ...[
+            if (catItems.isNotEmpty) ...[
+              Divider(
+                  height: 1,
+                  color: const Color(0xFFF0F0F0),
+                  indent: 12,
+                  endIndent: 12),
+              _expenseColumnHeader(small: false),
+              for (final item in catItems)
+                _PlanExpenseLine(
+                  key: ValueKey('plan_${item.id}'),
+                  item: item,
+                  color: catColor,
+                  onSave: (d, mn, mx) => vm.updatePlanItem(
+                      id: item.id,
+                      description: d,
+                      minAmount: mn,
+                      maxAmount: mx),
+                  onDelete: () => vm.deletePlanItem(item.id),
+                ),
+            ],
+            // Subcategory sections
+            for (final sub in cat.subCategories)
+              _buildSubCategorySection(context, vm, sub),
+          ],
           const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _expenseColumnHeader({required bool small}) {
+    final hPad = small ? 10.0 : 12.0;
+    final amtW = small ? 62.0 : 70.0;
+    const fs = 9.0;
+    const color = Color(0xFFAAAAAA);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(hPad, 4, 4, 0),
+      child: Row(
+        children: [
+          const Expanded(
+              child: Text('Note',
+                  style: TextStyle(fontSize: fs, color: color))),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: amtW,
+            child: const Text('Min',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: fs, color: color)),
+          ),
+          const SizedBox(width: 4),
+          SizedBox(
+            width: amtW,
+            child: const Text('Max',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: fs, color: color)),
+          ),
+          const SizedBox(width: 32),
         ],
       ),
     );
@@ -1160,6 +1203,7 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
     final subItems = vm.planItemsForCategory(sub.id);
     final minT = vm.planMinTotalForCategory(sub.id);
     final maxT = vm.planMaxTotalForCategory(sub.id);
+    final expanded = vm.expandedPlanCategories.contains(sub.id);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
@@ -1171,52 +1215,65 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
-            child: Row(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: subColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
+          GestureDetector(
+            onTap: () => vm.togglePlanCategoryExpanded(sub.id),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: subColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Center(
+                        child: Icon(iconDataFromName(sub.icon),
+                            size: 12, color: subColor)),
                   ),
-                  child: Center(
-                      child: Icon(iconDataFromName(sub.icon),
-                          size: 12, color: subColor)),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(sub.name,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: subColor)),
-                ),
-                _TotalBadge(min: minT, max: maxT, color: subColor, small: true),
-                const SizedBox(width: 4),
-                _AddButton(
-                    color: subColor,
-                    small: true,
-                    onTap: () => vm.addPlanItem(categoryId: sub.id)),
-              ],
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(sub.name,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: subColor)),
+                  ),
+                  _TotalBadge(min: minT, max: maxT, color: subColor, small: true),
+                  const SizedBox(width: 2),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 14,
+                    color: subColor.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(width: 2),
+                  _AddButton(
+                      color: subColor,
+                      small: true,
+                      onTap: () => vm.addPlanItem(categoryId: sub.id)),
+                ],
+              ),
             ),
           ),
-          for (final item in subItems)
-            _PlanExpenseLine(
-              key: ValueKey('plan_${item.id}'),
-              item: item,
-              color: subColor,
-              small: true,
-              onSave: (d, mn, mx) => vm.updatePlanItem(
-                  id: item.id,
-                  description: d,
-                  minAmount: mn,
-                  maxAmount: mx),
-              onDelete: () => vm.deletePlanItem(item.id),
-            ),
-          if (subItems.isEmpty) const SizedBox(height: 4),
+          if (expanded && subItems.isNotEmpty) ...[
+            _expenseColumnHeader(small: true),
+            for (final item in subItems)
+              _PlanExpenseLine(
+                key: ValueKey('plan_${item.id}'),
+                item: item,
+                color: subColor,
+                small: true,
+                onSave: (d, mn, mx) => vm.updatePlanItem(
+                    id: item.id,
+                    description: d,
+                    minAmount: mn,
+                    maxAmount: mx),
+                onDelete: () => vm.deletePlanItem(item.id),
+              ),
+          ],
+          const SizedBox(height: 4),
         ],
       ),
     );

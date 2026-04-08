@@ -113,7 +113,7 @@ abstract class AppLocalizations {
   /// No description provided for @navTransactions.
   ///
   /// In en, this message translates to:
-  /// **'Transactions'**
+  /// **'Daily'**
   String get navTransactions;
 
   /// No description provided for @navStatistics.
@@ -1659,21 +1659,39 @@ abstract class AppLocalizations {
   String get cardsDeleteConfirm;
 
   /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
   String get settingsTitle;
 
   /// No description provided for @settingsTextSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Text size'**
   String get settingsTextSize;
 
   /// No description provided for @settingsTextSizeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Default follows your device setting'**
   String get settingsTextSizeHint;
 
   /// No description provided for @settingsTextSizePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview text'**
   String get settingsTextSizePreview;
 
   /// No description provided for @drawerSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
   String get drawerSettings;
 
   /// No description provided for @drawerSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
   String get drawerSignOut;
 }
 

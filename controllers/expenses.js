@@ -175,7 +175,9 @@ class ExpensesController {
         paymentMethod,
         cardId,
         expenseCategoryId,
-        householdId
+        householdId,
+        installmentTotal,
+        installmentCurrent
       } = ctx.request.body;
 
       // --- Required fields ---
@@ -208,21 +210,51 @@ class ExpensesController {
         return;
       }
 
-      // --- Create ---
-      const expense = await Expense.create({
-        amount,
-        dateTime,
-        description: description || null,
-        note:        note        || null,
-        paymentMethod,
-        cardId:      cardId ? Number(cardId) : null,
-        expenseCategoryId: Number(expenseCategoryId),
-        appUserId,
-        householdId: Number(householdId)
-      });
+      const total   = installmentTotal && Number(installmentTotal) > 1 ? Number(installmentTotal) : null;
+      const current = total ? (installmentCurrent ? Number(installmentCurrent) : 1) : null;
+
+      // --- Create installment records ---
+      // If installmentTotal > 1, create one record per remaining payment month.
+      // The first record uses the given date, subsequent ones are bumped +N months.
+      let firstExpense;
+      if (total && total > 1) {
+        const baseDate = new Date(dateTime);
+        for (let i = 0; i < total; i++) {
+          const paymentDate = new Date(baseDate);
+          paymentDate.setMonth(paymentDate.getMonth() + i);
+          const rec = await Expense.create({
+            amount,
+            dateTime:          paymentDate.toISOString(),
+            description:       description || null,
+            note:              note        || null,
+            paymentMethod,
+            cardId:            cardId ? Number(cardId) : null,
+            expenseCategoryId: Number(expenseCategoryId),
+            appUserId,
+            householdId:       Number(householdId),
+            installmentTotal:  total,
+            installmentCurrent: current + i
+          });
+          if (i === 0) firstExpense = rec;
+        }
+      } else {
+        firstExpense = await Expense.create({
+          amount,
+          dateTime,
+          description: description || null,
+          note:        note        || null,
+          paymentMethod,
+          cardId:      cardId ? Number(cardId) : null,
+          expenseCategoryId: Number(expenseCategoryId),
+          appUserId,
+          householdId: Number(householdId),
+          installmentTotal:  null,
+          installmentCurrent: null
+        });
+      }
 
       // --- Reload with includes ---
-      const created = await Expense.findByPk(expense.id, {
+      const created = await Expense.findByPk(firstExpense.id, {
         include: [
           {
             model:      ExpenseCategory,
@@ -277,7 +309,9 @@ class ExpensesController {
         note,
         paymentMethod,
         cardId,
-        expenseCategoryId
+        expenseCategoryId,
+        installmentTotal,
+        installmentCurrent
       } = ctx.request.body;
 
       // --- Validate new category if provided ---
@@ -295,13 +329,15 @@ class ExpensesController {
 
       // --- Apply updates ---
       await expense.update({
-        amount:            amount            !== undefined ? amount            : expense.amount,
-        dateTime:          dateTime          !== undefined ? dateTime          : expense.dateTime,
-        description:       description       !== undefined ? description       : expense.description,
-        note:              note              !== undefined ? note              : expense.note,
-        paymentMethod:     paymentMethod     !== undefined ? paymentMethod     : expense.paymentMethod,
-        cardId:            cardId            !== undefined ? (cardId ? Number(cardId) : null) : expense.cardId,
-        expenseCategoryId: expenseCategoryId !== undefined ? Number(expenseCategoryId) : expense.expenseCategoryId
+        amount:             amount             !== undefined ? amount             : expense.amount,
+        dateTime:           dateTime           !== undefined ? dateTime           : expense.dateTime,
+        description:        description        !== undefined ? description        : expense.description,
+        note:               note               !== undefined ? note               : expense.note,
+        paymentMethod:      paymentMethod      !== undefined ? paymentMethod      : expense.paymentMethod,
+        cardId:             cardId             !== undefined ? (cardId ? Number(cardId) : null) : expense.cardId,
+        expenseCategoryId:  expenseCategoryId  !== undefined ? Number(expenseCategoryId) : expense.expenseCategoryId,
+        installmentTotal:   installmentTotal   !== undefined ? (installmentTotal ? Number(installmentTotal) : null) : expense.installmentTotal,
+        installmentCurrent: installmentCurrent !== undefined ? (installmentCurrent ? Number(installmentCurrent) : null) : expense.installmentCurrent
       });
 
       // --- Reload with includes ---
