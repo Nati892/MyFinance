@@ -748,6 +748,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonIncome => 'Income';
 
   @override
+  String get homeStartBalance => 'Starting Balance';
+
+  @override
+  String get homePredicted => 'Predicted';
+
+  @override
+  String get homeConfirmed => 'Confirmed';
+
+  @override
+  String get homePredictedEnd => 'Predicted End';
+
+  @override
+  String get homeSetStartBalance => 'Set Starting Balance';
+
+  @override
   String get cardsPageTitle => 'Cards';
 
   @override
@@ -776,4 +791,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardsDeleteConfirm => 'Delete this card?';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsTextSize => 'Text size';
+
+  @override
+  String get settingsTextSizeHint => 'Default follows your device setting';
+
+  @override
+  String get settingsTextSizePreview => 'Preview text';
+
+  @override
+  String get drawerSettings => 'Settings';
+
+  @override
+  String get drawerSignOut => 'Sign out';
 }

@@ -259,6 +259,11 @@
   "commonYesterday": "אתמול",
   "commonExpense": "הוצאה",
   "commonIncome": "הכנסה",
+  "homeStartBalance": "יתרת פתיחה",
+  "homePredicted": "חיזוי",
+  "homeConfirmed": "מאושר",
+  "homePredictedEnd": "סוף חזוי",
+  "homeSetStartBalance": "הגדר יתרת פתיחה",
 
   "cardsPageTitle": "כרטיסים",
   "cardsNone": "ללא",
@@ -269,5 +274,12 @@
   "cardsBankName": "שם הבנק",
   "cardsTypeCredit": "אשראי",
   "cardsTypeDebit": "דביט",
-  "cardsDeleteConfirm": "למחוק כרטיס זה?"
+  "cardsDeleteConfirm": "למחוק כרטיס זה?",
+
+  "settingsTitle": "הגדרות",
+  "settingsTextSize": "גודל טקסט",
+  "settingsTextSizeHint": "ברירת המחדל לפי הגדרות המכשיר",
+  "settingsTextSizePreview": "טקסט לדוגמה",
+  "drawerSettings": "הגדרות",
+  "drawerSignOut": "התנתק"
 }

@@ -967,43 +967,7 @@ class _PlanSection extends ConsumerStatefulWidget {
 }
 
 class _PlanSectionState extends ConsumerState<_PlanSection> {
-  // categoryId → controller with current month's budget value
-  final Map<int, TextEditingController> _controllers = {};
-  bool _saving = false;
-
-  @override
-  void didUpdateWidget(_PlanSection old) {
-    super.didUpdateWidget(old);
-    _syncControllers();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _syncControllers();
-  }
-
-  void _syncControllers() {
-    final vm = widget.vm;
-    for (final cat in vm.allExpenseCategories) {
-      if (!_controllers.containsKey(cat.id)) {
-        // Pre-fill from existing budget override or base budget
-        final row = vm.budgetRows.where((r) => r.id == cat.id).firstOrNull;
-        final initial = row?.override ?? row?.baseBudget;
-        _controllers[cat.id] = TextEditingController(
-          text: initial != null ? initial.toStringAsFixed(0) : '',
-        );
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    for (final c in _controllers.values) {
-      c.dispose();
-    }
-    super.dispose();
-  }
+  static const _purple = Color(0xFF667EEA);
 
   Color _hexColor(String hex) {
     try {
@@ -1013,87 +977,110 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
     }
   }
 
-  Future<void> _saveAll() async {
-    setState(() => _saving = true);
-    final budgets = <int, double?>{};
-    for (final entry in _controllers.entries) {
-      budgets[entry.key] = double.tryParse(entry.value.text.trim());
-    }
-    await widget.vm.savePlanBudgets(budgets);
-    if (mounted) setState(() => _saving = false);
-  }
-
   @override
   Widget build(BuildContext context) {
     final vm = widget.vm;
-    final l10n = AppLocalizations.of(context)!;
 
-    if (vm.allExpenseCategories.isEmpty) {
-      return Center(
-        child: Text(l10n.budgetNoCategories,
-            style: const TextStyle(color: Color(0xFF888888))),
-      );
+    if (vm.planLoading && vm.planItems.isEmpty && vm.allExpenseCategories.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
-
-    _syncControllers();
 
     return Column(
       children: [
+        // ── Header ──────────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: Text(
-            l10n.budgetPlanHint,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
-          ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-            children: <Widget>[
-              for (final cat in vm.allExpenseCategories) ...[
-                _buildCategoryInput(cat, _hexColor(cat.color), l10n),
-                ...cat.subCategories.map(
-                  (sub) => _buildSubCategoryInput(
-                      sub, _hexColor(sub.color), l10n),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF444444)),
+                        children: [
+                          const TextSpan(text: 'Min '),
+                          TextSpan(
+                            text: '₪${vm.planGrandMin.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF43A047)),
+                          ),
+                          const TextSpan(text: '   Max '),
+                          TextSpan(
+                            text: '₪${vm.planGrandMax.toStringAsFixed(0)}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (vm.planMonthConfig?.expectedIncome != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          'Income: ₪${vm.planMonthConfig!.expectedIncome!.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Color(0xFF888888)),
+                        ),
+                      ),
+                  ],
                 ),
-              ],
+              ),
+              // Month prediction settings button
+              GestureDetector(
+                onTap: () => _showMonthSettings(context, vm),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: _purple.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.tune, size: 15, color: _purple),
+                      SizedBox(width: 4),
+                      Text('Prediction',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _purple)),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _saving ? null : _saveAll,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF667EEA),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : Text(l10n.budgetPlanSave,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-          ),
+        // ── Category list ────────────────────────────────────────────────
+        Expanded(
+          child: vm.allExpenseCategories.isEmpty
+              ? const Center(
+                  child: Text('No categories.',
+                      style: TextStyle(color: Color(0xFF888888))))
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                  children: [
+                    for (final cat in vm.allExpenseCategories)
+                      _buildCategoryBlock(context, vm, cat),
+                  ],
+                ),
         ),
       ],
     );
   }
 
-  Widget _buildCategoryInput(
-      Category cat, Color catColor, AppLocalizations l10n) {
-    final ctrl = _controllers[cat.id]!;
+  Widget _buildCategoryBlock(
+      BuildContext context, BudgetViewModel vm, Category cat) {
+    final catColor = _hexColor(cat.color);
+    final catItems = vm.planItemsForCategory(cat.id);
+    final minT = vm.planMinTotalForCategory(cat.id);
+    final maxT = vm.planMaxTotalForCategory(cat.id);
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1101,121 +1088,518 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 3,
-              offset: const Offset(0, 1)),
+              blurRadius: 4,
+              offset: const Offset(0, 2)),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: catColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Icon(iconDataFromName(cat.icon), size: 16, color: catColor),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(cat.name,
-                style: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w600)),
-          ),
-          SizedBox(
-            width: 90,
-            child: TextField(
-              controller: ctrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              textAlign: TextAlign.end,
-              decoration: InputDecoration(
-                hintText: '—',
-                prefixText: '₪',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 8),
-                border: OutlineInputBorder(
+          // Category header row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFDDDDDD))),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(
-                        color: catColor, width: 1.5)),
-              ),
+                  ),
+                  child: Center(
+                    child: Icon(iconDataFromName(cat.icon),
+                        size: 15, color: catColor),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(cat.name,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700)),
+                ),
+                _TotalBadge(min: minT, max: maxT, color: catColor),
+                const SizedBox(width: 4),
+                _AddButton(
+                    color: catColor,
+                    onTap: () => vm.addPlanItem(categoryId: cat.id)),
+              ],
             ),
           ),
+          if (catItems.isNotEmpty)
+            Divider(
+                height: 1,
+                color: const Color(0xFFF0F0F0),
+                indent: 12,
+                endIndent: 12),
+          // Expense lines
+          for (final item in catItems)
+            _PlanExpenseLine(
+              key: ValueKey('plan_${item.id}'),
+              item: item,
+              color: catColor,
+              onSave: (d, mn, mx) => vm.updatePlanItem(
+                  id: item.id,
+                  description: d,
+                  minAmount: mn,
+                  maxAmount: mx),
+              onDelete: () => vm.deletePlanItem(item.id),
+            ),
+          // Subcategory sections
+          for (final sub in cat.subCategories)
+            _buildSubCategorySection(context, vm, sub),
+          const SizedBox(height: 4),
         ],
       ),
     );
   }
 
-  Widget _buildSubCategoryInput(
-      Category sub, Color subColor, AppLocalizations l10n) {
-    final ctrl = _controllers.putIfAbsent(sub.id, () {
-      final row = widget.vm.budgetRows.where((r) => r.id == sub.id).firstOrNull;
-      final initial = row?.override ?? row?.baseBudget;
-      return TextEditingController(
-          text: initial != null ? initial.toStringAsFixed(0) : '');
-    });
+  Widget _buildSubCategorySection(
+      BuildContext context, BudgetViewModel vm, Category sub) {
+    final subColor = _hexColor(sub.color);
+    final subItems = vm.planItemsForCategory(sub.id);
+    final minT = vm.planMinTotalForCategory(sub.id);
+    final maxT = vm.planMaxTotalForCategory(sub.id);
+
     return Container(
-      margin: const EdgeInsets.only(left: 20, bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       decoration: BoxDecoration(
         color: subColor.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(10),
-        border: Border(
-            left: BorderSide(color: subColor.withValues(alpha: 0.4), width: 2)),
+        borderRadius: BorderRadius.circular(8),
+        border:
+            Border(left: BorderSide(color: subColor.withValues(alpha: 0.5), width: 2)),
       ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: subColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Center(
+                      child: Icon(iconDataFromName(sub.icon),
+                          size: 12, color: subColor)),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(sub.name,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: subColor)),
+                ),
+                _TotalBadge(min: minT, max: maxT, color: subColor, small: true),
+                const SizedBox(width: 4),
+                _AddButton(
+                    color: subColor,
+                    small: true,
+                    onTap: () => vm.addPlanItem(categoryId: sub.id)),
+              ],
+            ),
+          ),
+          for (final item in subItems)
+            _PlanExpenseLine(
+              key: ValueKey('plan_${item.id}'),
+              item: item,
+              color: subColor,
+              small: true,
+              onSave: (d, mn, mx) => vm.updatePlanItem(
+                  id: item.id,
+                  description: d,
+                  minAmount: mn,
+                  maxAmount: mx),
+              onDelete: () => vm.deletePlanItem(item.id),
+            ),
+          if (subItems.isEmpty) const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  void _showMonthSettings(BuildContext context, BudgetViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (_) => _MonthSettingsDialog(vm: vm),
+    );
+  }
+}
+
+// ─── Add button ───────────────────────────────────────────────────────────────
+
+class _AddButton extends StatelessWidget {
+  final Color color;
+  final VoidCallback onTap;
+  final bool small;
+
+  const _AddButton(
+      {required this.color, required this.onTap, this.small = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = small ? 24.0 : 28.0;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(small ? 6 : 7),
+        ),
+        child: Icon(Icons.add, size: small ? 14 : 16, color: color),
+      ),
+    );
+  }
+}
+
+// ─── Total badge ──────────────────────────────────────────────────────────────
+
+class _TotalBadge extends StatelessWidget {
+  final double min;
+  final double max;
+  final Color color;
+  final bool small;
+
+  const _TotalBadge(
+      {required this.min,
+      required this.max,
+      required this.color,
+      this.small = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final fs = small ? 10.0 : 11.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('₪${min.toStringAsFixed(0)}',
+            style: TextStyle(
+                fontSize: fs,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF43A047))),
+        Text('₪${max.toStringAsFixed(0)}',
+            style: TextStyle(
+                fontSize: fs,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF888888))),
+      ],
+    );
+  }
+}
+
+// ─── Plan expense line ────────────────────────────────────────────────────────
+
+class _PlanExpenseLine extends StatefulWidget {
+  final BudgetPlanItem item;
+  final Color color;
+  final bool small;
+  final void Function(String? description, double minAmount, double maxAmount)
+      onSave;
+  final VoidCallback onDelete;
+
+  const _PlanExpenseLine({
+    super.key,
+    required this.item,
+    required this.color,
+    required this.onSave,
+    required this.onDelete,
+    this.small = false,
+  });
+
+  @override
+  State<_PlanExpenseLine> createState() => _PlanExpenseLineState();
+}
+
+class _PlanExpenseLineState extends State<_PlanExpenseLine> {
+  late final TextEditingController _note;
+  late final TextEditingController _min;
+  late final TextEditingController _max;
+  late final FocusNode _noteFocus;
+  late final FocusNode _minFocus;
+  late final FocusNode _maxFocus;
+
+  @override
+  void initState() {
+    super.initState();
+    final i = widget.item;
+    _note = TextEditingController(text: i.description ?? '');
+    _min = TextEditingController(
+        text: i.minAmount > 0 ? i.minAmount.toStringAsFixed(0) : '');
+    _max = TextEditingController(
+        text: i.maxAmount > 0 ? i.maxAmount.toStringAsFixed(0) : '');
+    _noteFocus = FocusNode()..addListener(_onFocusChange);
+    _minFocus = FocusNode()..addListener(_onFocusChange);
+    _maxFocus = FocusNode()..addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (!_noteFocus.hasFocus && !_minFocus.hasFocus && !_maxFocus.hasFocus) {
+      _save();
+    }
+  }
+
+  void _save() {
+    final note = _note.text.trim().isEmpty ? null : _note.text.trim();
+    final min = double.tryParse(_min.text.trim()) ?? 0.0;
+    final max = double.tryParse(_max.text.trim()) ?? 0.0;
+    widget.onSave(note, min, max);
+  }
+
+  @override
+  void dispose() {
+    _note.dispose();
+    _min.dispose();
+    _max.dispose();
+    _noteFocus.dispose();
+    _minFocus.dispose();
+    _maxFocus.dispose();
+    super.dispose();
+  }
+
+  InputDecoration _fieldDec({String? hint, String? prefix}) => InputDecoration(
+        hintText: hint,
+        prefixText: prefix,
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: BorderSide(color: widget.color, width: 1.5)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final small = widget.small;
+    final hPad = small ? 10.0 : 12.0;
+    final fs = small ? 11.0 : 13.0;
+    final amtW = small ? 62.0 : 70.0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(hPad, 3, 4, 3),
       child: Row(
         children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              color: subColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Center(
-              child:
-                  Icon(iconDataFromName(sub.icon), size: 13, color: subColor),
-            ),
-          ),
-          const SizedBox(width: 8),
+          // Note
           Expanded(
-            child: Text(sub.name,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: subColor)),
-          ),
-          SizedBox(
-            width: 90,
             child: TextField(
-              controller: ctrl,
+              controller: _note,
+              focusNode: _noteFocus,
+              decoration: _fieldDec(hint: 'Note...'),
+              style: TextStyle(fontSize: fs),
+              onSubmitted: (_) => _save(),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Min
+          SizedBox(
+            width: amtW,
+            child: TextField(
+              controller: _min,
+              focusNode: _minFocus,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              textAlign: TextAlign.end,
-              decoration: InputDecoration(
-                hintText: '—',
-                prefixText: '₪',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 6),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(7),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFDDDDDD))),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(7),
-                    borderSide: BorderSide(
-                        color: subColor, width: 1.5)),
-              ),
+              textAlign: TextAlign.right,
+              decoration: _fieldDec(hint: '0', prefix: '₪'),
+              style: TextStyle(fontSize: fs),
+              onSubmitted: (_) => _save(),
             ),
           ),
+          const SizedBox(width: 4),
+          // Max
+          SizedBox(
+            width: amtW,
+            child: TextField(
+              controller: _max,
+              focusNode: _maxFocus,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.right,
+              decoration: _fieldDec(hint: '0', prefix: '₪'),
+              style: TextStyle(fontSize: fs),
+              onSubmitted: (_) => _save(),
+            ),
+          ),
+          // Delete
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: Icon(Icons.delete_outline,
+                size: small ? 16 : 18, color: const Color(0xFFE53935)),
+            onPressed: widget.onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Month settings dialog ────────────────────────────────────────────────────
+
+class _MonthSettingsDialog extends StatefulWidget {
+  final BudgetViewModel vm;
+  const _MonthSettingsDialog({required this.vm});
+
+  @override
+  State<_MonthSettingsDialog> createState() => _MonthSettingsDialogState();
+}
+
+class _MonthSettingsDialogState extends State<_MonthSettingsDialog> {
+  late final TextEditingController _incomeCtrl;
+  static const _purple = Color(0xFF667EEA);
+
+  @override
+  void initState() {
+    super.initState();
+    final income = widget.vm.planMonthConfig?.expectedIncome;
+    _incomeCtrl = TextEditingController(
+        text: income != null ? income.toStringAsFixed(0) : '');
+  }
+
+  @override
+  void dispose() {
+    _incomeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = widget.vm;
+    final income = double.tryParse(_incomeCtrl.text.trim());
+    final grandMin = vm.planGrandMin;
+    final grandMax = vm.planGrandMax;
+    final remMin = income != null ? income - grandMin : null;
+    final remMax = income != null ? income - grandMax : null;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Row(
+        children: [
+          Icon(Icons.tune, color: _purple, size: 20),
+          SizedBox(width: 8),
+          Text('Month Prediction',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Expected Income',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF444444))),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                border:
+                    Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('₪',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF444444))),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _incomeCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      decoration: const InputDecoration(
+                        hintText: '0',
+                        border: InputBorder.none,
+                        contentPadding:
+                            EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w600),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _row('Total Planned (Min)',
+                '₪${grandMin.toStringAsFixed(0)}', const Color(0xFF43A047)),
+            _row('Total Planned (Max)',
+                '₪${grandMax.toStringAsFixed(0)}', const Color(0xFF888888)),
+            if (remMin != null) ...[
+              const Divider(height: 20),
+              _row(
+                'Remaining (Min)',
+                '₪${remMin.toStringAsFixed(0)}',
+                remMin >= 0
+                    ? const Color(0xFF43A047)
+                    : const Color(0xFFE53935),
+              ),
+              _row(
+                'Remaining (Max)',
+                '₪${(remMax ?? 0).toStringAsFixed(0)}',
+                (remMax ?? 0) >= 0
+                    ? const Color(0xFF43A047)
+                    : const Color(0xFFE53935),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel',
+              style: TextStyle(color: Color(0xFF888888))),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final income = double.tryParse(_incomeCtrl.text.trim());
+            widget.vm.setExpectedIncome(income);
+            Navigator.pop(context);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _purple,
+            foregroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Widget _row(String label, String value, Color valueColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF666666))),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: valueColor)),
         ],
       ),
     );

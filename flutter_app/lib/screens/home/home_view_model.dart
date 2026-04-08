@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
+import 'package:household/services/budget_service.dart';
 import 'package:household/services/household_service.dart';
 import 'package:household/services/transaction_service.dart';
 
@@ -10,6 +11,7 @@ final homeViewModelProvider =
   return HomeViewModel(
     ref.read(transactionServiceProvider),
     ref.read(householdServiceProvider),
+    ref.read(budgetServiceProvider),
   );
 });
 
@@ -18,8 +20,9 @@ enum HomeLoadState { idle, loading, error }
 class HomeViewModel extends ChangeNotifier {
   final TransactionService _txService;
   final HouseholdService _householdService;
+  final BudgetService _budgetService;
 
-  HomeViewModel(this._txService, this._householdService) {
+  HomeViewModel(this._txService, this._householdService, this._budgetService) {
     load();
   }
 
@@ -27,27 +30,46 @@ class HomeViewModel extends ChangeNotifier {
   List<Expense> expenses = [];
   List<Income> incomes = [];
 
+  /// Manually confirmed start amount for this month.
+  double? _confirmedStartAmount;
+
+  /// Whether the displayed start amount was manually set (vs predicted).
+  bool _isStartConfirmed = false;
+
+  /// Predicted start amount derived from previous month's end balance.
+  double? _predictedStartAmount;
+
   // ── State ──────────────────────────────────────────────────────────────────
   HomeLoadState state = HomeLoadState.loading;
+  bool isSavingStart = false;
   String? errorMessage;
 
   bool get noHousehold => _householdService.currentHouseholdId == null;
 
   // ── Computed summaries ─────────────────────────────────────────────────────
 
-  double get totalExpenses =>
-      expenses.fold(0.0, (sum, e) => sum + e.amount);
+  double get totalExpenses => expenses.fold(0.0, (s, e) => s + e.amount);
 
-  double get totalIncomes =>
-      incomes.fold(0.0, (sum, i) => sum + i.amount);
+  double get totalIncomes => incomes.fold(0.0, (s, i) => s + i.amount);
 
   double get balance => totalIncomes - totalExpenses;
 
-  /// Most recent transactions (expenses + incomes), sorted newest first, limited to 10.
+  /// The effective start amount: confirmed if manually set, otherwise predicted.
+  double? get startAmount =>
+      _isStartConfirmed ? _confirmedStartAmount : _predictedStartAmount;
+
+  bool get isStartConfirmed => _isStartConfirmed;
+
+  bool get hasStartAmount => startAmount != null;
+
+  /// Predicted end balance = startAmount + incomes - expenses.
+  double? get predictedEndBalance =>
+      startAmount != null ? startAmount! + totalIncomes - totalExpenses : null;
+
   List<RecentTx> get recentTransactions {
-    final List<RecentTx> all = [
-      ...expenses.map((e) => RecentTx.fromExpense(e)),
-      ...incomes.map((i) => RecentTx.fromIncome(i)),
+    final all = [
+      ...expenses.map(RecentTx.fromExpense),
+      ...incomes.map(RecentTx.fromIncome),
     ];
     all.sort((a, b) => b.dateTime.compareTo(a.dateTime));
     return all.take(10).toList();
@@ -60,18 +82,77 @@ class HomeViewModel extends ChangeNotifier {
     state = HomeLoadState.loading;
     notifyListeners();
     try {
-      final results = await Future.wait([
+      final now = DateTime.now();
+
+      final txFutures = await Future.wait([
         _txService.getExpenses(view: 'monthly', periodOffset: 0),
         _txService.getIncomes(view: 'monthly', periodOffset: 0),
       ]);
-      expenses = results[0] as List<Expense>;
-      incomes = results[1] as List<Income>;
+      expenses = txFutures[0] as List<Expense>;
+      incomes = txFutures[1] as List<Income>;
+
+      final config = await _budgetService.getMonthConfig(
+          year: now.year, month: now.month);
+
+      if (config?.startAmount != null) {
+        _confirmedStartAmount = config!.startAmount;
+        _isStartConfirmed = true;
+        _predictedStartAmount = null;
+      } else {
+        _confirmedStartAmount = null;
+        _isStartConfirmed = false;
+        _predictedStartAmount = await _computePredictedStart(now);
+      }
+
       state = HomeLoadState.idle;
     } catch (e) {
       state = HomeLoadState.error;
       errorMessage = e.toString();
     }
     notifyListeners();
+  }
+
+  /// Computes the predicted start of [now] from previous month's confirmed end.
+  Future<double?> _computePredictedStart(DateTime now) async {
+    try {
+      final prevYear = now.month == 1 ? now.year - 1 : now.year;
+      final prevMonth = now.month == 1 ? 12 : now.month - 1;
+
+      final prevConfig = await _budgetService.getMonthConfig(
+          year: prevYear, month: prevMonth);
+      if (prevConfig?.startAmount == null) return null;
+
+      final prevTxFutures = await Future.wait([
+        _txService.getExpenses(view: 'monthly', periodOffset: -1),
+        _txService.getIncomes(view: 'monthly', periodOffset: -1),
+      ]);
+      final prevExpenses = prevTxFutures[0] as List<Expense>;
+      final prevIncomes = prevTxFutures[1] as List<Income>;
+
+      final prevExp = prevExpenses.fold(0.0, (s, e) => s + e.amount);
+      final prevInc = prevIncomes.fold(0.0, (s, i) => s + i.amount);
+      return prevConfig!.startAmount! + prevInc - prevExp;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ── Save start amount ──────────────────────────────────────────────────────
+
+  Future<void> saveStartAmount(double amount) async {
+    isSavingStart = true;
+    notifyListeners();
+    try {
+      final now = DateTime.now();
+      await _budgetService.upsertMonthConfig(
+          year: now.year, month: now.month, startAmount: amount);
+      _confirmedStartAmount = amount;
+      _isStartConfirmed = true;
+      _predictedStartAmount = null;
+    } finally {
+      isSavingStart = false;
+      notifyListeners();
+    }
   }
 }
 

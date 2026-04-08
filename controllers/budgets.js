@@ -335,9 +335,9 @@ class BudgetsController {
   async createPlanItem(ctx) {
     try {
       const appUser = ctx.state.appUser;
-      const { householdId, expenseCategoryId, year, month, description, amount } = ctx.request.body;
-      if (!householdId || !expenseCategoryId || !year || !month || amount === undefined) {
-        ctx.status = 400; ctx.body = { error: 'householdId, expenseCategoryId, year, month, amount required' }; return;
+      const { householdId, expenseCategoryId, year, month, description, minAmount, maxAmount } = ctx.request.body;
+      if (!householdId || !expenseCategoryId || !year || !month) {
+        ctx.status = 400; ctx.body = { error: 'householdId, expenseCategoryId, year, month required' }; return;
       }
       const membership = await HouseholdMember.findOne({ where: { householdId, appUserId: appUser.id } });
       if (!membership) { ctx.status = 403; ctx.body = { error: 'Not a member' }; return; }
@@ -345,7 +345,8 @@ class BudgetsController {
       const item = await BudgetPlanItem.create({
         householdId, expenseCategoryId, year, month,
         description: description || null,
-        amount: parseFloat(amount) || 0
+        minAmount: parseFloat(minAmount) || 0,
+        maxAmount: parseFloat(maxAmount) || 0
       });
       ctx.status = 201;
       ctx.body = { success: true, item };
@@ -363,7 +364,7 @@ class BudgetsController {
     try {
       const appUser = ctx.state.appUser;
       const { id } = ctx.params;
-      const { description, amount } = ctx.request.body;
+      const { description, minAmount, maxAmount } = ctx.request.body;
 
       const item = await BudgetPlanItem.findByPk(id);
       if (!item) { ctx.status = 404; ctx.body = { error: 'Item not found' }; return; }
@@ -373,7 +374,8 @@ class BudgetsController {
 
       await item.update({
         description: description !== undefined ? (description || null) : item.description,
-        amount: amount !== undefined ? (parseFloat(amount) || 0) : item.amount
+        minAmount: minAmount !== undefined ? (parseFloat(minAmount) || 0) : item.minAmount,
+        maxAmount: maxAmount !== undefined ? (parseFloat(maxAmount) || 0) : item.maxAmount
       });
       ctx.body = { success: true, item };
     } catch (err) {
@@ -436,7 +438,7 @@ class BudgetsController {
   async upsertMonthConfig(ctx) {
     try {
       const appUser = ctx.state.appUser;
-      const { householdId, year, month, startAmount } = ctx.request.body;
+      const { householdId, year, month, startAmount, expectedIncome } = ctx.request.body;
       if (!householdId || !year || !month) {
         ctx.status = 400; ctx.body = { error: 'householdId, year, month required' }; return;
       }
@@ -445,7 +447,8 @@ class BudgetsController {
 
       const [config] = await BudgetMonthConfig.upsert({
         householdId, year, month,
-        startAmount: startAmount !== undefined ? (parseFloat(startAmount) || null) : null
+        startAmount: startAmount !== undefined ? (parseFloat(startAmount) || null) : null,
+        expectedIncome: expectedIncome !== undefined ? (parseFloat(expectedIncome) || null) : null
       });
       ctx.body = { success: true, config };
     } catch (err) {

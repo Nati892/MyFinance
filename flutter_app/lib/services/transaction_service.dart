@@ -48,6 +48,8 @@ class TransactionService {
     int? cardId,
     String? description,
     String? note,
+    int? installmentTotal,
+    int? installmentCurrent,
   }) {
     return _repo.createExpense({
       'amount': amount,
@@ -58,6 +60,8 @@ class TransactionService {
       'householdId': _householdId,
       if (description != null && description.isNotEmpty) 'description': description,
       if (note != null && note.isNotEmpty) 'note': note,
+      if (installmentTotal != null) 'installmentTotal': installmentTotal,
+      if (installmentCurrent != null) 'installmentCurrent': installmentCurrent,
     });
   }
 

@@ -5,6 +5,7 @@ import 'package:household/router.dart';
 import 'package:household/services/auth_service.dart';
 import 'package:household/services/household_service.dart';
 import 'package:household/services/locale_service.dart';
+import 'package:household/services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +59,7 @@ class HouseholdApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final locale = ref.watch(localeProvider);
+    final fontScale = ref.watch(fontScaleProvider);
     return MaterialApp.router(
       title: 'Household',
       debugShowCheckedModeBanner: false,
@@ -69,6 +71,15 @@ class HouseholdApp extends ConsumerWidget {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
+      builder: (context, child) {
+        if (fontScale == null) return child!;
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(fontScale),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

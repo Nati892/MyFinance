@@ -134,6 +134,8 @@ class TransactionsViewModel extends ChangeNotifier {
   int? formCardId;
   String formDescription = '';
   String formNote = '';
+  int formInstallmentTotal = 1;
+  int formInstallmentCurrent = 1;
 
   // ── Load ───────────────────────────────────────────────────────────────────
 
@@ -245,6 +247,8 @@ class TransactionsViewModel extends ChangeNotifier {
     formCardId = null;
     formDescription = '';
     formNote = '';
+    formInstallmentTotal = 1;
+    formInstallmentCurrent = 1;
     modalOpen = true;
     notifyListeners();
   }
@@ -278,6 +282,8 @@ class TransactionsViewModel extends ChangeNotifier {
     formCardId = expense.cardId;
     formDescription = expense.description ?? '';
     formNote = expense.note ?? '';
+    formInstallmentTotal = expense.installmentTotal ?? 1;
+    formInstallmentCurrent = expense.installmentCurrent ?? 1;
     modalOpen = true;
     notifyListeners();
   }
@@ -316,6 +322,8 @@ class TransactionsViewModel extends ChangeNotifier {
   void setFormCardId(int? id) { formCardId = id; notifyListeners(); }
   void setFormDescription(String v) { formDescription = v; notifyListeners(); }
   void setFormNote(String v) { formNote = v; notifyListeners(); }
+  void setFormInstallmentTotal(int v) { formInstallmentTotal = v.clamp(1, 99); notifyListeners(); }
+  void setFormInstallmentCurrent(int v) { formInstallmentCurrent = v.clamp(1, formInstallmentTotal); notifyListeners(); }
 
   // ── Save / Delete ──────────────────────────────────────────────────────────
 
@@ -347,6 +355,8 @@ class TransactionsViewModel extends ChangeNotifier {
           description: formDescription.isNotEmpty ? formDescription : null,
           note: formNote.isNotEmpty ? formNote : null,
           cardId: formPaymentMethod == 'card' ? formCardId : null,
+          installmentTotal: formInstallmentTotal > 1 ? formInstallmentTotal : null,
+          installmentCurrent: formInstallmentTotal > 1 ? formInstallmentCurrent : null,
         );
       } else {
         await _txService.updateExpense(editingId!, {
@@ -357,6 +367,10 @@ class TransactionsViewModel extends ChangeNotifier {
           'expenseCategoryId': formCategoryId,
           'description': formDescription,
           'note': formNote,
+          if (formInstallmentTotal > 1) 'installmentTotal': formInstallmentTotal,
+          if (formInstallmentTotal > 1) 'installmentCurrent': formInstallmentCurrent,
+          if (formInstallmentTotal == 1) 'installmentTotal': null,
+          if (formInstallmentTotal == 1) 'installmentCurrent': null,
         });
       }
 

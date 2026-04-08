@@ -14,6 +14,8 @@ class Expense {
   final int householdId;
   final Category? category;
   final AppUser? appUser;
+  final int? installmentCurrent;
+  final int? installmentTotal;
 
   const Expense({
     required this.id,
@@ -27,6 +29,8 @@ class Expense {
     required this.householdId,
     this.category,
     this.appUser,
+    this.installmentCurrent,
+    this.installmentTotal,
   });
 
   factory Expense.fromJson(Map<String, dynamic> json) => Expense(
@@ -47,6 +51,8 @@ class Expense {
     appUser: (json['AppUser'] ?? json['appUser']) != null
         ? AppUser.fromJson(json['AppUser'] ?? json['appUser'])
         : null,
+    installmentCurrent: json['installmentCurrent'] as int?,
+    installmentTotal:   json['installmentTotal'] as int?,
   );
 
   Map<String, dynamic> toCreateJson({
@@ -61,5 +67,7 @@ class Expense {
     'cardId': cardId,
     'expenseCategoryId': expenseCategoryId,
     'householdId': householdId,
+    if (installmentTotal != null && installmentTotal! > 1) 'installmentTotal': installmentTotal,
+    if (installmentCurrent != null) 'installmentCurrent': installmentCurrent,
   };
 }

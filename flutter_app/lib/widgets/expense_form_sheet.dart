@@ -123,6 +123,8 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
               maxLength: 500,
               buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
             ),
+            const SizedBox(height: 16),
+            _buildInstallmentsRow(vm),
             const SizedBox(height: 20),
             _buildSaveButton(
               vm: vm,
@@ -134,6 +136,84 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInstallmentsRow(TransactionsViewModel vm) {
+    final total = vm.formInstallmentTotal;
+    final current = vm.formInstallmentCurrent;
+    return Row(
+      children: [
+        const Text('תשלומים', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF333333))),
+        const Spacer(),
+        if (vm.isEditMode && total > 1) ...[
+          // In edit mode with installments: show current stepper
+          _installmentStepper(
+            label: '$current',
+            onMinus: () => vm.setFormInstallmentCurrent(current - 1),
+            onPlus: () => vm.setFormInstallmentCurrent(current + 1),
+            minusEnabled: current > 1,
+            plusEnabled: current < total,
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Text('/', style: TextStyle(fontSize: 16, color: Color(0xFF888888))),
+          ),
+        ],
+        _installmentStepper(
+          label: '$total',
+          onMinus: () {
+            vm.setFormInstallmentTotal(total - 1);
+          },
+          onPlus: () => vm.setFormInstallmentTotal(total + 1),
+          minusEnabled: total > 1,
+          plusEnabled: total < 99,
+        ),
+      ],
+    );
+  }
+
+  Widget _installmentStepper({
+    required String label,
+    required VoidCallback onMinus,
+    required VoidCallback onPlus,
+    required bool minusEnabled,
+    required bool plusEnabled,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: minusEnabled ? onMinus : null,
+          child: Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: minusEnabled ? kExpensePurple.withValues(alpha: 0.1) : const Color(0xFFEEEEEE),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(Icons.remove, size: 16,
+                color: minusEnabled ? kExpensePurple : const Color(0xFFCCCCCC)),
+          ),
+        ),
+        Container(
+          width: 36,
+          alignment: Alignment.center,
+          child: Text(label,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF222222))),
+        ),
+        GestureDetector(
+          onTap: plusEnabled ? onPlus : null,
+          child: Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: plusEnabled ? kExpensePurple.withValues(alpha: 0.1) : const Color(0xFFEEEEEE),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(Icons.add, size: 16,
+                color: plusEnabled ? kExpensePurple : const Color(0xFFCCCCCC)),
+          ),
+        ),
+      ],
     );
   }
 

@@ -259,6 +259,11 @@
   "commonYesterday": "Yesterday",
   "commonExpense": "Expense",
   "commonIncome": "Income",
+  "homeStartBalance": "Starting Balance",
+  "homePredicted": "Predicted",
+  "homeConfirmed": "Confirmed",
+  "homePredictedEnd": "Predicted End",
+  "homeSetStartBalance": "Set Starting Balance",
 
   "cardsPageTitle": "Cards",
   "cardsNone": "None",
@@ -269,5 +274,12 @@
   "cardsBankName": "Bank name",
   "cardsTypeCredit": "Credit",
   "cardsTypeDebit": "Debit",
-  "cardsDeleteConfirm": "Delete this card?"
+  "cardsDeleteConfirm": "Delete this card?",
+
+  "settingsTitle": "Settings",
+  "settingsTextSize": "Text size",
+  "settingsTextSizeHint": "Default follows your device setting",
+  "settingsTextSizePreview": "Preview text",
+  "drawerSettings": "Settings",
+  "drawerSignOut": "Sign out"
 }

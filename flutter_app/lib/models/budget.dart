@@ -56,7 +56,8 @@ class BudgetPlanItem {
   final int year;
   final int month;
   final String? description;
-  final double amount;
+  final double minAmount;
+  final double maxAmount;
 
   const BudgetPlanItem({
     required this.id,
@@ -64,7 +65,8 @@ class BudgetPlanItem {
     required this.year,
     required this.month,
     this.description,
-    required this.amount,
+    required this.minAmount,
+    required this.maxAmount,
   });
 
   factory BudgetPlanItem.fromJson(Map<String, dynamic> json) => BudgetPlanItem(
@@ -73,27 +75,32 @@ class BudgetPlanItem {
         year: json['year'] as int,
         month: json['month'] as int,
         description: json['description'] as String?,
-        amount: (json['amount'] as num?)?.toDouble() ?? 0,
+        minAmount: (json['minAmount'] as num?)?.toDouble() ?? 0,
+        maxAmount: (json['maxAmount'] as num?)?.toDouble() ?? 0,
       );
 
-  BudgetPlanItem copyWith({String? description, double? amount}) => BudgetPlanItem(
+  BudgetPlanItem copyWith({String? description, double? minAmount, double? maxAmount}) =>
+      BudgetPlanItem(
         id: id,
         expenseCategoryId: expenseCategoryId,
         year: year,
         month: month,
         description: description ?? this.description,
-        amount: amount ?? this.amount,
+        minAmount: minAmount ?? this.minAmount,
+        maxAmount: maxAmount ?? this.maxAmount,
       );
 }
 
-/// Per-month household config — start amount for the balance view.
+/// Per-month household config — start amount and expected income for the plan view.
 class BudgetMonthConfig {
   final double? startAmount;
+  final double? expectedIncome;
 
-  const BudgetMonthConfig({this.startAmount});
+  const BudgetMonthConfig({this.startAmount, this.expectedIncome});
 
   factory BudgetMonthConfig.fromJson(Map<String, dynamic> json) => BudgetMonthConfig(
         startAmount: (json['startAmount'] as num?)?.toDouble(),
+        expectedIncome: (json['expectedIncome'] as num?)?.toDouble(),
       );
 }
 

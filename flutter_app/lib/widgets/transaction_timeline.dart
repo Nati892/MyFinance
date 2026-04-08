@@ -21,9 +21,12 @@ class TimelineTx {
   final String? categoryIcon;
   final String? parentCategoryName;
   final String? parentCategoryColor;
+  final String? parentCategoryIcon;
   final String? username;
   /// 'expense' or 'income'
   final String txType;
+  final int? installmentCurrent;
+  final int? installmentTotal;
 
   const TimelineTx({
     required this.id,
@@ -38,8 +41,11 @@ class TimelineTx {
     this.categoryIcon,
     this.parentCategoryName,
     this.parentCategoryColor,
+    this.parentCategoryIcon,
     this.username,
     this.txType = 'expense',
+    this.installmentCurrent,
+    this.installmentTotal,
   });
 
   static TimelineTx fromExpense(Expense e, {Map<int, Category>? parentLookup}) {
@@ -58,8 +64,11 @@ class TimelineTx {
       categoryIcon: e.category?.icon,
       parentCategoryName: parent?.name,
       parentCategoryColor: parent?.color,
+      parentCategoryIcon: parent?.icon,
       username: e.appUser?.name,
       txType: 'expense',
+      installmentCurrent: e.installmentCurrent,
+      installmentTotal: e.installmentTotal,
     );
   }
 
@@ -79,6 +88,7 @@ class TimelineTx {
       categoryIcon: i.category?.icon,
       parentCategoryName: parent?.name,
       parentCategoryColor: parent?.color,
+      parentCategoryIcon: parent?.icon,
       username: i.appUser?.name,
       txType: 'income',
     );
@@ -271,7 +281,7 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
         return !d.isBefore(week.start!) && !d.isAfter(week.end!);
       }).toList();
       final days = _groupByDay(txs);
-      final total = txs.fold(0.0, (s, t) => s + t.amount);
+      final total = txs.fold(0.0, (s, t) => s + (t.txType == 'expense' ? -t.amount : t.amount));
       final wk = _locale == 'he' ? "שב׳" : 'Week';
       return WeekGroup(
         weekNumber: week.weekNumber,
@@ -310,7 +320,7 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
     return map.entries.map((e) {
       final parts = e.key.split('-').map(int.parse).toList();
       final date = DateTime(parts[0], parts[1], parts[2]);
-      final total = e.value.fold(0.0, (s, t) => s + t.amount);
+      final total = e.value.fold(0.0, (s, t) => s + (t.txType == 'expense' ? -t.amount : t.amount));
       return DayGroup(
         label: '${buildDayLabel(date, locale: _locale)} · ${formatNIS(total)}',
         dateKey: e.key,
@@ -325,7 +335,7 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
 
   @override
   Widget build(BuildContext context) {
-    final grandTotal = widget.transactions.fold(0.0, (s, t) => s + t.amount);
+    final grandTotal = widget.transactions.fold(0.0, (s, t) => s + (t.txType == 'expense' ? -t.amount : t.amount));
 
     return Column(
       children: [
@@ -394,7 +404,11 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
                 Text(_navLabel,
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 Text(formatNIS(total),
-                    style: const TextStyle(fontSize: 12, color: _textDim)),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: total >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                      fontWeight: FontWeight.w600,
+                    )),
               ],
             ),
           ),
@@ -426,7 +440,7 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
   }
 
   Widget _buildMonthly() {
-    final groups = _buildMonthlyGroups().where((g) => g.total > 0).toList();
+    final groups = _buildMonthlyGroups().where((g) => g.dayGroups.isNotEmpty).toList();
     if (groups.isEmpty) {
       return Center(child: Text(AppLocalizations.of(context)!.timelineNoTransactionsMonth,
           style: const TextStyle(color: Color(0xFFAAAAAA))));
@@ -562,6 +576,10 @@ class _TxTile extends StatelessWidget {
     final color = _hexColor(tx.categoryColor ?? '#888888');
     final time = buildTimeLabel(DateTime.parse(tx.dateTime).toLocal());
 
+    final amountColor = tx.txType == 'income'
+        ? const Color(0xFF2E7D32)  // green
+        : const Color(0xFFC62828); // red
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       decoration: BoxDecoration(
@@ -571,15 +589,45 @@ class _TxTile extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        leading: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(
-            child: Icon(iconDataFromName(tx.categoryIcon), size: 18, color: color),
+        leading: SizedBox(
+          width: 40,
+          height: 40,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Icon(iconDataFromName(tx.categoryIcon), size: 18, color: color),
+                ),
+              ),
+              if (tx.parentCategoryName != null)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: _hexColor(tx.parentCategoryColor ?? '#888888'),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        iconDataFromName(tx.parentCategoryIcon),
+                        size: 8,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
         title: RichText(
@@ -612,8 +660,19 @@ class _TxTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(formatNIS(tx.amount),
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: color)),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(formatNIS(tx.amount),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: amountColor)),
+                if (tx.installmentTotal != null && tx.installmentTotal! > 1)
+                  Text(
+                    '${tx.installmentCurrent ?? 1}/${tx.installmentTotal}',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: amountColor.withValues(alpha: 0.7)),
+                  ),
+              ],
+            ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, size: 16, color: Color(0xFFAAAAAA)),
               onSelected: (v) => v == 'edit' ? onEdit(tx) : onDelete(tx),

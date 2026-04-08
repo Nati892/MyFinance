@@ -54,7 +54,7 @@ class HomeScreen extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         children: [
-          _buildSummaryHeader(context, vm),
+          _buildSummaryHeader(context, vm, ref),
           const SizedBox(height: 24),
           _buildRecentTransactions(context, vm),
         ],
@@ -62,9 +62,9 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // ── Summary header with gradient cards ──────────────────────────────────────
+  // ── Summary header ──────────────────────────────────────────────────────────
 
-  Widget _buildSummaryHeader(BuildContext context, HomeViewModel vm) {
+  Widget _buildSummaryHeader(BuildContext context, HomeViewModel vm, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final monthName = _monthName(now.month);
@@ -86,6 +86,10 @@ class HomeScreen extends ConsumerWidget {
           style: const TextStyle(fontSize: 14, color: Color(0xFF888888)),
         ),
         const SizedBox(height: 16),
+        // Start balance card (full width)
+        _StartBalanceCard(vm: vm, onEdit: () => _showEditStartDialog(context, vm)),
+        const SizedBox(height: 12),
+        // Expenses / Incomes row
         Row(
           children: [
             Expanded(
@@ -110,8 +114,50 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 12),
-        _BalanceCard(balance: vm.balance),
+        // Predicted end / Net balance card
+        vm.hasStartAmount
+            ? _PredictedEndCard(predictedEnd: vm.predictedEndBalance!)
+            : _BalanceCard(balance: vm.balance),
       ],
+    );
+  }
+
+  void _showEditStartDialog(BuildContext context, HomeViewModel vm) {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(
+      text: vm.startAmount != null ? vm.startAmount!.toStringAsFixed(2) : '',
+    );
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.homeSetStartBalance),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          autofocus: true,
+          decoration: InputDecoration(
+            prefixText: '₪',
+            hintText: '0.00',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text.trim());
+              if (val != null) {
+                vm.saveStartAmount(val);
+                Navigator.pop(ctx);
+              }
+            },
+            child: Text(l10n.commonSave),
+          ),
+        ],
+      ),
     );
   }
 
@@ -188,6 +234,193 @@ class HomeScreen extends ConsumerWidget {
       'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return names[month - 1];
+  }
+}
+
+// ── Start Balance Card ───────────────────────────────────────────────────────
+
+class _StartBalanceCard extends StatelessWidget {
+  final HomeViewModel vm;
+  final VoidCallback onEdit;
+
+  const _StartBalanceCard({required this.vm, required this.onEdit});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final amount = vm.startAmount;
+    final isConfirmed = vm.isStartConfirmed;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isConfirmed
+              ? const Color(0xFF00B894).withValues(alpha: 0.4)
+              : const Color(0xFFFFA502).withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isConfirmed
+                  ? const Color(0xFF00B894).withValues(alpha: 0.12)
+                  : const Color(0xFFFFA502).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isConfirmed ? Icons.account_balance_wallet : Icons.auto_awesome,
+              color: isConfirmed ? const Color(0xFF00B894) : const Color(0xFFFFA502),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      l10n.homeStartBalance,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF888888),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isConfirmed
+                            ? const Color(0xFF00B894).withValues(alpha: 0.12)
+                            : const Color(0xFFFFA502).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isConfirmed ? l10n.homeConfirmed : l10n.homePredicted,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: isConfirmed
+                              ? const Color(0xFF00B894)
+                              : const Color(0xFFFFA502),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  amount != null ? '₪${amount.toStringAsFixed(0)}' : '—',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF222222),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined, size: 20),
+            color: const Color(0xFF888888),
+            tooltip: l10n.homeSetStartBalance,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Predicted End Card ───────────────────────────────────────────────────────
+
+class _PredictedEndCard extends StatelessWidget {
+  final double predictedEnd;
+
+  const _PredictedEndCard({required this.predictedEnd});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isPositive = predictedEnd >= 0;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isPositive
+              ? const [Color(0xFF4FACFE), Color(0xFF00F2FE)]
+              : const [Color(0xFFFA709A), Color(0xFFFEE140)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: (isPositive ? const Color(0xFF4FACFE) : const Color(0xFFFA709A))
+                .withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.homePredictedEnd,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${isPositive ? '+' : ''}₪${predictedEnd.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPositive ? Icons.trending_up : Icons.trending_down,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -270,7 +503,7 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-// ── Balance Card ────────────────────────────────────────────────────────────
+// ── Balance Card (fallback when no start amount) ─────────────────────────────
 
 class _BalanceCard extends StatelessWidget {
   final double balance;

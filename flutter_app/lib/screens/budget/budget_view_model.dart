@@ -145,21 +145,6 @@ class BudgetViewModel extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> savePlanBudgets(Map<int, double?> budgets) async {
-    for (final entry in budgets.entries) {
-      final amount = entry.value;
-      if (amount == null || amount < 0) continue;
-      try {
-        await _budgetService.overrideBudget(
-          expenseCategoryId: entry.key,
-          year: currentYear,
-          month: currentMonth,
-          amount: amount,
-        );
-      } catch (_) {}
-    }
-    await load();
-  }
 
   void setViewMode(BudgetViewMode mode) {
     viewMode = mode;
@@ -320,29 +305,26 @@ class BudgetViewModel extends ChangeNotifier {
   List<BudgetPlanItem> planItemsForCategory(int categoryId) =>
       planItems.where((i) => i.expenseCategoryId == categoryId).toList();
 
-  double planTotalForCategory(int categoryId) =>
-      planItemsForCategory(categoryId).fold(0.0, (sum, i) => sum + i.amount);
+  double planMinTotalForCategory(int categoryId) =>
+      planItemsForCategory(categoryId).fold(0.0, (sum, i) => sum + i.minAmount);
 
-  double get planGrandTotal => planItems.fold(0.0, (sum, i) => sum + i.amount);
+  double planMaxTotalForCategory(int categoryId) =>
+      planItemsForCategory(categoryId).fold(0.0, (sum, i) => sum + i.maxAmount);
 
-  double? get planBalance {
-    final start = planMonthConfig?.startAmount;
-    if (start == null) return null;
-    return start - planGrandTotal;
-  }
+  double get planGrandMin => planItems.fold(0.0, (sum, i) => sum + i.minAmount);
+  double get planGrandMax => planItems.fold(0.0, (sum, i) => sum + i.maxAmount);
 
   Future<void> addPlanItem({
     required int categoryId,
-    String? description,
-    double amount = 0,
   }) async {
     try {
       final item = await _budgetService.createPlanItem(
         expenseCategoryId: categoryId,
         year: currentYear,
         month: currentMonth,
-        description: description,
-        amount: amount,
+        description: null,
+        minAmount: 0,
+        maxAmount: 0,
       );
       planItems = [...planItems, item];
       notifyListeners();
@@ -352,13 +334,15 @@ class BudgetViewModel extends ChangeNotifier {
   Future<void> updatePlanItem({
     required int id,
     required String? description,
-    required double amount,
+    required double minAmount,
+    required double maxAmount,
   }) async {
     try {
       final updated = await _budgetService.updatePlanItem(
         id: id,
         description: description,
-        amount: amount,
+        minAmount: minAmount,
+        maxAmount: maxAmount,
       );
       planItems = planItems.map((i) => i.id == id ? updated : i).toList();
       notifyListeners();
@@ -374,13 +358,29 @@ class BudgetViewModel extends ChangeNotifier {
   }
 
   Future<void> setPlanStartAmount(double? amount) async {
-    planMonthConfig = BudgetMonthConfig(startAmount: amount);
+    planMonthConfig = BudgetMonthConfig(
+        startAmount: amount, expectedIncome: planMonthConfig?.expectedIncome);
     notifyListeners();
     try {
       await _budgetService.upsertMonthConfig(
         year: currentYear,
         month: currentMonth,
         startAmount: amount,
+        expectedIncome: planMonthConfig?.expectedIncome,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> setExpectedIncome(double? income) async {
+    planMonthConfig = BudgetMonthConfig(
+        startAmount: planMonthConfig?.startAmount, expectedIncome: income);
+    notifyListeners();
+    try {
+      await _budgetService.upsertMonthConfig(
+        year: currentYear,
+        month: currentMonth,
+        startAmount: planMonthConfig?.startAmount,
+        expectedIncome: income,
       );
     } catch (_) {}
   }

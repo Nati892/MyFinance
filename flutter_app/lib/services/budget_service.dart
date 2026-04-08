@@ -77,23 +77,27 @@ class BudgetService extends ChangeNotifier {
     required int year,
     required int month,
     required String? description,
-    required double amount,
+    required double minAmount,
+    required double maxAmount,
   }) async {
     final hid = currentHouseholdId!;
     return _repo.createPlanItem(
       householdId: hid,
       expenseCategoryId: expenseCategoryId,
       year: year, month: month,
-      description: description, amount: amount,
+      description: description,
+      minAmount: minAmount,
+      maxAmount: maxAmount,
     );
   }
 
   Future<BudgetPlanItem> updatePlanItem({
     required int id,
     required String? description,
-    required double amount,
+    required double minAmount,
+    required double maxAmount,
   }) =>
-      _repo.updatePlanItem(id: id, description: description, amount: amount);
+      _repo.updatePlanItem(id: id, description: description, minAmount: minAmount, maxAmount: maxAmount);
 
   Future<void> deletePlanItem(int id) => _repo.deletePlanItem(id);
 
@@ -107,10 +111,13 @@ class BudgetService extends ChangeNotifier {
     required int year,
     required int month,
     required double? startAmount,
+    double? expectedIncome,
   }) async {
     final hid = currentHouseholdId;
     if (hid == null) return;
-    await _repo.upsertMonthConfig(householdId: hid, year: year, month: month, startAmount: startAmount);
+    await _repo.upsertMonthConfig(
+        householdId: hid, year: year, month: month,
+        startAmount: startAmount, expectedIncome: expectedIncome);
   }
 
   /// Weekly spending breakdown.

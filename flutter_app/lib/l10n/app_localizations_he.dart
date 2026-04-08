@@ -744,6 +744,21 @@ class AppLocalizationsHe extends AppLocalizations {
   String get commonIncome => 'הכנסה';
 
   @override
+  String get homeStartBalance => 'יתרת פתיחה';
+
+  @override
+  String get homePredicted => 'חיזוי';
+
+  @override
+  String get homeConfirmed => 'מאושר';
+
+  @override
+  String get homePredictedEnd => 'סוף חזוי';
+
+  @override
+  String get homeSetStartBalance => 'הגדר יתרת פתיחה';
+
+  @override
   String get cardsPageTitle => 'כרטיסים';
 
   @override
@@ -772,4 +787,22 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get cardsDeleteConfirm => 'למחוק כרטיס זה?';
+
+  @override
+  String get settingsTitle => 'הגדרות';
+
+  @override
+  String get settingsTextSize => 'גודל טקסט';
+
+  @override
+  String get settingsTextSizeHint => 'ברירת המחדל לפי הגדרות המכשיר';
+
+  @override
+  String get settingsTextSizePreview => 'טקסט לדוגמה';
+
+  @override
+  String get drawerSettings => 'הגדרות';
+
+  @override
+  String get drawerSignOut => 'התנתק';
 }

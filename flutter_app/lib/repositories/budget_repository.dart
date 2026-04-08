@@ -105,7 +105,8 @@ class BudgetRepository {
     required int year,
     required int month,
     required String? description,
-    required double amount,
+    required double minAmount,
+    required double maxAmount,
   }) async {
     final res = await _dio.post('/app/budget/plan-items', data: {
       'householdId': householdId,
@@ -113,20 +114,23 @@ class BudgetRepository {
       'year': year,
       'month': month,
       'description': description,
-      'amount': amount,
+      'minAmount': minAmount,
+      'maxAmount': maxAmount,
     });
     return BudgetPlanItem.fromJson(res.data['item'] as Map<String, dynamic>);
   }
 
-  /// PUT /app/budget/plan-items/:id — update description/amount.
+  /// PUT /app/budget/plan-items/:id — update description/amounts.
   Future<BudgetPlanItem> updatePlanItem({
     required int id,
     required String? description,
-    required double amount,
+    required double minAmount,
+    required double maxAmount,
   }) async {
     final res = await _dio.put('/app/budget/plan-items/$id', data: {
       'description': description,
-      'amount': amount,
+      'minAmount': minAmount,
+      'maxAmount': maxAmount,
     });
     return BudgetPlanItem.fromJson(res.data['item'] as Map<String, dynamic>);
   }
@@ -151,18 +155,20 @@ class BudgetRepository {
     return BudgetMonthConfig.fromJson(config as Map<String, dynamic>);
   }
 
-  /// PUT /app/budget/month-config — upsert startAmount.
+  /// PUT /app/budget/month-config — upsert startAmount and expectedIncome.
   Future<void> upsertMonthConfig({
     required int householdId,
     required int year,
     required int month,
     required double? startAmount,
+    double? expectedIncome,
   }) =>
       _dio.put('/app/budget/month-config', data: {
         'householdId': householdId,
         'year': year,
         'month': month,
         'startAmount': startAmount,
+        'expectedIncome': expectedIncome,
       });
 
   /// GET /app/budget/by-month — monthly spend over a range of months.

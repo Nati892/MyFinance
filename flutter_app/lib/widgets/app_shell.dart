@@ -18,6 +18,7 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   bool _showHouseholdDropdown = false;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   static const _darkBlue1 = Color(0xFF141E30);
   static const _darkBlue2 = Color(0xFF1565C0);
@@ -41,7 +42,13 @@ class _AppShellState extends ConsumerState<AppShell> {
     ];
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF7F8FC),
+      endDrawer: _AppSidePanel(
+        user: user,
+        onLanguageToggle: () => ref.read(localeProvider.notifier).toggle(),
+        onSignOut: () => ref.read(authServiceProvider).signOut(),
+      ),
       body: Column(
         children: [
           // ── Header ────────────────────────────────────────────────────────
@@ -76,8 +83,14 @@ class _AppShellState extends ConsumerState<AppShell> {
                       _buildHouseholdSelector(
                           householdSvc, selectedHousehold, hasMultiple),
                       const Spacer(),
-                      // User menu
-                      _buildUserMenu(ref, user, l10n),
+                      // User / profile icon
+                      IconButton(
+                        icon: const Icon(Icons.person, size: 22),
+                        color: Colors.white,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+                      ),
                     ],
                   ),
                 ),
@@ -137,79 +150,6 @@ class _AppShellState extends ConsumerState<AppShell> {
         ),
       ),
     );
-  }
-
-  Widget _buildUserMenu(WidgetRef ref, dynamic user, AppLocalizations l10n) {
-    return Builder(
-      builder: (btnContext) => IconButton(
-        icon: const Icon(Icons.person, size: 22),
-        color: Colors.white,
-        onPressed: () => _openUserMenu(btnContext, ref, user, l10n),
-      ),
-    );
-  }
-
-  void _openUserMenu(BuildContext btnContext, WidgetRef ref, dynamic user, AppLocalizations l10n) {
-    final isHe = ref.read(localeProvider).languageCode == 'he';
-    final button = btnContext.findRenderObject() as RenderBox;
-    final overlay = Overlay.of(btnContext).context.findRenderObject() as RenderBox;
-    final position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
-      ),
-      Offset.zero & overlay.size,
-    );
-
-    showMenu<String>(
-      context: btnContext,
-      position: position,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      elevation: 8,
-      constraints: const BoxConstraints(minWidth: 180),
-      items: [
-        if (user != null)
-          PopupMenuItem<String>(
-            enabled: false,
-            height: 42,
-            child: Row(
-              children: [
-                const Icon(Icons.person_outline, size: 16, color: Color(0xFF888888)),
-                const SizedBox(width: 8),
-                Text(user.username, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
-              ],
-            ),
-          ),
-        PopupMenuItem<String>(
-          value: 'language',
-          height: 42,
-          child: Row(
-            children: [
-              const Icon(Icons.language, size: 16, color: Color(0xFF888888)),
-              const SizedBox(width: 8),
-              Text(isHe ? 'English' : 'עברית', style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E))),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'logout',
-          height: 42,
-          child: Row(
-            children: [
-              const Icon(Icons.logout, size: 16, color: Color(0xFF888888)),
-              const SizedBox(width: 8),
-              Text(l10n.headerSignOut, style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E))),
-            ],
-          ),
-        ),
-      ],
-    ).then((value) {
-      if (value == 'language') {
-        ref.read(localeProvider.notifier).toggle();
-      } else if (value == 'logout') {
-        ref.read(authServiceProvider).signOut();
-      }
-    });
   }
 
   Widget _buildHouseholdSelector(
@@ -317,6 +257,123 @@ class _AppShellState extends ConsumerState<AppShell> {
             );
           }).toList(),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Side panel drawer ────────────────────────────────────────────────────────
+
+class _AppSidePanel extends ConsumerWidget {
+  final dynamic user;
+  final VoidCallback onLanguageToggle;
+  final VoidCallback onSignOut;
+
+  const _AppSidePanel({
+    required this.user,
+    required this.onLanguageToggle,
+    required this.onSignOut,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isHe = ref.watch(localeProvider).languageCode == 'he';
+    final l10n = AppLocalizations.of(context)!;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final panelWidth = screenWidth.clamp(0.0, 300.0);
+
+    return Drawer(
+      width: panelWidth,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(left: Radius.circular(16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Header ──────────────────────────────────────────────────────
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF141E30), Color(0xFF1565C0)],
+              ),
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(16)),
+            ),
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 20,
+              left: 20,
+              right: 20,
+              bottom: 20,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    user?.username ?? '—',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Menu items ───────────────────────────────────────────────────
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                // Language
+                ListTile(
+                  leading: const Icon(Icons.language, color: Color(0xFF667EEA)),
+                  title: Text(
+                    isHe ? 'Switch to English' : 'עבור לעברית',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onLanguageToggle();
+                  },
+                ),
+
+                // Settings
+                ListTile(
+                  leading: const Icon(Icons.settings_outlined, color: Color(0xFF667EEA)),
+                  title: Text(l10n.drawerSettings, style: const TextStyle(fontSize: 14)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/settings');
+                  },
+                ),
+
+                // Sign out
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Color(0xFF888888)),
+                  title: Text(l10n.drawerSignOut, style: const TextStyle(fontSize: 14)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onSignOut();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

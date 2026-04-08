@@ -986,7 +986,8 @@ class _SubCategoriesArc extends StatefulWidget {
   static const double arcRadius    = 80.0; // semicircle radius – engulfs the icons
   static const double minScale     = 0.55; // size ratio of the most-edge item
   static const int    visibleItems = 5;    // items visible at once
-  static const double textZone     = 115.0; // extra width for labels outside the arc
+  static const double sidebarWidth = 80.0; // width of the category sidebar
+  // textZone is computed dynamically in build() from screen width
   // ─────────────────────────────────────────────────────────────────────────
 
   static const double totalHeight = itemHeight * visibleItems; // 240 px
@@ -1094,6 +1095,7 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
     required int index,
     required Color color,
     required bool isRTL,
+    required double textZone,
   }) {
     final layout = _calculateItemLayout(
       itemIndex:      index,
@@ -1146,6 +1148,7 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
                 color:     color,
                 isGeneral: item.isGeneral,
                 isRTL:     isRTL,
+                textZone:  textZone,
               ),
             ),
           ),
@@ -1156,9 +1159,9 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
 
   // ── LTR build (English) ──────────────────────────────────────────────────
 
-  Widget _buildLTR(List<_ArcItem> items, Color color) {
+  Widget _buildLTR(List<_ArcItem> items, Color color, double textZone) {
     return SizedBox(
-      width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.textZone,
+      width:  _SubCategoriesArc.arcRadius + textZone,
       height: _SubCategoriesArc.totalHeight,
       child: GestureDetector(
         behavior:             HitTestBehavior.opaque,
@@ -1184,7 +1187,7 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
                   ),
                 ),
                 for (int i = 0; i < items.length; i++)
-                  _buildItem(item: items[i], index: i, color: color, isRTL: false),
+                  _buildItem(item: items[i], index: i, color: color, isRTL: false, textZone: textZone),
               ],
             ),
           ),
@@ -1195,9 +1198,9 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
 
   // ── RTL build (Hebrew) ───────────────────────────────────────────────────
 
-  Widget _buildRTL(List<_ArcItem> items, Color color) {
+  Widget _buildRTL(List<_ArcItem> items, Color color, double textZone) {
     return SizedBox(
-      width:  _SubCategoriesArc.arcRadius + _SubCategoriesArc.textZone,
+      width:  _SubCategoriesArc.arcRadius + textZone,
       height: _SubCategoriesArc.totalHeight,
       child: GestureDetector(
         behavior:             HitTestBehavior.opaque,
@@ -1223,7 +1226,7 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
                   ),
                 ),
                 for (int i = 0; i < items.length; i++)
-                  _buildItem(item: items[i], index: i, color: color, isRTL: true),
+                  _buildItem(item: items[i], index: i, color: color, isRTL: true, textZone: textZone),
               ],
             ),
           ),
@@ -1242,10 +1245,15 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
     final items  = _buildItemList(locale, generalLabel);
     final color  = _hexColor(widget.parent.color);
 
+    // Dynamic text zone: from the arc's left edge to the screen's right edge.
+    final screenWidth = MediaQuery.of(context).size.width;
+    final textZone = (screenWidth - _SubCategoriesArc.sidebarWidth - _SubCategoriesArc.arcRadius)
+        .clamp(100.0, 500.0);
+
     if (isRTL) {
-      return _buildRTL(items, color);
+      return _buildRTL(items, color, textZone);
     } else {
-      return _buildLTR(items, color);
+      return _buildLTR(items, color, textZone);
     }
   }
 
@@ -1320,6 +1328,7 @@ class _WheelItem extends StatelessWidget {
   final Color color;
   final bool isGeneral;
   final bool isRTL;
+  final double textZone;
 
   const _WheelItem({
     required this.icon,
@@ -1327,6 +1336,7 @@ class _WheelItem extends StatelessWidget {
     required this.color,
     required this.isGeneral,
     required this.isRTL,
+    required this.textZone,
   });
 
   @override
@@ -1345,13 +1355,14 @@ class _WheelItem extends StatelessWidget {
       ),
     );
 
-    final label = Expanded(
+    final label = Flexible(
+      fit: FlexFit.loose,
       child: Text(
         name,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontSize: isGeneral ? 12 : 11,
+          fontSize: isGeneral ? 14 : 13,
           fontWeight: isGeneral ? FontWeight.w700 : FontWeight.w600,
           color: color,
         ),
@@ -1362,18 +1373,29 @@ class _WheelItem extends StatelessWidget {
     // LTR (arc fans right): icon left, text right
     // RTL (arc fans left):  icon right, text left
     final children = isRTL
-        ? [label, const SizedBox(width: 4), iconBox]
-        : [iconBox, const SizedBox(width: 4), label];
+        ? [label, const SizedBox(width: 6), iconBox]
+        : [iconBox, const SizedBox(width: 6), label];
 
-    // Constrain the Row to exactly textZone so Flexible gets a bounded max
-    // width and ellipsis works correctly without overflowing the ClipRect.
-    return SizedBox(
-      width: _SubCategoriesArc.textZone,
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        textDirection: TextDirection.ltr, // prevent Flutter's auto-RTL reversal
-        children: children,
+    // White rounded background — text zone is bounded by textZone.
+    // Row uses mainAxisSize.min so it only takes as much space as needed,
+    // up to textZone (no wider than the screen edge).
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: textZone),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(color: Color(0x18000000), blurRadius: 6, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          textDirection: TextDirection.ltr, // prevent Flutter's auto-RTL reversal
+          children: children,
+        ),
       ),
     );
   }

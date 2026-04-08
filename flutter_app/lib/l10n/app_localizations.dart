@@ -1568,6 +1568,36 @@ abstract class AppLocalizations {
   /// **'Income'**
   String get commonIncome;
 
+  /// No description provided for @homeStartBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting Balance'**
+  String get homeStartBalance;
+
+  /// No description provided for @homePredicted.
+  ///
+  /// In en, this message translates to:
+  /// **'Predicted'**
+  String get homePredicted;
+
+  /// No description provided for @homeConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get homeConfirmed;
+
+  /// No description provided for @homePredictedEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Predicted End'**
+  String get homePredictedEnd;
+
+  /// No description provided for @homeSetStartBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Starting Balance'**
+  String get homeSetStartBalance;
+
   /// No description provided for @cardsPageTitle.
   ///
   /// In en, this message translates to:
@@ -1627,6 +1657,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete this card?'**
   String get cardsDeleteConfirm;
+
+  /// No description provided for @settingsTitle.
+  String get settingsTitle;
+
+  /// No description provided for @settingsTextSize.
+  String get settingsTextSize;
+
+  /// No description provided for @settingsTextSizeHint.
+  String get settingsTextSizeHint;
+
+  /// No description provided for @settingsTextSizePreview.
+  String get settingsTextSizePreview;
+
+  /// No description provided for @drawerSettings.
+  String get drawerSettings;
+
+  /// No description provided for @drawerSignOut.
+  String get drawerSignOut;
 }
 
 class _AppLocalizationsDelegate

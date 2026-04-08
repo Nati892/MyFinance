@@ -20,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
     startAmount: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: true
+    },
+    expectedIncome: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true
     }
   }, {
     timestamps: true,
