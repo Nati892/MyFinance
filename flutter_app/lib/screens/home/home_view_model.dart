@@ -165,6 +165,7 @@ class RecentTx {
   final String dateTime;
   final String? description;
   final String? categoryName;
+  final String? categoryNameHe;
   final String? categoryColor;
   final String? categoryIcon;
 
@@ -175,6 +176,7 @@ class RecentTx {
     required this.dateTime,
     this.description,
     this.categoryName,
+    this.categoryNameHe,
     this.categoryColor,
     this.categoryIcon,
   });
@@ -186,6 +188,7 @@ class RecentTx {
         dateTime: e.dateTime,
         description: e.description,
         categoryName: e.category?.name,
+        categoryNameHe: e.category?.nameHe,
         categoryColor: e.category?.color,
         categoryIcon: e.category?.icon,
       );
@@ -197,6 +200,7 @@ class RecentTx {
         dateTime: i.dateTime,
         description: i.description,
         categoryName: i.category?.name,
+        categoryNameHe: i.category?.nameHe,
         categoryColor: i.category?.color,
         categoryIcon: i.category?.icon,
       );

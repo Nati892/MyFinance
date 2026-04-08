@@ -37,7 +37,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       _TabItem(path: '/assets',       icon: Icons.account_balance, label: l10n.navAssets),
       _TabItem(path: '/budget',       icon: Icons.pie_chart,        label: l10n.navBudget),
       _TabItem(path: '/transactions', icon: Icons.swap_horiz,       label: l10n.navTransactions),
-      _TabItem(path: '/home',         icon: Icons.bar_chart,        label: l10n.navStatistics),
+      _TabItem(path: '/statistics',   icon: Icons.bar_chart,        label: l10n.navStatistics),
       _TabItem(path: '/board',        icon: Icons.dashboard,        label: l10n.navBoard),
     ];
 

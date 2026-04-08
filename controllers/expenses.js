@@ -217,6 +217,7 @@ class ExpensesController {
       // If installmentTotal > 1, create one record per remaining payment month.
       // The first record uses the given date, subsequent ones are bumped +N months.
       let firstExpense;
+      let parentId = null;
       if (total && total > 1) {
         const baseDate = new Date(dateTime);
         for (let i = 0; i < total; i++) {
@@ -224,18 +225,22 @@ class ExpensesController {
           paymentDate.setMonth(paymentDate.getMonth() + i);
           const rec = await Expense.create({
             amount,
-            dateTime:          paymentDate.toISOString(),
-            description:       description || null,
-            note:              note        || null,
+            dateTime:           paymentDate.toISOString(),
+            description:        description || null,
+            note:               note        || null,
             paymentMethod,
-            cardId:            cardId ? Number(cardId) : null,
-            expenseCategoryId: Number(expenseCategoryId),
+            cardId:             cardId ? Number(cardId) : null,
+            expenseCategoryId:  Number(expenseCategoryId),
             appUserId,
-            householdId:       Number(householdId),
-            installmentTotal:  total,
-            installmentCurrent: current + i
+            householdId:        Number(householdId),
+            installmentTotal:   total,
+            installmentCurrent: current + i,
+            parentExpenseId:    i === 0 ? null : parentId
           });
-          if (i === 0) firstExpense = rec;
+          if (i === 0) {
+            firstExpense = rec;
+            parentId = rec.id;
+          }
         }
       } else {
         firstExpense = await Expense.create({
@@ -386,6 +391,8 @@ class ExpensesController {
         return;
       }
 
+      // Cascade-delete all future installments linked to this expense
+      await Expense.destroy({ where: { parentExpenseId: expense.id } });
       await expense.destroy();
 
       ctx.body = { success: true };

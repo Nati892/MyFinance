@@ -17,9 +17,11 @@ class TimelineTx {
   final String paymentMethod;
   final String? cardLabel; // card nickname or ••••XXXX
   final String? categoryName;
+  final String? categoryNameHe;
   final String? categoryColor;
   final String? categoryIcon;
   final String? parentCategoryName;
+  final String? parentCategoryNameHe;
   final String? parentCategoryColor;
   final String? parentCategoryIcon;
   final String? username;
@@ -37,9 +39,11 @@ class TimelineTx {
     required this.paymentMethod,
     this.cardLabel,
     this.categoryName,
+    this.categoryNameHe,
     this.categoryColor,
     this.categoryIcon,
     this.parentCategoryName,
+    this.parentCategoryNameHe,
     this.parentCategoryColor,
     this.parentCategoryIcon,
     this.username,
@@ -60,9 +64,11 @@ class TimelineTx {
       paymentMethod: e.paymentMethod,
       cardLabel: e.card?.displayLabel,
       categoryName: e.category?.name,
+      categoryNameHe: e.category?.nameHe,
       categoryColor: e.category?.color,
       categoryIcon: e.category?.icon,
       parentCategoryName: parent?.name,
+      parentCategoryNameHe: parent?.nameHe,
       parentCategoryColor: parent?.color,
       parentCategoryIcon: parent?.icon,
       username: e.appUser?.name,
@@ -84,9 +90,11 @@ class TimelineTx {
       paymentMethod: i.paymentMethod,
       cardLabel: i.card?.displayLabel,
       categoryName: i.category?.name,
+      categoryNameHe: i.category?.nameHe,
       categoryColor: i.category?.color,
       categoryIcon: i.category?.icon,
       parentCategoryName: parent?.name,
+      parentCategoryNameHe: parent?.nameHe,
       parentCategoryColor: parent?.color,
       parentCategoryIcon: parent?.icon,
       username: i.appUser?.name,
@@ -573,8 +581,16 @@ class _TxTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
     final color = _hexColor(tx.categoryColor ?? '#888888');
     final time = buildTimeLabel(DateTime.parse(tx.dateTime).toLocal());
+
+    final displayCategoryName = isHe
+        ? (tx.categoryNameHe?.isNotEmpty == true ? tx.categoryNameHe! : tx.categoryName)
+        : tx.categoryName;
+    final displayParentName = isHe
+        ? (tx.parentCategoryNameHe?.isNotEmpty == true ? tx.parentCategoryNameHe! : tx.parentCategoryName)
+        : tx.parentCategoryName;
 
     final amountColor = tx.txType == 'income'
         ? const Color(0xFF2E7D32)  // green
@@ -635,9 +651,9 @@ class _TxTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           text: TextSpan(
             children: [
-              if (tx.parentCategoryName != null) ...[
+              if (displayParentName != null) ...[
                 TextSpan(
-                  text: '${tx.parentCategoryName} › ',
+                  text: '$displayParentName › ',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
@@ -646,7 +662,7 @@ class _TxTile extends StatelessWidget {
                 ),
               ],
               TextSpan(
-                text: tx.description?.isNotEmpty == true ? tx.description! : (tx.categoryName ?? '—'),
+                text: tx.description?.isNotEmpty == true ? tx.description! : (displayCategoryName ?? '—'),
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF222222)),
               ),
             ],

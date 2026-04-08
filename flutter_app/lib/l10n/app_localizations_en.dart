@@ -805,8 +805,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTextSizePreview => 'Preview text';
 
   @override
+  String get settingsLanguage => 'Language';
+
+  @override
+  String get settingsLanguageHint => 'Toggle between English and Hebrew';
+
+  @override
+  String get settingsAbout => 'About';
+
+  @override
+  String get settingsVersion => 'Version 1.0';
+
+  @override
+  String get settingsAppName => 'Household Finance Manager';
+
+  @override
   String get drawerSettings => 'Settings';
 
   @override
   String get drawerSignOut => 'Sign out';
+
+  @override
+  String get statsTitle => 'Statistics';
+
+  @override
+  String get statsThisMonth => 'This month';
+
+  @override
+  String get statsSavingsRate => 'Savings rate';
+
+  @override
+  String get statsTopCategories => 'Top expense categories';
+
+  @override
+  String get statsMonthlyTrend => 'Monthly trend';
+
+  @override
+  String get statsBiggestExpense => 'Biggest expense';
+
+  @override
+  String get statsPaymentMethods => 'By payment method';
+
+  @override
+  String get statsAvgMonthlyExpense => 'Avg. monthly expense';
+
+  @override
+  String get statsNoData => 'Not enough data yet';
+
+  @override
+  String get statsLast4Months => 'Last 4 months';
 }

@@ -67,6 +67,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: null
+    },
+    parentExpenseId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+      references: {
+        model: 'expenses',
+        key: 'id'
+      }
     }
   }, {
     timestamps: true,

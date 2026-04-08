@@ -257,21 +257,33 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   void _confirmDeleteExpense(
       BuildContext context, TransactionsViewModel vm, Expense expense) {
     final l10n = AppLocalizations.of(context)!;
+    final name = expense.description?.isNotEmpty == true
+        ? expense.description!
+        : expense.category?.name ?? 'this expense';
+    final isInstallmentParent = (expense.installmentTotal ?? 0) > 1 &&
+        expense.installmentCurrent == 1 &&
+        expense.parentExpenseId == null;
+    final remaining = isInstallmentParent
+        ? (expense.installmentTotal! - 1)
+        : 0;
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(l10n.commonDeleteExpense),
         content: Text(
-          'Delete "${expense.description?.isNotEmpty == true ? expense.description : expense.category?.name ?? 'this expense'}"?',
+          isInstallmentParent
+              ? 'Delete "$name"? This will also delete $remaining future installment${remaining == 1 ? '' : 's'}.'
+              : 'Delete "$name"?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               vm.deleteExpense(expense);
             },
             child: Text(l10n.commonDelete, style: const TextStyle(color: Colors.red)),
@@ -286,19 +298,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(l10n.commonDeleteIncome),
         content: Text(
           'Delete "${income.description?.isNotEmpty == true ? income.description : income.category?.name ?? 'this income'}"?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               vm.deleteIncome(income);
             },
             child: Text(l10n.commonDelete, style: const TextStyle(color: Colors.red)),

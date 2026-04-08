@@ -280,6 +280,22 @@
   "settingsTextSize": "Text size",
   "settingsTextSizeHint": "Default follows your device setting",
   "settingsTextSizePreview": "Preview text",
+  "settingsLanguage": "Language",
+  "settingsLanguageHint": "Toggle between English and Hebrew",
+  "settingsAbout": "About",
+  "settingsVersion": "Version 1.0",
+  "settingsAppName": "Household Finance Manager",
   "drawerSettings": "Settings",
-  "drawerSignOut": "Sign out"
+  "drawerSignOut": "Sign out",
+
+  "statsTitle": "Statistics",
+  "statsThisMonth": "This month",
+  "statsSavingsRate": "Savings rate",
+  "statsTopCategories": "Top expense categories",
+  "statsMonthlyTrend": "Monthly trend",
+  "statsBiggestExpense": "Biggest expense",
+  "statsPaymentMethods": "By payment method",
+  "statsAvgMonthlyExpense": "Avg. monthly expense",
+  "statsNoData": "Not enough data yet",
+  "statsLast4Months": "Last 4 months"
 }

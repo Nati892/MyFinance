@@ -801,8 +801,53 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingsTextSizePreview => 'טקסט לדוגמה';
 
   @override
+  String get settingsLanguage => 'שפה';
+
+  @override
+  String get settingsLanguageHint => 'החלף בין אנגלית לעברית';
+
+  @override
+  String get settingsAbout => 'אודות';
+
+  @override
+  String get settingsVersion => 'גרסה 1.0';
+
+  @override
+  String get settingsAppName => 'מנהל כספי הבית';
+
+  @override
   String get drawerSettings => 'הגדרות';
 
   @override
   String get drawerSignOut => 'התנתק';
+
+  @override
+  String get statsTitle => 'Statistics';
+
+  @override
+  String get statsThisMonth => 'This month';
+
+  @override
+  String get statsSavingsRate => 'Savings rate';
+
+  @override
+  String get statsTopCategories => 'Top expense categories';
+
+  @override
+  String get statsMonthlyTrend => 'Monthly trend';
+
+  @override
+  String get statsBiggestExpense => 'Biggest expense';
+
+  @override
+  String get statsPaymentMethods => 'By payment method';
+
+  @override
+  String get statsAvgMonthlyExpense => 'Avg. monthly expense';
+
+  @override
+  String get statsNoData => 'Not enough data yet';
+
+  @override
+  String get statsLast4Months => 'Last 4 months';
 }

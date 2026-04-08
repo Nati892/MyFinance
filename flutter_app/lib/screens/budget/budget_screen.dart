@@ -49,7 +49,7 @@ class BudgetScreen extends ConsumerWidget {
             ),
             // ── Month navigation ───────────────────────────────────────────
             _MonthNav(
-              label: vm.monthLabel,
+              label: vm.monthLabel(Localizations.localeOf(context).languageCode),
               isCurrentMonth: vm.isCurrentMonth,
               onPrev: vm.prevMonth,
               onNext: vm.nextMonth,
@@ -397,6 +397,8 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
     final catColor = _hexColor(row.color);
     final overBudget = vm.isOverBudget(row);
     final fraction = vm.spentFraction(row).clamp(0.0, 1.0);
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
+    final displayName = isHe ? (row.nameHe ?? row.name) : row.name;
 
     return GestureDetector(
       onTap: isEditing
@@ -447,8 +449,8 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
                                 ? Icon(iconDataFromName(row.icon),
                                     size: 16, color: catColor)
                                 : Text(
-                                    row.name.isNotEmpty
-                                        ? row.name[0].toUpperCase()
+                                    displayName.isNotEmpty
+                                        ? displayName[0].toUpperCase()
                                         : '?',
                                     style: TextStyle(
                                         fontSize: 14,
@@ -460,7 +462,7 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
-                            row.name,
+                            displayName,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 fontSize: 13, fontWeight: FontWeight.w600),
@@ -567,7 +569,7 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
               ),
               const SizedBox(width: 8),
               _editModeTab(
-                label: vm.monthLabel,
+                label: vm.monthLabel(Localizations.localeOf(context).languageCode),
                 active: vm.editingBudgetMode == EditMode.month,
                 onTap: () => vm.setEditMode(EditMode.month, row),
               ),
@@ -722,6 +724,7 @@ class _CategoryDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -741,7 +744,7 @@ class _CategoryDropdown extends StatelessWidget {
             ...vm.budgetRows.map(
               (row) => DropdownMenuItem<int?>(
                 value: row.id,
-                child: Text(row.name),
+                child: Text(isHe ? (row.nameHe ?? row.name) : row.name),
               ),
             ),
           ],
@@ -1076,6 +1079,8 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
     final minT = vm.planMinTotalForCategoryTree(cat);
     final maxT = vm.planMaxTotalForCategoryTree(cat);
     final expanded = vm.expandedPlanCategories.contains(cat.id);
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
+    final displayName = isHe ? (cat.nameHe ?? cat.name) : cat.name;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1115,7 +1120,7 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(cat.name,
+                    child: Text(displayName,
                         style: const TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w700)),
                   ),
@@ -1204,6 +1209,8 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
     final minT = vm.planMinTotalForCategory(sub.id);
     final maxT = vm.planMaxTotalForCategory(sub.id);
     final expanded = vm.expandedPlanCategories.contains(sub.id);
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
+    final displaySubName = isHe ? (sub.nameHe ?? sub.name) : sub.name;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
@@ -1235,7 +1242,7 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
                   ),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(sub.name,
+                    child: Text(displaySubName,
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -1785,7 +1792,7 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
               children: [
                 _modeChip('Every month', EditMode.base),
                 const SizedBox(width: 8),
-                _modeChip('${vm.monthLabel} only', EditMode.month),
+                _modeChip('${vm.monthLabel(Localizations.localeOf(context).languageCode)} only', EditMode.month),
               ],
             ),
             const SizedBox(height: 16),

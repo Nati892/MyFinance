@@ -1682,6 +1682,36 @@ abstract class AppLocalizations {
   /// **'Preview text'**
   String get settingsTextSizePreview;
 
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsLanguageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle between English and Hebrew'**
+  String get settingsLanguageHint;
+
+  /// No description provided for @settingsAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsAbout;
+
+  /// No description provided for @settingsVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version 1.0'**
+  String get settingsVersion;
+
+  /// No description provided for @settingsAppName.
+  ///
+  /// In en, this message translates to:
+  /// **'Household Finance Manager'**
+  String get settingsAppName;
+
   /// No description provided for @drawerSettings.
   ///
   /// In en, this message translates to:
@@ -1693,6 +1723,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign out'**
   String get drawerSignOut;
+
+  /// No description provided for @statsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get statsTitle;
+
+  /// No description provided for @statsThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get statsThisMonth;
+
+  /// No description provided for @statsSavingsRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings rate'**
+  String get statsSavingsRate;
+
+  /// No description provided for @statsTopCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Top expense categories'**
+  String get statsTopCategories;
+
+  /// No description provided for @statsMonthlyTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly trend'**
+  String get statsMonthlyTrend;
+
+  /// No description provided for @statsBiggestExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Biggest expense'**
+  String get statsBiggestExpense;
+
+  /// No description provided for @statsPaymentMethods.
+  ///
+  /// In en, this message translates to:
+  /// **'By payment method'**
+  String get statsPaymentMethods;
+
+  /// No description provided for @statsAvgMonthlyExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg. monthly expense'**
+  String get statsAvgMonthlyExpense;
+
+  /// No description provided for @statsNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data yet'**
+  String get statsNoData;
+
+  /// No description provided for @statsLast4Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 4 months'**
+  String get statsLast4Months;
 }
 
 class _AppLocalizationsDelegate

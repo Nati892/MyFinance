@@ -32,6 +32,11 @@ class CategorySidebar extends StatefulWidget {
 class _CategorySidebarState extends State<CategorySidebar> {
   final Set<int> _expandedIds = {};
 
+  String _catName(Category cat) {
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
+    return isHe ? (cat.nameHe ?? cat.name) : cat.name;
+  }
+
   void _toggleExpand(int id) {
     setState(() {
       if (_expandedIds.contains(id)) {
@@ -76,7 +81,7 @@ class _CategorySidebarState extends State<CategorySidebar> {
               ),
               const SizedBox(height: 16),
               Text(
-                cat.name,
+                _catName(cat),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -131,7 +136,10 @@ class _CategorySidebarState extends State<CategorySidebar> {
           // ── Filter selector ──────────────────────────────────────────────────
           GestureDetector(
             onTap: () => _showFilterSheet(context),
-            child: _FilterTile(category: filterCat),
+            child: _FilterTile(
+              category: filterCat,
+              categoryLabel: filterCat != null ? _catName(filterCat) : null,
+            ),
           ),
           const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
           // ── Quick-add tiles ──────────────────────────────────────────────────
@@ -143,7 +151,7 @@ class _CategorySidebarState extends State<CategorySidebar> {
                   final isExpanded = _expandedIds.contains(cat.id);
                   return [
                     _QuickAddTile(
-                      label: cat.name,
+                      label: _catName(cat),
                       color: cat.color,
                       icon: cat.icon,
                       hasSubCategories: cat.subCategories.isNotEmpty,
@@ -156,7 +164,7 @@ class _CategorySidebarState extends State<CategorySidebar> {
                     ),
                     if (isExpanded)
                       ...cat.subCategories.map((sub) => _SubCategoryTile(
-                            label: sub.name,
+                            label: _catName(sub),
                             color: sub.color,
                             icon: sub.icon,
                             onTap: () => widget.onCategoryQuickAdd(sub.id),
@@ -177,7 +185,7 @@ class _CategorySidebarState extends State<CategorySidebar> {
                         style: TextStyle(fontSize: 10, color: Color(0xFFAAAAAA))),
                   ),
                   ...widget.favoriteCategories.map((cat) => _QuickAddTile(
-                        label: cat.name,
+                        label: _catName(cat),
                         color: cat.color,
                         icon: cat.icon,
                         hasSubCategories: false,
@@ -307,7 +315,8 @@ class _ActionButton extends StatelessWidget {
 
 class _FilterTile extends StatelessWidget {
   final Category? category;
-  const _FilterTile({this.category});
+  final String? categoryLabel;
+  const _FilterTile({this.category, this.categoryLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -336,7 +345,7 @@ class _FilterTile extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            category?.name ?? AppLocalizations.of(context)!.transactionsAll,
+            categoryLabel ?? AppLocalizations.of(context)!.transactionsAll,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -525,11 +534,14 @@ class _SearchSheetState extends State<_SearchSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
     final all = widget.categories.toSet().toList(); // dedup
     final filtered = _query.isEmpty
         ? all
         : all
-            .where((c) => c.name.toLowerCase().contains(_query.toLowerCase()))
+            .where((c) =>
+                c.name.toLowerCase().contains(_query.toLowerCase()) ||
+                (c.nameHe ?? '').contains(_query))
             .toList();
 
     return Padding(
@@ -582,7 +594,8 @@ class _SearchSheetState extends State<_SearchSheet> {
                       child: Icon(iconDataFromName(cat.icon), size: 18, color: color),
                     ),
                   ),
-                  title: Text(cat.name,
+                  title: Text(
+                      isHe ? (cat.nameHe ?? cat.name) : cat.name,
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () => widget.onCategorySelected(cat.id),
                 );
@@ -674,6 +687,7 @@ class _FilterSheet extends StatelessWidget {
                 onTap: () => onFilterChanged(null),
               ),
               ...categories.expand((cat) {
+                final isHe = Localizations.localeOf(context).languageCode == 'he';
                 final color = _hexColor(cat.color);
                 final selected = filterCategoryId == cat.id;
                 return [
@@ -689,7 +703,7 @@ class _FilterSheet extends StatelessWidget {
                         child: Icon(iconDataFromName(cat.icon), size: 18, color: color),
                       ),
                     ),
-                    title: Text(cat.name,
+                    title: Text(isHe ? (cat.nameHe ?? cat.name) : cat.name,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     trailing: selected ? Icon(Icons.check, color: color) : null,
                     onTap: () => onFilterChanged(cat.id),
@@ -712,7 +726,7 @@ class _FilterSheet extends StatelessWidget {
                               size: 15, color: subColor),
                         ),
                       ),
-                      title: Text(sub.name,
+                      title: Text(isHe ? (sub.nameHe ?? sub.name) : sub.name,
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,

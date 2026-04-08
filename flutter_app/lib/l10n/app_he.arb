@@ -280,6 +280,11 @@
   "settingsTextSize": "גודל טקסט",
   "settingsTextSizeHint": "ברירת המחדל לפי הגדרות המכשיר",
   "settingsTextSizePreview": "טקסט לדוגמה",
+  "settingsLanguage": "שפה",
+  "settingsLanguageHint": "החלף בין אנגלית לעברית",
+  "settingsAbout": "אודות",
+  "settingsVersion": "גרסה 1.0",
+  "settingsAppName": "מנהל כספי הבית",
   "drawerSettings": "הגדרות",
   "drawerSignOut": "התנתק"
 }

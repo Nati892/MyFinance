@@ -16,6 +16,7 @@ class Expense {
   final AppUser? appUser;
   final int? installmentCurrent;
   final int? installmentTotal;
+  final int? parentExpenseId;
 
   const Expense({
     required this.id,
@@ -31,6 +32,7 @@ class Expense {
     this.appUser,
     this.installmentCurrent,
     this.installmentTotal,
+    this.parentExpenseId,
   });
 
   factory Expense.fromJson(Map<String, dynamic> json) => Expense(
@@ -53,6 +55,7 @@ class Expense {
         : null,
     installmentCurrent: json['installmentCurrent'] as int?,
     installmentTotal:   json['installmentTotal'] as int?,
+    parentExpenseId:    json['parentExpenseId'] as int?,
   );
 
   Map<String, dynamic> toCreateJson({

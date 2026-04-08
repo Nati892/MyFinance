@@ -67,7 +67,7 @@ class HomeScreen extends ConsumerWidget {
   Widget _buildSummaryHeader(BuildContext context, HomeViewModel vm, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
-    final monthName = _monthName(now.month);
+    final monthName = _monthName(now.month, context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,12 +228,17 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  String _monthName(int month) {
-    const names = [
+  String _monthName(int month, BuildContext context) {
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
+    const namesEn = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December',
     ];
-    return names[month - 1];
+    const namesHe = [
+      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+    ];
+    return (isHe ? namesHe : namesEn)[month - 1];
   }
 }
 
@@ -587,9 +592,11 @@ class _TxListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _hexColor(tx.categoryColor);
     final l10n = AppLocalizations.of(context)!;
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
     final label = tx.description?.isNotEmpty == true
         ? tx.description!
-        : (tx.categoryName ?? (tx.isExpense ? l10n.commonExpense : l10n.commonIncome));
+        : (isHe ? (tx.categoryNameHe ?? tx.categoryName) : tx.categoryName) ??
+            (tx.isExpense ? l10n.commonExpense : l10n.commonIncome);
     final date = _formatDate(tx.dateTime, l10n);
 
     return Column(

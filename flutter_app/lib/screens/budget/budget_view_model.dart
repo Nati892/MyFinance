@@ -52,12 +52,19 @@ class BudgetViewModel extends ChangeNotifier {
     return currentYear == now.year && currentMonth == now.month;
   }
 
-  static const _monthNames = [
+  static const _monthNamesEn = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
+  static const _monthNamesHe = [
+    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+  ];
 
-  String get monthLabel => '${_monthNames[currentMonth - 1]} $currentYear';
+  String monthLabel(String locale) {
+    final names = locale == 'he' ? _monthNamesHe : _monthNamesEn;
+    return '${names[currentMonth - 1]} $currentYear';
+  }
 
   void prevMonth() {
     if (currentMonth == 1) {
