@@ -5,7 +5,14 @@
       "Bash(flutter pub:*)",
       "Bash(flutter analyze:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(flutter gen-l10n:*)"
+      "Bash(flutter gen-l10n:*)",
+      "Bash(xargs grep:*)",
+      "Bash(node:*)",
+      "Bash(grep -E \"\\\\.dart$\")",
+      "Bash(sed:*)",
+      "Bash(flutter build:*)",
+      "Bash(python3:*)",
+      "Bash(python:*)"
     ]
   }
 }

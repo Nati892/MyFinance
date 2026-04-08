@@ -293,6 +293,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get budgetPlanHint => 'Set budget for each category for this month';
 
   @override
+  String get budgetPlanAddCategory => 'Add Category';
+
+  @override
+  String get budgetPlanAddItem => 'Add item';
+
+  @override
+  String get budgetPlanStartAmount => 'Starting budget';
+
+  @override
+  String get budgetPlanTotal => 'Total planned';
+
+  @override
+  String get budgetPlanBalance => 'Balance';
+
+  @override
+  String get budgetPlanDescriptionHint => 'Description';
+
+  @override
+  String get budgetPlanNoCategories =>
+      'No expense categories. Tap + to add one.';
+
+  @override
+  String get budgetPlanAdvanced => 'Advanced';
+
+  @override
+  String get budgetPlanDeleteItem => 'Delete item';
+
+  @override
   String get assetsTitle => 'Assets';
 
   @override

@@ -4,7 +4,10 @@ import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/budget.dart';
 import 'package:household/models/category.dart';
 import 'package:household/screens/budget/budget_view_model.dart';
+import 'package:household/screens/transactions/transactions_view_model.dart';
 import 'package:household/utils/icon_helper.dart';
+import 'package:household/widgets/create_category_sheet.dart';
+import 'package:household/widgets/expense_form_sheet.dart';
 
 class BudgetScreen extends ConsumerWidget {
   const BudgetScreen({super.key});
@@ -61,7 +64,7 @@ class BudgetScreen extends ConsumerWidget {
             ),
           ],
         ),
-        // ── FAB — only shown in table mode ─────────────────────────────────
+        // ── FAB — table mode: add budget entry; plan mode handled inline ──────
         if (vm.viewMode == BudgetViewMode.table)
           Positioned(
             bottom: 16,

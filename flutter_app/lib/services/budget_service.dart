@@ -65,6 +65,54 @@ class BudgetService extends ChangeNotifier {
     );
   }
 
+  /// Plan items for a given month.
+  Future<List<BudgetPlanItem>> getPlanItems({required int year, required int month}) async {
+    final hid = currentHouseholdId;
+    if (hid == null) return [];
+    return _repo.getPlanItems(householdId: hid, year: year, month: month);
+  }
+
+  Future<BudgetPlanItem> createPlanItem({
+    required int expenseCategoryId,
+    required int year,
+    required int month,
+    required String? description,
+    required double amount,
+  }) async {
+    final hid = currentHouseholdId!;
+    return _repo.createPlanItem(
+      householdId: hid,
+      expenseCategoryId: expenseCategoryId,
+      year: year, month: month,
+      description: description, amount: amount,
+    );
+  }
+
+  Future<BudgetPlanItem> updatePlanItem({
+    required int id,
+    required String? description,
+    required double amount,
+  }) =>
+      _repo.updatePlanItem(id: id, description: description, amount: amount);
+
+  Future<void> deletePlanItem(int id) => _repo.deletePlanItem(id);
+
+  Future<BudgetMonthConfig?> getMonthConfig({required int year, required int month}) async {
+    final hid = currentHouseholdId;
+    if (hid == null) return null;
+    return _repo.getMonthConfig(householdId: hid, year: year, month: month);
+  }
+
+  Future<void> upsertMonthConfig({
+    required int year,
+    required int month,
+    required double? startAmount,
+  }) async {
+    final hid = currentHouseholdId;
+    if (hid == null) return;
+    await _repo.upsertMonthConfig(householdId: hid, year: year, month: month, startAmount: startAmount);
+  }
+
   /// Weekly spending breakdown.
   Future<List<WeekSpend>> getByWeek({
     required int year,

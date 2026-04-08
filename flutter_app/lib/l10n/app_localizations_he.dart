@@ -291,6 +291,33 @@ class AppLocalizationsHe extends AppLocalizations {
   String get budgetPlanHint => 'הגדר תקציב לכל קטגוריה לחודש זה';
 
   @override
+  String get budgetPlanAddCategory => 'הוסף קטגוריה';
+
+  @override
+  String get budgetPlanAddItem => 'הוסף פריט';
+
+  @override
+  String get budgetPlanStartAmount => 'תקציב התחלתי';
+
+  @override
+  String get budgetPlanTotal => 'סה״כ מתוכנן';
+
+  @override
+  String get budgetPlanBalance => 'יתרה';
+
+  @override
+  String get budgetPlanDescriptionHint => 'תיאור';
+
+  @override
+  String get budgetPlanNoCategories => 'אין קטגוריות הוצאה. לחץ + להוספה.';
+
+  @override
+  String get budgetPlanAdvanced => 'מתקדם';
+
+  @override
+  String get budgetPlanDeleteItem => 'מחק פריט';
+
+  @override
   String get assetsTitle => 'נכסים';
 
   @override

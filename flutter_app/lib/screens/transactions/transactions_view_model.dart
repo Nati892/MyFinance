@@ -423,6 +423,32 @@ class TransactionsViewModel extends ChangeNotifier {
     }
   }
 
+  // ── Frequent amounts helper ────────────────────────────────────────────────
+
+  /// Returns the top 5–7 most-used amounts for the given category id,
+  /// computed from already-loaded transactions for the current period.
+  List<double> getTopAmountsForCategory(int? categoryId, {bool isExpense = true}) {
+    if (categoryId == null) return [];
+    final freq = <double, int>{};
+    if (isExpense) {
+      for (final e in expenses) {
+        if (e.category?.id == categoryId) {
+          freq[e.amount] = (freq[e.amount] ?? 0) + 1;
+        }
+      }
+    } else {
+      for (final i in incomes) {
+        if (i.category?.id == categoryId) {
+          freq[i.amount] = (freq[i.amount] ?? 0) + 1;
+        }
+      }
+    }
+    return (freq.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
+        .take(7)
+        .map((e) => e.key)
+        .toList();
+  }
+
   // ── Card management ───────────────────────────────────────────────────────
 
   Future<void> loadCards() async {

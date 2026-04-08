@@ -662,6 +662,60 @@ abstract class AppLocalizations {
   /// **'Set budget for each category for this month'**
   String get budgetPlanHint;
 
+  /// No description provided for @budgetPlanAddCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Category'**
+  String get budgetPlanAddCategory;
+
+  /// No description provided for @budgetPlanAddItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Add item'**
+  String get budgetPlanAddItem;
+
+  /// No description provided for @budgetPlanStartAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting budget'**
+  String get budgetPlanStartAmount;
+
+  /// No description provided for @budgetPlanTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total planned'**
+  String get budgetPlanTotal;
+
+  /// No description provided for @budgetPlanBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get budgetPlanBalance;
+
+  /// No description provided for @budgetPlanDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get budgetPlanDescriptionHint;
+
+  /// No description provided for @budgetPlanNoCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'No expense categories. Tap + to add one.'**
+  String get budgetPlanNoCategories;
+
+  /// No description provided for @budgetPlanAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get budgetPlanAdvanced;
+
+  /// No description provided for @budgetPlanDeleteItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete item'**
+  String get budgetPlanDeleteItem;
+
   /// No description provided for @assetsTitle.
   ///
   /// In en, this message translates to:

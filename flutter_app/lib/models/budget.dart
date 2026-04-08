@@ -49,6 +49,54 @@ class MonthBudgetRow {
       );
 }
 
+/// A single planned expense item under a category for a given month.
+class BudgetPlanItem {
+  final int id;
+  final int expenseCategoryId;
+  final int year;
+  final int month;
+  final String? description;
+  final double amount;
+
+  const BudgetPlanItem({
+    required this.id,
+    required this.expenseCategoryId,
+    required this.year,
+    required this.month,
+    this.description,
+    required this.amount,
+  });
+
+  factory BudgetPlanItem.fromJson(Map<String, dynamic> json) => BudgetPlanItem(
+        id: json['id'] as int,
+        expenseCategoryId: json['expenseCategoryId'] as int,
+        year: json['year'] as int,
+        month: json['month'] as int,
+        description: json['description'] as String?,
+        amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      );
+
+  BudgetPlanItem copyWith({String? description, double? amount}) => BudgetPlanItem(
+        id: id,
+        expenseCategoryId: expenseCategoryId,
+        year: year,
+        month: month,
+        description: description ?? this.description,
+        amount: amount ?? this.amount,
+      );
+}
+
+/// Per-month household config — start amount for the balance view.
+class BudgetMonthConfig {
+  final double? startAmount;
+
+  const BudgetMonthConfig({this.startAmount});
+
+  factory BudgetMonthConfig.fromJson(Map<String, dynamic> json) => BudgetMonthConfig(
+        startAmount: (json['startAmount'] as num?)?.toDouble(),
+      );
+}
+
 /// Spending per calendar week — from GET /app/budget/by-week.
 class WeekSpend {
   final String weekLabel;

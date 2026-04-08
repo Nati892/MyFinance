@@ -31,6 +31,8 @@ const Note = require('./note')(sequelize, Sequelize.DataTypes);
 const Asset = require('./asset')(sequelize, Sequelize.DataTypes);
 const Card = require('./card')(sequelize, Sequelize.DataTypes);
 const CategoryBudgetOverride = require('./categoryBudgetOverride')(sequelize, Sequelize.DataTypes);
+const BudgetPlanItem = require('./budgetPlanItem')(sequelize, Sequelize.DataTypes);
+const BudgetMonthConfig = require('./budgetMonthConfig')(sequelize, Sequelize.DataTypes);
 const ShoppingCategory = require('./shopping-category')(sequelize, Sequelize.DataTypes);
 const ShoppingStore = require('./shopping-store')(sequelize, Sequelize.DataTypes);
 const ShoppingItem = require('./shopping-item')(sequelize, Sequelize.DataTypes);
@@ -216,6 +218,8 @@ const db = {
   Asset,
   Card,
   CategoryBudgetOverride,
+  BudgetPlanItem,
+  BudgetMonthConfig,
   ShoppingCategory,
   ShoppingStore,
   ShoppingItem,

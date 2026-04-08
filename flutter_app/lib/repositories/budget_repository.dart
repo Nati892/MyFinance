@@ -82,6 +82,89 @@ class BudgetRepository {
         .toList();
   }
 
+  /// GET /app/budget/plan-items — all plan items for a month.
+  Future<List<BudgetPlanItem>> getPlanItems({
+    required int householdId,
+    required int year,
+    required int month,
+  }) async {
+    final res = await _dio.get('/app/budget/plan-items', queryParameters: {
+      'householdId': householdId,
+      'year': year,
+      'month': month,
+    });
+    final data = res.data as Map<String, dynamic>;
+    final items = data['items'] as List<dynamic>? ?? [];
+    return items.map((e) => BudgetPlanItem.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// POST /app/budget/plan-items — create a new plan item.
+  Future<BudgetPlanItem> createPlanItem({
+    required int householdId,
+    required int expenseCategoryId,
+    required int year,
+    required int month,
+    required String? description,
+    required double amount,
+  }) async {
+    final res = await _dio.post('/app/budget/plan-items', data: {
+      'householdId': householdId,
+      'expenseCategoryId': expenseCategoryId,
+      'year': year,
+      'month': month,
+      'description': description,
+      'amount': amount,
+    });
+    return BudgetPlanItem.fromJson(res.data['item'] as Map<String, dynamic>);
+  }
+
+  /// PUT /app/budget/plan-items/:id — update description/amount.
+  Future<BudgetPlanItem> updatePlanItem({
+    required int id,
+    required String? description,
+    required double amount,
+  }) async {
+    final res = await _dio.put('/app/budget/plan-items/$id', data: {
+      'description': description,
+      'amount': amount,
+    });
+    return BudgetPlanItem.fromJson(res.data['item'] as Map<String, dynamic>);
+  }
+
+  /// DELETE /app/budget/plan-items/:id
+  Future<void> deletePlanItem(int id) => _dio.delete('/app/budget/plan-items/$id');
+
+  /// GET /app/budget/month-config
+  Future<BudgetMonthConfig?> getMonthConfig({
+    required int householdId,
+    required int year,
+    required int month,
+  }) async {
+    final res = await _dio.get('/app/budget/month-config', queryParameters: {
+      'householdId': householdId,
+      'year': year,
+      'month': month,
+    });
+    final data = res.data as Map<String, dynamic>;
+    final config = data['config'];
+    if (config == null) return null;
+    return BudgetMonthConfig.fromJson(config as Map<String, dynamic>);
+  }
+
+  /// PUT /app/budget/month-config — upsert startAmount.
+  Future<void> upsertMonthConfig({
+    required int householdId,
+    required int year,
+    required int month,
+    required double? startAmount,
+  }) =>
+      _dio.put('/app/budget/month-config', data: {
+        'householdId': householdId,
+        'year': year,
+        'month': month,
+        'startAmount': startAmount,
+      });
+
   /// GET /app/budget/by-month — monthly spend over a range of months.
   Future<List<MonthSpend>> getByMonth({
     required int householdId,

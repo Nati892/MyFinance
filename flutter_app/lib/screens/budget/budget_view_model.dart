@@ -68,6 +68,7 @@ class BudgetViewModel extends ChangeNotifier {
     }
     load();
     if (viewMode == BudgetViewMode.graph) _loadGraphData();
+    if (viewMode == BudgetViewMode.plan) loadPlanData();
   }
 
   void nextMonth() {
@@ -79,6 +80,7 @@ class BudgetViewModel extends ChangeNotifier {
     }
     load();
     if (viewMode == BudgetViewMode.graph) _loadGraphData();
+    if (viewMode == BudgetViewMode.plan) loadPlanData();
   }
 
   // ── Data ────────────────────────────────────────────────────────────────────
@@ -86,6 +88,14 @@ class BudgetViewModel extends ChangeNotifier {
   List<WeekSpend> weekData = [];
   List<MonthSpend> monthData = [];
   List<Category> allExpenseCategories = [];
+
+  // ── Plan data ────────────────────────────────────────────────────────────────
+  List<BudgetPlanItem> planItems = [];
+  BudgetMonthConfig? planMonthConfig;
+  bool planLoading = false;
+
+  /// IDs of categories currently expanded in plan view.
+  Set<int> expandedPlanCategories = {};
 
   // ── Load state ──────────────────────────────────────────────────────────────
   BudgetLoadState state = BudgetLoadState.loading;
@@ -99,6 +109,7 @@ class BudgetViewModel extends ChangeNotifier {
   int? selectedCategoryId;
 
   bool get noHousehold => _householdService.currentHouseholdId == null;
+  int? get householdId => _householdService.currentHouseholdId;
 
   // ── Inline budget editing ───────────────────────────────────────────────────
   int? editingBudgetCategoryId;
@@ -153,7 +164,11 @@ class BudgetViewModel extends ChangeNotifier {
   void setViewMode(BudgetViewMode mode) {
     viewMode = mode;
     if (mode == BudgetViewMode.graph) _loadGraphData();
-    if (mode == BudgetViewMode.plan) loadExpenseCategories();
+    if (mode == BudgetViewMode.plan) {
+      loadExpenseCategories();
+      loadPlanData();
+      // Start all categories expanded by default
+    }
     notifyListeners();
   }
 
@@ -266,6 +281,135 @@ class BudgetViewModel extends ChangeNotifier {
     editingBudgetCategoryId = null;
     editingBudgetValue = null;
     await load();
+  }
+
+  // ── Plan data ────────────────────────────────────────────────────────────────
+
+  Future<void> loadPlanData() async {
+    planLoading = true;
+    notifyListeners();
+    try {
+      final results = await Future.wait([
+        _budgetService.getPlanItems(year: currentYear, month: currentMonth),
+        _budgetService.getMonthConfig(year: currentYear, month: currentMonth),
+      ]);
+      planItems = results[0] as List<BudgetPlanItem>;
+      planMonthConfig = results[1] as BudgetMonthConfig?;
+
+      // Default all categories to expanded
+      if (expandedPlanCategories.isEmpty && allExpenseCategories.isNotEmpty) {
+        expandedPlanCategories = {
+          ...allExpenseCategories.map((c) => c.id),
+          ...allExpenseCategories.expand((c) => c.subCategories.map((s) => s.id)),
+        };
+      }
+    } catch (_) {}
+    planLoading = false;
+    notifyListeners();
+  }
+
+  void togglePlanCategoryExpanded(int categoryId) {
+    if (expandedPlanCategories.contains(categoryId)) {
+      expandedPlanCategories = {...expandedPlanCategories}..remove(categoryId);
+    } else {
+      expandedPlanCategories = {...expandedPlanCategories, categoryId};
+    }
+    notifyListeners();
+  }
+
+  List<BudgetPlanItem> planItemsForCategory(int categoryId) =>
+      planItems.where((i) => i.expenseCategoryId == categoryId).toList();
+
+  double planTotalForCategory(int categoryId) =>
+      planItemsForCategory(categoryId).fold(0.0, (sum, i) => sum + i.amount);
+
+  double get planGrandTotal => planItems.fold(0.0, (sum, i) => sum + i.amount);
+
+  double? get planBalance {
+    final start = planMonthConfig?.startAmount;
+    if (start == null) return null;
+    return start - planGrandTotal;
+  }
+
+  Future<void> addPlanItem({
+    required int categoryId,
+    String? description,
+    double amount = 0,
+  }) async {
+    try {
+      final item = await _budgetService.createPlanItem(
+        expenseCategoryId: categoryId,
+        year: currentYear,
+        month: currentMonth,
+        description: description,
+        amount: amount,
+      );
+      planItems = [...planItems, item];
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> updatePlanItem({
+    required int id,
+    required String? description,
+    required double amount,
+  }) async {
+    try {
+      final updated = await _budgetService.updatePlanItem(
+        id: id,
+        description: description,
+        amount: amount,
+      );
+      planItems = planItems.map((i) => i.id == id ? updated : i).toList();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> deletePlanItem(int id) async {
+    try {
+      await _budgetService.deletePlanItem(id);
+      planItems = planItems.where((i) => i.id != id).toList();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> setPlanStartAmount(double? amount) async {
+    planMonthConfig = BudgetMonthConfig(startAmount: amount);
+    notifyListeners();
+    try {
+      await _budgetService.upsertMonthConfig(
+        year: currentYear,
+        month: currentMonth,
+        startAmount: amount,
+      );
+    } catch (_) {}
+  }
+
+  // ── Category management (for plan view) ──────────────────────────────────────
+
+  Future<void> createExpenseCategory(Map<String, dynamic> body) async {
+    try {
+      final cat = await _categoryRepo.createExpenseCategory(body);
+      allExpenseCategories = [...allExpenseCategories, cat];
+      // Auto-expand the new category
+      expandedPlanCategories = {...expandedPlanCategories, cat.id};
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void updateExpenseCategoryInList(Category updated) {
+    allExpenseCategories = allExpenseCategories.map((c) => c.id == updated.id ? updated : c).toList();
+    notifyListeners();
+  }
+
+  Future<void> deleteExpenseCategory(int id, {bool deleteRefs = false}) async {
+    try {
+      await _categoryRepo.deleteExpenseCategory(id, deleteRefs: deleteRefs);
+      allExpenseCategories = allExpenseCategories.where((c) => c.id != id).toList();
+      planItems = planItems.where((i) => i.expenseCategoryId != id).toList();
+      expandedPlanCategories = {...expandedPlanCategories}..remove(id);
+      notifyListeners();
+    } catch (_) {}
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────

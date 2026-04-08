@@ -11,10 +11,11 @@ import 'package:household/services/household_service.dart';
 import 'package:household/utils/icon_helper.dart';
 import 'package:household/screens/transactions/transactions_view_model.dart';
 import 'package:household/widgets/create_category_sheet.dart';
+import 'package:household/widgets/expense_form_sheet.dart';
 import 'package:household/widgets/transaction_timeline.dart';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
-const _kExpensePurple = Color(0xFF667EEA);
+const _kExpensePurple = kExpensePurple;
 const _kIncomeGreen   = Color(0xFF4CAF50);
 
 class TransactionsScreen extends ConsumerStatefulWidget {
@@ -161,6 +162,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 _expandedCategoryId = null;
                 _expandedCategoryYCenter = null;
               }),
+              onEditSubCategory: (sub) {
+                setState(() {
+                  _expandedCategoryId = null;
+                  _expandedCategoryYCenter = null;
+                });
+                _showEditCategorySheet(context, vm, sub);
+              },
             );
 
             final isRTL = Directionality.of(context) == TextDirection.rtl;
@@ -241,7 +249,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => vm.isExpenseMode
-          ? const _ExpenseFormSheet()
+          ? const ExpenseFormSheet()
           : const _IncomeFormSheet(),
     );
   }
@@ -464,6 +472,7 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     final filterCat = widget.filterCategoryId != null
         ? widget.categories
             .expand((c) => c.flatList)
@@ -493,10 +502,13 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
               children: [
                 ...widget.categories.map((cat) {
                   final key = _categoryKeys.putIfAbsent(cat.id, () => GlobalKey());
+                  final catLabel = (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true)
+                      ? cat.nameHe!
+                      : cat.name;
                   return Container(
                     key: key,
                     child: _QuickAddTileWidget(
-                      label: cat.name,
+                      label: catLabel,
                       color: cat.color,
                       icon: cat.icon,
                       hasSubCategories: cat.subCategories.isNotEmpty,
@@ -636,6 +648,10 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
 
   void _showCategoryActions(BuildContext context, Category cat) {
     final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context);
+    final catLabel = (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true)
+        ? cat.nameHe!
+        : cat.name;
     // Determine if category is expense or income to enable "Add Subcategory"
     showModalBottomSheet(
       context: context,
@@ -653,7 +669,7 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
                     color: const Color(0xFFDDDDDD),
                     borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 12),
-            Text(cat.name,
+            Text(catLabel,
                 style: const TextStyle(
                     fontWeight: FontWeight.w600, fontSize: 15)),
             const SizedBox(height: 8),
@@ -963,6 +979,7 @@ class _SubCategoriesArc extends StatefulWidget {
   final Category parent;
   final ValueChanged<int> onSelected;
   final VoidCallback onClose;
+  final ValueChanged<Category>? onEditSubCategory;
 
   // ── Tune these to change the feel of the arc ─────────────────────────────
   static const double itemHeight   = 52.0;
@@ -978,6 +995,7 @@ class _SubCategoriesArc extends StatefulWidget {
     required this.parent,
     required this.onSelected,
     required this.onClose,
+    this.onEditSubCategory,
   });
 
   @override
@@ -1116,6 +1134,12 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
             opacity: layout.opacity,
             child: GestureDetector(
               onTap: layout.opacity > 0.05 ? () => widget.onSelected(item.id) : null,
+              onLongPress: (layout.opacity > 0.05 && !item.isGeneral && widget.onEditSubCategory != null)
+                  ? () {
+                      final sub = widget.parent.subCategories.firstWhere((s) => s.id == item.id);
+                      widget.onEditSubCategory!(sub);
+                    }
+                  : null,
               child: _WheelItem(
                 icon:      item.icon,
                 name:      item.name,
@@ -1684,617 +1708,6 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
   }
 }
 
-// ─── Expense form sheet ───────────────────────────────────────────────────────
-
-class _ExpenseFormSheet extends ConsumerStatefulWidget {
-  const _ExpenseFormSheet();
-
-  @override
-  ConsumerState<_ExpenseFormSheet> createState() => _ExpenseFormSheetState();
-}
-
-class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
-  late TextEditingController _amountCtrl;
-  late TextEditingController _descCtrl;
-  late TextEditingController _noteCtrl;
-  int? _selectedParentId;
-
-  static const _paymentMethodKeys = [
-    ('card',         '💳'),
-    ('cash',         '💵'),
-    ('bank_transfer','🏦'),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    final vm = ref.read(transactionsViewModelProvider);
-    _amountCtrl = TextEditingController(
-        text: vm.formAmount != null ? vm.formAmount.toString() : '');
-    _descCtrl = TextEditingController(text: vm.formDescription);
-    _noteCtrl = TextEditingController(text: vm.formNote);
-    // Pre-select parent based on current formCategoryId (for edit mode)
-    if (vm.formCategoryId != null) {
-      for (final cat in vm.expenseCategories) {
-        if (cat.id == vm.formCategoryId) {
-          _selectedParentId = cat.id;
-          break;
-        }
-        for (final sub in cat.subCategories) {
-          if (sub.id == vm.formCategoryId) {
-            _selectedParentId = cat.id;
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _amountCtrl.dispose();
-    _descCtrl.dispose();
-    _noteCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = ref.watch(transactionsViewModelProvider);
-    final l10n = AppLocalizations.of(context)!;
-    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
-    final locale = Localizations.localeOf(context);
-    final selectedCategoryName = _getExpenseCategoryName(vm, locale.languageCode);
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPad),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHandle(),
-            const SizedBox(height: 16),
-            _buildHeader(vm, l10n.transactionsExpenseLabel, _kExpensePurple, l10n, selectedCategoryName),
-            if (vm.modalError != null) _buildError(vm),
-            const SizedBox(height: 16),
-            _buildAmountField(vm),
-            const SizedBox(height: 16),
-            _buildLabel(l10n.expensesCategory),
-            const SizedBox(height: 8),
-            _buildCategoryChips(vm, vm.expenseCategories, l10n),
-            const SizedBox(height: 16),
-            _buildLabel(l10n.expensesDate),
-            const SizedBox(height: 8),
-            _buildDateTimePicker(vm),
-            const SizedBox(height: 16),
-            _buildLabel(l10n.expensesPaymentMethod),
-            const SizedBox(height: 8),
-            _buildPaymentSegment(vm, _kExpensePurple, l10n),
-            const SizedBox(height: 16),
-            _buildLabel(l10n.expensesDescription, optional: true),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _descCtrl,
-              onChanged: vm.setFormDescription,
-              decoration: _inputDeco(l10n.expensesDescriptionPlaceholder, _kExpensePurple),
-              maxLength: 200,
-              buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-            ),
-            const SizedBox(height: 16),
-            _buildLabel(l10n.expensesNote, optional: true),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _noteCtrl,
-              onChanged: vm.setFormNote,
-              decoration: _inputDeco(l10n.expensesNotePlaceholder, _kExpensePurple),
-              maxLines: 3,
-              maxLength: 500,
-              buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-            ),
-            const SizedBox(height: 20),
-            _buildSaveButton(
-              vm: vm,
-              color: _kExpensePurple,
-              editLabel: l10n.expensesSave,
-              addLabel: l10n.expensesAdd,
-              onSave: vm.saveExpense,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHandle() => Center(
-    child: Container(
-      width: 36, height: 4,
-      decoration: BoxDecoration(
-        color: const Color(0xFFDDDDDD),
-        borderRadius: BorderRadius.circular(2),
-      ),
-    ),
-  );
-
-  Widget _buildHeader(TransactionsViewModel vm, String type, Color color, AppLocalizations l10n, [String? selectedCategoryName]) {
-    final editLabel = type == l10n.transactionsExpenseLabel ? l10n.expensesEdit : l10n.incomesEdit;
-    final newLabel = type == l10n.transactionsExpenseLabel ? l10n.expensesNew : l10n.incomesNew;
-    final title = vm.isEditMode
-        ? editLabel
-        : (selectedCategoryName != null ? '$newLabel - $selectedCategoryName' : newLabel);
-    return Row(
-      children: [
-        Container(
-          width: 6, height: 20,
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () {
-            vm.closeModal();
-            Navigator.pop(context);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildError(TransactionsViewModel vm) {
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF0F0),
-            border: Border.all(color: const Color(0xFFFFCDD2)),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(vm.modalError!,
-              style: const TextStyle(color: Color(0xFFD32F2F), fontSize: 13)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAmountField(TransactionsViewModel vm) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
-        borderRadius: BorderRadius.circular(10),
-        color: const Color(0xFFFAFAFA),
-      ),
-      child: Row(
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14),
-            child: Text('₪',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF444444))),
-          ),
-          Expanded(
-            child: TextField(
-              controller: _amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                hintText: '0.00',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 14),
-              ),
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-              onChanged: (v) => vm.setFormAmount(double.tryParse(v)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryChips(TransactionsViewModel vm, List<Category> cats, AppLocalizations l10n) {
-    final locale = Localizations.localeOf(context);
-    if (cats.isEmpty) {
-      return Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [_buildNewCategoryChip(vm, l10n)],
-      );
-    }
-
-    final selectedParent = _selectedParentId != null
-        ? cats.where((c) => c.id == _selectedParentId).firstOrNull
-        : null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ...cats.map((cat) {
-              final isActiveParent = _selectedParentId == cat.id;
-              final base = _hexColor(cat.color);
-              final catName = (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true)
-                  ? cat.nameHe!
-                  : cat.name;
-              return GestureDetector(
-                onTap: () {
-                  setState(() => _selectedParentId = cat.id);
-                  vm.setFormCategory(cat.id);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isActiveParent ? base : base.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(iconDataFromName(cat.icon), size: 16,
-                          color: isActiveParent ? Colors.white : base),
-                      const SizedBox(width: 4),
-                      Text(
-                        catName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isActiveParent ? Colors.white : const Color(0xFF333333),
-                        ),
-                      ),
-                      if (cat.subCategories.isNotEmpty) ...[
-                        const SizedBox(width: 2),
-                        Icon(Icons.chevron_right, size: 14,
-                            color: isActiveParent ? Colors.white : base),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            }),
-            _buildNewCategoryChip(vm, l10n),
-          ],
-        ),
-        if (selectedParent != null && selectedParent.subCategories.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: selectedParent.subCategories.map((sub) {
-                final selected = vm.formCategoryId == sub.id;
-                final base = _hexColor(sub.color.isNotEmpty ? sub.color : selectedParent.color);
-                final subName = (locale.languageCode == 'he' && sub.nameHe?.isNotEmpty == true)
-                    ? sub.nameHe!
-                    : sub.name;
-                return GestureDetector(
-                  onTap: () => vm.setFormCategory(sub.id),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: selected ? base : base.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: selected ? base : base.withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (sub.icon != null && sub.icon!.isNotEmpty) ...[
-                          Icon(iconDataFromName(sub.icon), size: 13,
-                              color: selected ? Colors.white : base),
-                          const SizedBox(width: 3),
-                        ],
-                        Text(
-                          subName,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: selected ? Colors.white : const Color(0xFF444444),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildNewCategoryChip(TransactionsViewModel vm, AppLocalizations l10n) {
-    return GestureDetector(
-      onTap: () => _openCreateCategorySheet(context, ref, vm),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFDDDDDD)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.add, size: 16, color: Color(0xFF666666)),
-            const SizedBox(width: 4),
-            Text(l10n.commonNew, style: const TextStyle(fontSize: 13, color: Color(0xFF666666))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openCreateCategorySheet(BuildContext context, WidgetRef ref, TransactionsViewModel vm) {
-    final categoryType = vm.isExpenseMode ? 'expense' : 'income';
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => CreateCategorySheet(
-        categoryType: categoryType,
-        householdId: vm.householdId,
-        onCreated: (cat) {
-          if (vm.isExpenseMode) {
-            vm.addExpenseCategory(cat);
-          } else {
-            vm.addIncomeCategory(cat);
-          }
-          vm.setFormCategory(cat.id);
-        },
-      ),
-    );
-  }
-
-  Widget _buildDateTimePicker(TransactionsViewModel vm) {
-    final dt = vm.formDateTime;
-    final formatted =
-        '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}'
-        '  ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-
-    return GestureDetector(
-      onTap: () async {
-        final date = await showDatePicker(
-          context: context,
-          initialDate: vm.formDateTime,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now().add(const Duration(days: 1)),
-        );
-        if (date == null || !mounted) return;
-        final time = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.fromDateTime(vm.formDateTime),
-        );
-        if (time == null) return;
-        vm.setFormDateTime(
-            DateTime(date.year, date.month, date.day, time.hour, time.minute));
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
-          borderRadius: BorderRadius.circular(10),
-          color: const Color(0xFFFAFAFA),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.calendar_today, size: 16, color: Color(0xFF888888)),
-            const SizedBox(width: 8),
-            Text(formatted,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF333333))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentSegment(TransactionsViewModel vm, Color activeColor, AppLocalizations l10n) {
-    final labels = [l10n.paymentCard, l10n.paymentCash, l10n.paymentTransfer];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: _paymentMethodKeys.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final pm = entry.value;
-            final active = vm.formPaymentMethod == pm.$1;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => vm.setFormPayment(pm.$1),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: active ? activeColor : const Color(0xFFF0F0F0),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(pm.$2, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(height: 2),
-                      Text(
-                        labels[idx],
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: active ? Colors.white : const Color(0xFF666666),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-        if (vm.formPaymentMethod == 'card') ...[
-          const SizedBox(height: 10),
-          _buildCardPicker(vm, activeColor, l10n),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildCardPicker(TransactionsViewModel vm, Color activeColor, AppLocalizations l10n) {
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        _TxCardChip(
-          label: l10n.cardsNone,
-          active: vm.formCardId == null,
-          color: activeColor,
-          onTap: () => vm.setFormCardId(null),
-        ),
-        ...vm.cards.map((card) => _TxCardChip(
-          label: card.displayLabel,
-          active: vm.formCardId == card.id,
-          color: activeColor,
-          onTap: () => vm.setFormCardId(card.id),
-        )),
-        GestureDetector(
-          onTap: () => _showCardFormSheet(context, vm, activeColor),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              border: Border.all(color: activeColor, width: 1.5),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.add, size: 14, color: activeColor),
-                const SizedBox(width: 2),
-                Text('+', style: TextStyle(fontSize: 13, color: activeColor, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showCardFormSheet(BuildContext context, TransactionsViewModel vm, Color activeColor, {CreditCard? card}) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _TxCardFormSheet(card: card, vm: vm, activeColor: activeColor),
-    );
-  }
-
-  Widget _buildSaveButton({
-    required TransactionsViewModel vm,
-    required Color color,
-    required String editLabel,
-    required String addLabel,
-    required Future<void> Function() onSave,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: vm.modalSaving
-            ? null
-            : () async {
-                final nav = Navigator.of(context);
-                await onSave();
-                if (vm.modalError == null) nav.pop();
-              },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-        child: vm.modalSaving
-            ? const SizedBox(
-                height: 16,
-                width: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : Text(vm.isEditMode ? editLabel : addLabel,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-      ),
-    );
-  }
-
-  Widget _buildLabel(String text, {bool optional = false}) {
-    return Row(
-      children: [
-        Text(text,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF444444))),
-        if (optional)
-          Text(' ${AppLocalizations.of(context)!.commonOptional}',
-              style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA))),
-      ],
-    );
-  }
-
-  InputDecoration _inputDeco(String hint, Color focusColor) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(color: Color(0xFFAAAAAA)),
-    filled: true,
-    fillColor: const Color(0xFFFAFAFA),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
-    enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
-    focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: focusColor, width: 1.5)),
-  );
-
-  String? _getExpenseCategoryName(TransactionsViewModel vm, String languageCode) {
-    if (vm.formCategoryId == null) return null;
-    for (final cat in vm.expenseCategories) {
-      if (cat.id == vm.formCategoryId) {
-        return (languageCode == 'he' && cat.nameHe?.isNotEmpty == true) ? cat.nameHe! : cat.name;
-      }
-      for (final sub in cat.subCategories) {
-        if (sub.id == vm.formCategoryId) {
-          return (languageCode == 'he' && sub.nameHe?.isNotEmpty == true) ? sub.nameHe! : sub.name;
-        }
-      }
-    }
-    return null;
-  }
-
-  Color _hexColor(String hex) {
-    try {
-      return Color(int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
-    } catch (_) {
-      return const Color(0xFF888888);
-    }
-  }
-}
-
 // ─── Income form sheet ────────────────────────────────────────────────────────
 
 class _IncomeFormSheet extends ConsumerStatefulWidget {
@@ -2353,6 +1766,8 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
     final vm = ref.watch(transactionsViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
     final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    final locale = Localizations.localeOf(context);
+    final selectedCategoryName = _getIncomeCategoryName(vm, locale.languageCode);
 
     return Container(
       decoration: const BoxDecoration(
@@ -2367,10 +1782,11 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
           children: [
             _buildHandle(),
             const SizedBox(height: 16),
-            _buildHeader(vm, l10n.transactionsIncomeLabel, _kIncomeGreen, l10n),
+            _buildHeader(vm, l10n.transactionsIncomeLabel, _kIncomeGreen, l10n, vm.incomeCategories, selectedCategoryName),
             if (vm.modalError != null) _buildError(vm),
             const SizedBox(height: 16),
             _buildAmountField(vm),
+            _buildFrequentAmounts(vm, isExpense: false),
             const SizedBox(height: 16),
             _buildLabel(l10n.incomesCategory),
             const SizedBox(height: 8),
@@ -2428,22 +1844,35 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
     ),
   );
 
-  Widget _buildHeader(TransactionsViewModel vm, String type, Color color, AppLocalizations l10n, [String? selectedCategoryName]) {
+  Widget _buildHeader(TransactionsViewModel vm, String type, Color color, AppLocalizations l10n, List<Category> cats, [String? selectedCategoryName]) {
     final editLabel = type == l10n.transactionsExpenseLabel ? l10n.expensesEdit : l10n.incomesEdit;
     final newLabel = type == l10n.transactionsExpenseLabel ? l10n.expensesNew : l10n.incomesNew;
     final title = vm.isEditMode
         ? editLabel
         : (selectedCategoryName != null ? '$newLabel - $selectedCategoryName' : newLabel);
+    final selCat = vm.formCategoryId != null ? _findCategoryById(vm.formCategoryId!, cats) : null;
     return Row(
       children: [
-        Container(
-          width: 6, height: 20,
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
+        if (selCat != null) ...[
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: _hexColor(selCat.color),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(iconDataFromName(selCat.icon), size: 20, color: Colors.white),
           ),
-        ),
+          const SizedBox(width: 8),
+        ] else ...[
+          Container(
+            width: 6, height: 20,
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ],
         Expanded(
           child: Text(
             title,
@@ -2481,37 +1910,62 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
   }
 
   Widget _buildAmountField(TransactionsViewModel vm) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
-        borderRadius: BorderRadius.circular(10),
-        color: const Color(0xFFFAFAFA),
-      ),
-      child: Row(
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14),
-            child: Text('₪',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF444444))),
-          ),
-          Expanded(
-            child: TextField(
-              controller: _amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                hintText: '0.00',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 14),
-              ),
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-              onChanged: (v) => vm.setFormAmount(double.tryParse(v)),
+    return Row(
+      children: [
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildAdjustButton('-10', -10, vm),
+            _buildAdjustButton('-5', -5, vm),
+            _buildAdjustButton('−1', -1, vm),
+          ],
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
+              borderRadius: BorderRadius.circular(10),
+              color: const Color(0xFFFAFAFA),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('₪',
+                    style: TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF444444))),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: IntrinsicWidth(
+                    child: TextField(
+                      controller: _amountCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      textAlign: TextAlign.center,
+                      decoration: const InputDecoration(
+                        hintText: '0.00',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                        isDense: true,
+                      ),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                      onChanged: (v) => vm.setFormAmount(double.tryParse(v)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 6),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildAdjustButton('+1', 1, vm),
+            _buildAdjustButton('+5', 5, vm),
+            _buildAdjustButton('+10', 10, vm),
+          ],
+        ),
+      ],
     );
   }
 
@@ -2770,13 +2224,13 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
       spacing: 6,
       runSpacing: 6,
       children: [
-        _TxCardChip(
+        TxCardChip(
           label: l10n.cardsNone,
           active: vm.formCardId == null,
           color: activeColor,
           onTap: () => vm.setFormCardId(null),
         ),
-        ...vm.cards.map((card) => _TxCardChip(
+        ...vm.cards.map((card) => TxCardChip(
           label: card.displayLabel,
           active: vm.formCardId == card.id,
           color: activeColor,
@@ -2809,7 +2263,7 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _TxCardFormSheet(card: card, vm: vm, activeColor: activeColor),
+      builder: (_) => TxCardFormSheet(card: card, vm: vm, activeColor: activeColor),
     );
   }
 
@@ -2879,6 +2333,103 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
         borderSide: BorderSide(color: focusColor, width: 1.5)),
   );
 
+  void _adjustAmount(double delta, TransactionsViewModel vm) {
+    final current = double.tryParse(_amountCtrl.text) ?? 0.0;
+    final next = (current + delta).clamp(0.0, 999999.0);
+    final formatted = next == next.truncateToDouble()
+        ? next.toInt().toString()
+        : next.toStringAsFixed(2);
+    _amountCtrl.text = formatted;
+    vm.setFormAmount(next == 0 ? null : next);
+  }
+
+  Widget _buildAdjustButton(String label, double delta, TransactionsViewModel vm) {
+    return GestureDetector(
+      onTap: () => _adjustAmount(delta, vm),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        margin: const EdgeInsets.symmetric(vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF444444)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFrequentAmounts(TransactionsViewModel vm, {required bool isExpense}) {
+    final amounts = vm.getTopAmountsForCategory(vm.formCategoryId, isExpense: isExpense);
+    if (amounts.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 34,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: amounts.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final a = amounts[i];
+              final label = a == a.truncateToDouble()
+                  ? '₪${a.toInt()}'
+                  : '₪${a.toStringAsFixed(2)}';
+              return GestureDetector(
+                onTap: () {
+                  _amountCtrl.text = a == a.truncateToDouble()
+                      ? a.toInt().toString()
+                      : a.toStringAsFixed(2);
+                  vm.setFormAmount(a);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F4FF),
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(color: const Color(0xFFB0C4FF)),
+                  ),
+                  child: Text(label,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3366CC))),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Category? _findCategoryById(int id, List<Category> cats) {
+    for (final cat in cats) {
+      if (cat.id == id) return cat;
+      for (final sub in cat.subCategories) {
+        if (sub.id == id) return sub;
+      }
+    }
+    return null;
+  }
+
+  String? _getIncomeCategoryName(TransactionsViewModel vm, String languageCode) {
+    if (vm.formCategoryId == null) return null;
+    for (final cat in vm.incomeCategories) {
+      if (cat.id == vm.formCategoryId) {
+        return (languageCode == 'he' && cat.nameHe?.isNotEmpty == true) ? cat.nameHe! : cat.name;
+      }
+      for (final sub in cat.subCategories) {
+        if (sub.id == vm.formCategoryId) {
+          return (languageCode == 'he' && sub.nameHe?.isNotEmpty == true) ? sub.nameHe! : sub.name;
+        }
+      }
+    }
+    return null;
+  }
+
   Color _hexColor(String hex) {
     try {
       return Color(int.parse('FF${hex.replaceAll('#', '')}', radix: 16));
@@ -2888,226 +2439,3 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
   }
 }
 
-// ── Card chip ─────────────────────────────────────────────────────────────────
-
-class _TxCardChip extends StatelessWidget {
-  final String label;
-  final bool active;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _TxCardChip({required this.label, required this.active, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? color : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: active ? color : const Color(0xFFDDDDDD),
-            width: 1.5,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: active ? Colors.white : const Color(0xFF333333),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Card form sheet ───────────────────────────────────────────────────────────
-
-class _TxCardFormSheet extends ConsumerStatefulWidget {
-  final CreditCard? card;
-  final TransactionsViewModel vm;
-  final Color activeColor;
-
-  const _TxCardFormSheet({this.card, required this.vm, required this.activeColor});
-
-  @override
-  ConsumerState<_TxCardFormSheet> createState() => _TxCardFormSheetState();
-}
-
-class _TxCardFormSheetState extends ConsumerState<_TxCardFormSheet> {
-  late TextEditingController _lastFourCtrl;
-  late TextEditingController _nicknameCtrl;
-  late TextEditingController _bankCtrl;
-  String? _cardType;
-  bool _saving = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _lastFourCtrl = TextEditingController(text: widget.card?.lastFourDigits ?? '');
-    _nicknameCtrl = TextEditingController(text: widget.card?.nickname ?? '');
-    _bankCtrl     = TextEditingController(text: widget.card?.bankName ?? '');
-    _cardType     = widget.card?.cardType;
-  }
-
-  @override
-  void dispose() {
-    _lastFourCtrl.dispose();
-    _nicknameCtrl.dispose();
-    _bankCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    final digits = _lastFourCtrl.text.trim();
-    if (digits.length != 4 || !RegExp(r'^\d{4}$').hasMatch(digits)) {
-      setState(() => _error = 'Enter exactly 4 digits.');
-      return;
-    }
-    setState(() { _saving = true; _error = null; });
-
-    final hid = ref.read(householdServiceProvider).currentHouseholdId;
-    if (hid == null) { setState(() => _saving = false); return; }
-
-    final body = <String, dynamic>{
-      'lastFourDigits': digits,
-      if (_nicknameCtrl.text.trim().isNotEmpty) 'nickname': _nicknameCtrl.text.trim(),
-      if (_bankCtrl.text.trim().isNotEmpty) 'bankName': _bankCtrl.text.trim(),
-      if (_cardType != null) 'cardType': _cardType,
-      'householdId': hid,
-    };
-
-    try {
-      if (widget.card == null) {
-        await widget.vm.createCard(body);
-      } else {
-        await widget.vm.updateCard(widget.card!.id, body);
-      }
-      if (mounted) Navigator.of(context).pop();
-    } catch (_) {
-      setState(() { _saving = false; _error = 'Failed to save. Please try again.'; });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
-    final isEdit = widget.card != null;
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPad),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isEdit ? l10n.cardsEditCard : l10n.cardsAddCard,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
-
-          Text(l10n.cardsLastFour, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444))),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _lastFourCtrl,
-            keyboardType: TextInputType.number,
-            maxLength: 4,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: _inputDeco('1234', widget.activeColor),
-          ),
-          const SizedBox(height: 12),
-
-          Text('${l10n.cardsNickname} ', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444))),
-          const SizedBox(height: 6),
-          TextField(controller: _nicknameCtrl, decoration: _inputDeco('e.g. My Visa', widget.activeColor)),
-          const SizedBox(height: 12),
-
-          Text('${l10n.cardsBankName} ', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF444444))),
-          const SizedBox(height: 6),
-          TextField(controller: _bankCtrl, decoration: _inputDeco('e.g. Leumi', widget.activeColor)),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              _typeBtn(l10n.cardsTypeCredit, 'credit'),
-              const SizedBox(width: 8),
-              _typeBtn(l10n.cardsTypeDebit, 'debit'),
-              const SizedBox(width: 8),
-              _typeBtn('—', null),
-            ],
-          ),
-
-          if (_error != null) ...[
-            const SizedBox(height: 10),
-            Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
-          ],
-
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _saving ? null : _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.activeColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: _saving
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _typeBtn(String label, String? type) {
-    final active = _cardType == type;
-    return GestureDetector(
-      onTap: () => setState(() => _cardType = type),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? widget.activeColor : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: active ? widget.activeColor : const Color(0xFFDDDDDD)),
-        ),
-        child: Text(label, style: TextStyle(
-          fontSize: 12, fontWeight: FontWeight.w600,
-          color: active ? Colors.white : const Color(0xFF555555),
-        )),
-      ),
-    );
-  }
-
-  InputDecoration _inputDeco(String hint, Color focusColor) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(color: Color(0xFFAAAAAA)),
-    filled: true,
-    fillColor: const Color(0xFFFAFAFA),
-    counterText: '',
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: focusColor, width: 1.5)),
-  );
-}

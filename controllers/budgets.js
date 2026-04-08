@@ -1,4 +1,4 @@
-const { ExpenseCategory, CategoryBudgetOverride, Expense, HouseholdMember, sequelize } = require('../models');
+const { ExpenseCategory, CategoryBudgetOverride, Expense, HouseholdMember, BudgetPlanItem, BudgetMonthConfig, sequelize } = require('../models');
 const { Op, fn, col, literal } = require('sequelize');
 
 class BudgetsController {
@@ -300,6 +300,157 @@ class BudgetsController {
       console.error('getSpendingByMonth error:', error);
       ctx.status = 500;
       ctx.body = { error: 'Failed to retrieve spending by month' };
+    }
+  }
+  // ── Budget Plan Items ───────────────────────────────────────────────────────
+
+  /**
+   * GET /app/budget/plan-items?householdId=X&year=Y&month=M
+   */
+  async getPlanItems(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { householdId, year, month } = ctx.query;
+      if (!householdId || !year || !month) {
+        ctx.status = 400; ctx.body = { error: 'householdId, year, month required' }; return;
+      }
+      const membership = await HouseholdMember.findOne({ where: { householdId, appUserId: appUser.id } });
+      if (!membership) { ctx.status = 403; ctx.body = { error: 'Not a member' }; return; }
+
+      const items = await BudgetPlanItem.findAll({
+        where: { householdId, year: parseInt(year), month: parseInt(month) },
+        order: [['createdAt', 'ASC']]
+      });
+      ctx.body = { success: true, items };
+    } catch (err) {
+      console.error('getPlanItems error:', err);
+      ctx.status = 500; ctx.body = { error: 'Failed to get plan items' };
+    }
+  }
+
+  /**
+   * POST /app/budget/plan-items
+   * Body: { householdId, expenseCategoryId, year, month, description, amount }
+   */
+  async createPlanItem(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { householdId, expenseCategoryId, year, month, description, amount } = ctx.request.body;
+      if (!householdId || !expenseCategoryId || !year || !month || amount === undefined) {
+        ctx.status = 400; ctx.body = { error: 'householdId, expenseCategoryId, year, month, amount required' }; return;
+      }
+      const membership = await HouseholdMember.findOne({ where: { householdId, appUserId: appUser.id } });
+      if (!membership) { ctx.status = 403; ctx.body = { error: 'Not a member' }; return; }
+
+      const item = await BudgetPlanItem.create({
+        householdId, expenseCategoryId, year, month,
+        description: description || null,
+        amount: parseFloat(amount) || 0
+      });
+      ctx.status = 201;
+      ctx.body = { success: true, item };
+    } catch (err) {
+      console.error('createPlanItem error:', err);
+      ctx.status = 500; ctx.body = { error: 'Failed to create plan item' };
+    }
+  }
+
+  /**
+   * PUT /app/budget/plan-items/:id
+   * Body: { description, amount }
+   */
+  async updatePlanItem(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { id } = ctx.params;
+      const { description, amount } = ctx.request.body;
+
+      const item = await BudgetPlanItem.findByPk(id);
+      if (!item) { ctx.status = 404; ctx.body = { error: 'Item not found' }; return; }
+
+      const membership = await HouseholdMember.findOne({ where: { householdId: item.householdId, appUserId: appUser.id } });
+      if (!membership) { ctx.status = 403; ctx.body = { error: 'Not a member' }; return; }
+
+      await item.update({
+        description: description !== undefined ? (description || null) : item.description,
+        amount: amount !== undefined ? (parseFloat(amount) || 0) : item.amount
+      });
+      ctx.body = { success: true, item };
+    } catch (err) {
+      console.error('updatePlanItem error:', err);
+      ctx.status = 500; ctx.body = { error: 'Failed to update plan item' };
+    }
+  }
+
+  /**
+   * DELETE /app/budget/plan-items/:id
+   */
+  async deletePlanItem(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { id } = ctx.params;
+
+      const item = await BudgetPlanItem.findByPk(id);
+      if (!item) { ctx.status = 404; ctx.body = { error: 'Item not found' }; return; }
+
+      const membership = await HouseholdMember.findOne({ where: { householdId: item.householdId, appUserId: appUser.id } });
+      if (!membership) { ctx.status = 403; ctx.body = { error: 'Not a member' }; return; }
+
+      await item.destroy();
+      ctx.body = { success: true };
+    } catch (err) {
+      console.error('deletePlanItem error:', err);
+      ctx.status = 500; ctx.body = { error: 'Failed to delete plan item' };
+    }
+  }
+
+  // ── Budget Month Config ─────────────────────────────────────────────────────
+
+  /**
+   * GET /app/budget/month-config?householdId=X&year=Y&month=M
+   */
+  async getMonthConfig(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { householdId, year, month } = ctx.query;
+      if (!householdId || !year || !month) {
+        ctx.status = 400; ctx.body = { error: 'householdId, year, month required' }; return;
+      }
+      const membership = await HouseholdMember.findOne({ where: { householdId, appUserId: appUser.id } });
+      if (!membership) { ctx.status = 403; ctx.body = { error: 'Not a member' }; return; }
+
+      const config = await BudgetMonthConfig.findOne({
+        where: { householdId, year: parseInt(year), month: parseInt(month) }
+      });
+      ctx.body = { success: true, config: config || null };
+    } catch (err) {
+      console.error('getMonthConfig error:', err);
+      ctx.status = 500; ctx.body = { error: 'Failed to get month config' };
+    }
+  }
+
+  /**
+   * PUT /app/budget/month-config
+   * Body: { householdId, year, month, startAmount }
+   */
+  async upsertMonthConfig(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { householdId, year, month, startAmount } = ctx.request.body;
+      if (!householdId || !year || !month) {
+        ctx.status = 400; ctx.body = { error: 'householdId, year, month required' }; return;
+      }
+      const membership = await HouseholdMember.findOne({ where: { householdId, appUserId: appUser.id } });
+      if (!membership) { ctx.status = 403; ctx.body = { error: 'Not a member' }; return; }
+
+      const [config] = await BudgetMonthConfig.upsert({
+        householdId, year, month,
+        startAmount: startAmount !== undefined ? (parseFloat(startAmount) || null) : null
+      });
+      ctx.body = { success: true, config };
+    } catch (err) {
+      console.error('upsertMonthConfig error:', err);
+      ctx.status = 500; ctx.body = { error: 'Failed to save month config' };
     }
   }
 }

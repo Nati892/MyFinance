@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/category.dart';
@@ -76,6 +77,16 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
     _selectedColor = existing?.color ?? '#607D8B';
     _selectedIcon = existing?.icon;
     _selectedParentId = existing?.parentCategoryId ?? widget.preselectedParentId;
+
+    // If creating a new sub-category with a preselected parent, inherit parent color/icon
+    if (!_isEditMode && widget.preselectedParentId != null && widget.topLevelCategories != null) {
+      final parent = widget.topLevelCategories!.where((c) => c.id == widget.preselectedParentId).firstOrNull;
+      if (parent != null) {
+        _selectedColor = parent.color;
+        _selectedIcon = parent.icon;
+      }
+    }
+
     _iconSearchController.addListener(_filterIcons);
   }
 
@@ -157,6 +168,38 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
       'label': Icons.label,
     };
     return map[name] ?? Icons.category;
+  }
+
+  void _openColorPicker(BuildContext context) {
+    Color current = _hexColor(_selectedColor);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        contentPadding: const EdgeInsets.all(16),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: current,
+            onColorChanged: (c) => current = c,
+            enableAlpha: false,
+            labelTypes: const [],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final hex = '#${current.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+              setState(() => _selectedColor = hex);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -285,7 +328,32 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
                         color: Color(0xFFB71C1C), fontSize: 13)),
               ),
             ],
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            // Live category preview
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: _hexColor(_selectedColor),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      _selectedIcon != null ? _iconFromName(_selectedIcon!) : Icons.category,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Preview',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             // Name field
             Text(l10n.categoryName,
                 style: const TextStyle(
@@ -349,10 +417,34 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
                   ),
                   ...topLevelCats.map((cat) => DropdownMenuItem<int?>(
                         value: cat.id,
-                        child: Text(cat.name),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: _hexColor(cat.color),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Icon(_iconFromName(cat.icon ?? ''),
+                                  size: 13, color: Colors.white),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(cat.name),
+                          ],
+                        ),
                       )),
                 ],
-                onChanged: (v) => setState(() => _selectedParentId = v),
+                onChanged: (v) {
+                  setState(() {
+                    _selectedParentId = v;
+                    if (v != null && !_isEditMode) {
+                      final parent = topLevelCats.firstWhere((c) => c.id == v, orElse: () => topLevelCats.first);
+                      _selectedColor = parent.color;
+                      _selectedIcon = parent.icon;
+                    }
+                  });
+                },
               ),
             ],
             const SizedBox(height: 20),
@@ -366,33 +458,63 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
             Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: _kCategoryColors.map((hex) {
-                final isSelected = _selectedColor == hex;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedColor = hex),
+              children: [
+                ..._kCategoryColors.map((hex) {
+                  final isSelected = _selectedColor == hex;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedColor = hex),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: _hexColor(hex),
+                        shape: BoxShape.circle,
+                        border: isSelected
+                            ? Border.all(color: Colors.black54, width: 3)
+                            : null,
+                        boxShadow: isSelected
+                            ? [
+                                const BoxShadow(
+                                    color: Color(0x40000000), blurRadius: 4)
+                              ]
+                            : null,
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check,
+                              color: Colors.white, size: 18)
+                          : null,
+                    ),
+                  );
+                }),
+                // Rainbow gradient swatch — opens full HSV color picker
+                GestureDetector(
+                  onTap: () => _openColorPicker(context),
                   child: Container(
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: _hexColor(hex),
                       shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: Colors.black54, width: 3)
-                          : null,
-                      boxShadow: isSelected
-                          ? [
-                              const BoxShadow(
-                                  color: Color(0x40000000), blurRadius: 4)
-                            ]
-                          : null,
+                      gradient: const SweepGradient(
+                        colors: [
+                          Color(0xFFFF0000),
+                          Color(0xFFFFFF00),
+                          Color(0xFF00FF00),
+                          Color(0xFF00FFFF),
+                          Color(0xFF0000FF),
+                          Color(0xFFFF00FF),
+                          Color(0xFFFF0000),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Color(0x18000000),
+                            blurRadius: 3,
+                            offset: Offset(0, 1)),
+                      ],
                     ),
-                    child: isSelected
-                        ? const Icon(Icons.check,
-                            color: Colors.white, size: 18)
-                        : null,
                   ),
-                );
-              }).toList(),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             // Icon picker
