@@ -10,6 +10,14 @@ pluginManagement {
 
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.namespace?.startsWith("org.jetbrains.kotlin") == true) {
+                useVersion("2.1.0")
+            }
+        }
+    }
+
     repositories {
         google()
         mavenCentral()

@@ -52,6 +52,7 @@ class ApkController {
    * Returns the latest APK version and download URL.
    */
   async latest(ctx) {
+    console.log("/apk/latest");
     try {
       const release = await ApkRelease.findOne({ order: [['version', 'DESC']] });
       if (!release) {
