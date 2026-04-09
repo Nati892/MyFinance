@@ -12,6 +12,7 @@ const assetsRoutes = require('./routers/assets');
 const cardsRoutes = require('./routers/cards');
 const budgetsRoutes = require('./routers/budgets');
 const shoppingRoutes = require('./routers/shopping');
+const apkRoutes = require('./routers/apk');
 
 const router = new Router();
 
@@ -31,6 +32,7 @@ router.use('/api', assetsRoutes.routes());
 router.use('/api', cardsRoutes.routes());
 router.use('/api', budgetsRoutes.routes());
 router.use('/api', shoppingRoutes.routes());
+router.use('/api', apkRoutes.routes());
 
 // Health check
 router.get('/health', (ctx) => {

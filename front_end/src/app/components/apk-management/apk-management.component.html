@@ -1,0 +1,73 @@
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h2>APK Management</h2>
+    <button class="btn-primary" (click)="loadLatest()" [disabled]="loading">
+      <i class="fa-solid fa-rotate"></i> Refresh
+    </button>
+  </div>
+
+  <!-- Error -->
+  <div class="error-message" *ngIf="error">
+    <i class="fa-solid fa-triangle-exclamation"></i> {{ error }}
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Current Version Card -->
+  <div class="card" *ngIf="!loading">
+    <div class="card-header">
+      <i class="fa-solid fa-mobile-screen-button"></i>
+      Current APK Version
+    </div>
+    <div class="card-body">
+      <div *ngIf="currentVersion !== null" class="version-display">
+        <span class="version-number">v{{ currentVersion }}</span>
+        <span class="version-label">Latest uploaded version</span>
+      </div>
+      <div *ngIf="currentVersion === null" class="no-version">
+        <i class="fa-solid fa-inbox"></i>
+        No APK has been uploaded yet.
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Instructions Card -->
+  <div class="card" *ngIf="!loading">
+    <div class="card-header">
+      <i class="fa-solid fa-upload"></i>
+      Upload New APK
+    </div>
+    <div class="card-body">
+      <p class="instructions">
+        Use the following <code>curl</code> command to upload a new APK.
+        Each upload automatically increments the version number.
+      </p>
+
+      <div class="curl-block">
+        <div class="curl-header">
+          <span>Upload command</span>
+          <button class="btn-copy" (click)="copyToClipboard()">
+            <i class="fa-solid" [class.fa-copy]="!copied" [class.fa-check]="copied"></i>
+            {{ copied ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
+        <pre class="curl-command">{{ curlCommand }}</pre>
+      </div>
+
+      <div class="info-box">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>
+          <strong>Manager API Token:</strong> <code>{{ managerToken }}</code><br>
+          <span class="hint">Set <code>MANAGER_API_TOKEN</code> env variable on the server to override the default token.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

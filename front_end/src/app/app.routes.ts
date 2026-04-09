@@ -7,6 +7,7 @@ import { AuthGuard } from './guards/auth.guard';
 import { SettingsComponent } from './components/settings/settings.component';
 import { AppUsersComponent } from './components/app-users/app-users.component';
 import { HouseholdsComponent } from './components/households/households.component';
+import { ApkManagementComponent } from './components/apk-management/apk-management.component';
 
 import { AppLoginComponent } from './pages/app-login/app-login.component';
 import { AppLayoutComponent } from './layout/app-layout/app-layout.component';
@@ -31,6 +32,7 @@ export const routes: Routes = [
       { path: 'settings', component: SettingsComponent },
       { path: 'app-users', component: AppUsersComponent },
       { path: 'households', component: HouseholdsComponent },
+      { path: 'apk-management', component: ApkManagementComponent },
     ]
   },
   {

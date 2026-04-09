@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:household/l10n/app_localizations.dart';
+import 'package:household/services/apk_service.dart';
 import 'package:household/services/auth_service.dart';
 import 'package:household/services/household_service.dart';
 import 'package:household/services/locale_service.dart';
@@ -19,6 +20,18 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   bool _showHouseholdDropdown = false;
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Check for APK update on startup for developer users
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(authServiceProvider).currentUser;
+      if (user?.isDeveloper == true) {
+        _checkAndPromptUpdate(context);
+      }
+    });
+  }
 
   static const _darkBlue1 = Color(0xFF141E30);
   static const _darkBlue2 = Color(0xFF1565C0);
@@ -83,13 +96,27 @@ class _AppShellState extends ConsumerState<AppShell> {
                       _buildHouseholdSelector(
                           householdSvc, selectedHousehold, hasMultiple),
                       const Spacer(),
-                      // User / profile icon
-                      IconButton(
-                        icon: const Icon(Icons.person, size: 22),
-                        color: Colors.white,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+                      // Developer update button + profile icon
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (user?.isDeveloper == true)
+                            IconButton(
+                              icon: const Icon(Icons.system_update_alt, size: 20),
+                              color: Colors.white,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              tooltip: 'Check for update',
+                              onPressed: () => _checkAndPromptUpdate(context),
+                            ),
+                          IconButton(
+                            icon: const Icon(Icons.person, size: 22),
+                            color: Colors.white,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -125,6 +152,75 @@ class _AppShellState extends ConsumerState<AppShell> {
         ),
       ),
     );
+  }
+
+  Future<void> _checkAndPromptUpdate(BuildContext context) async {
+    final apkSvc = ref.read(apkServiceProvider);
+    final info = await apkSvc.checkForUpdate();
+
+    if (!context.mounted) return;
+
+    if (info == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not check for updates')),
+      );
+      return;
+    }
+
+    if (!info.isUpdateAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('You are on the latest version (${info.latestVersion})'),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Update Available'),
+        content:
+            Text('Version ${info.latestVersion} is available. Download now?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Later'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Download'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+    _downloadUpdate(context, info.downloadUrl);
+  }
+
+  Future<void> _downloadUpdate(BuildContext context, String url) async {
+    final apkSvc = ref.read(apkServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Downloading update...'),
+        duration: Duration(minutes: 5),
+      ),
+    );
+
+    try {
+      await apkSvc.downloadAndInstall(url);
+      messenger.hideCurrentSnackBar();
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildTab(_TabItem tab) {

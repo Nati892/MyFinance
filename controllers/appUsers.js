@@ -136,7 +136,7 @@ class AppUsersController {
   async update(ctx) {
     try {
       const { id } = ctx.params;
-      const { username, isActive } = ctx.request.body;
+      const { username, isActive, isDeveloper } = ctx.request.body;
 
       const user = await AppUser.findByPk(id);
 
@@ -157,7 +157,8 @@ class AppUsersController {
 
       await user.update({
         username: username !== undefined ? username : user.username,
-        isActive: isActive !== undefined ? isActive : user.isActive
+        isActive: isActive !== undefined ? isActive : user.isActive,
+        isDeveloper: isDeveloper !== undefined ? isDeveloper : user.isDeveloper
       });
 
       ctx.body = {

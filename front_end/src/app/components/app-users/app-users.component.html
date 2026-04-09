@@ -46,6 +46,7 @@
         <tr>
           <th>Username</th>
           <th>Status</th>
+          <th>Developer</th>
           <th>Last Login</th>
           <th>Households</th>
           <th>Actions</th>
@@ -62,6 +63,12 @@
               <span class="status-dot"></span>
               {{ user.isActive ? 'Active' : 'Inactive' }}
             </span>
+          </td>
+          <td class="developer-cell">
+            <span *ngIf="user.isDeveloper" class="status-badge active">
+              <i class="fa-solid fa-code"></i> Dev
+            </span>
+            <span *ngIf="!user.isDeveloper">—</span>
           </td>
           <td class="lastlogin-cell">{{ formatLastLogin(user.lastLogin) }}</td>
           <td class="households-cell">{{ formatHouseholds(user.households) }}</td>
@@ -91,7 +98,7 @@
           </td>
         </tr>
         <tr *ngIf="users.length === 0">
-          <td colspan="5" class="no-data">No users found.</td>
+          <td colspan="6" class="no-data">No users found.</td>
         </tr>
       </tbody>
     </table>
@@ -200,6 +207,15 @@
             <div class="toggle-thumb"></div>
           </div>
           <span class="toggle-state">{{ editForm.isActive ? 'Yes' : 'No' }}</span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="toggle-label">
+          <span>Developer</span>
+          <div class="toggle-switch" [class.on]="editForm.isDeveloper" (click)="editForm.isDeveloper = !editForm.isDeveloper">
+            <div class="toggle-thumb"></div>
+          </div>
+          <span class="toggle-state">{{ editForm.isDeveloper ? 'Yes' : 'No' }}</span>
         </label>
       </div>
       <div class="modal-error" *ngIf="editError">

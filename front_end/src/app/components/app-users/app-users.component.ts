@@ -10,6 +10,7 @@ interface AppUser {
     id: number;
     username: string;
     isActive: boolean;
+    isDeveloper: boolean;
     lastLogin: string | null;
     households: string[];
 }
@@ -22,6 +23,7 @@ interface CreateUserForm {
 interface EditUserForm {
     username: string;
     isActive: boolean;
+    isDeveloper: boolean;
 }
 
 interface ResetPasswordForm {
@@ -61,7 +63,7 @@ export class AppUsersComponent implements OnInit, OnDestroy {
     // Edit modal
     showEditModal = false;
     editingUser: AppUser | null = null;
-    editForm: EditUserForm = { username: '', isActive: true };
+    editForm: EditUserForm = { username: '', isActive: true, isDeveloper: false };
     editError = '';
     editLoading = false;
 
@@ -209,7 +211,7 @@ export class AppUsersComponent implements OnInit, OnDestroy {
     // Edit
     openEditModal(user: AppUser): void {
         this.editingUser = user;
-        this.editForm = { username: user.username, isActive: user.isActive };
+        this.editForm = { username: user.username, isActive: user.isActive, isDeveloper: user.isDeveloper };
         this.editError = '';
         this.showEditModal = true;
     }
@@ -232,7 +234,8 @@ export class AppUsersComponent implements OnInit, OnDestroy {
 
         this.appUsersService.updateAppUser(this.editingUser.id, {
             username: this.editForm.username.trim(),
-            isActive: this.editForm.isActive
+            isActive: this.editForm.isActive,
+            isDeveloper: this.editForm.isDeveloper
         }).subscribe({
             next: () => {
                 this.logger.info('APP_USER_UPDATED', `Updated user: ${this.editForm.username}`);

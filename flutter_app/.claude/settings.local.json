@@ -12,7 +12,13 @@
       "Bash(sed:*)",
       "Bash(flutter build:*)",
       "Bash(python3:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(grep -r \"version\" /c/Repos/Household/*.js)",
+      "Bash(grep -E \"\\\\.\\(dart|ts|js\\)$\")",
+      "Bash(cat /c/Repos/Household/migrations/*.js)",
+      "Bash(ls:*)",
+      "Bash(npm install:*)",
+      "Bash(chmod +x:*)"
     ]
   }
 }

@@ -5,11 +5,8 @@ import 'package:household/core/network/logging_interceptor.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-/// Base URL — web uses localhost, Android emulator uses 10.0.2.2 (which maps to host localhost).
-/// For a real device on the same LAN, change 10.0.2.2 to your machine's IP.
-final String kBaseUrl = kIsWeb
-    ? 'http://localhost:1234/api'
-    : 'http://192.168.1.62:1234/api';
+/// Base URL — points to the production server.
+final String kBaseUrl = 'http://5.189.161.010:1236/api';
 
 BaseOptions _baseOptions() => BaseOptions(
   baseUrl: kBaseUrl,

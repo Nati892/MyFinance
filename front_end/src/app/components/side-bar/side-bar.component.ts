@@ -37,6 +37,11 @@ export class SideBarComponent {
       path: '/households',
       label: 'Households',
       icon: 'fa-solid fa-house-chimney'
+    },
+    {
+      path: '/apk-management',
+      label: 'APK Management',
+      icon: 'fa-solid fa-mobile-screen-button'
     }
   ];
 

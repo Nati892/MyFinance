@@ -40,6 +40,7 @@ const ShoppingList = require('./shopping-list')(sequelize, Sequelize.DataTypes);
 const ShoppingListItem = require('./shopping-list-item')(sequelize, Sequelize.DataTypes);
 const ShoppingSession = require('./shopping-session')(sequelize, Sequelize.DataTypes);
 const ShoppingSessionItem = require('./shopping-session-item')(sequelize, Sequelize.DataTypes);
+const ApkRelease = require('./apkRelease')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 User.hasMany(Log, {
@@ -226,7 +227,8 @@ const db = {
   ShoppingList,
   ShoppingListItem,
   ShoppingSession,
-  ShoppingSessionItem
+  ShoppingSessionItem,
+  ApkRelease
 };
 
 module.exports = db;

@@ -50,7 +50,7 @@ export class AppUsersService {
         });
     }
 
-    updateAppUser(id: number, data: { username?: string; isActive?: boolean }): Observable<any> {
+    updateAppUser(id: number, data: { username?: string; isActive?: boolean; isDeveloper?: boolean }): Observable<any> {
         return this.http.put(`${this.apiUrl}/app-users/${id}`, data, {
             headers: this.getHeaders()
         });

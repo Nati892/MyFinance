@@ -31,5 +31,7 @@ module.exports = {
     cors: {
         origin: ['http://localhost:4200', '*'], // Add Angular's default port
         credentials: true
-    }
+    },
+
+    managerApiToken: process.env.MANAGER_API_TOKEN || 'household-manager-api-token'
 };
