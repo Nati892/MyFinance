@@ -101,13 +101,16 @@ class _AppShellState extends ConsumerState<AppShell> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (user?.isDeveloper == true)
-                            IconButton(
-                              icon: const Icon(Icons.system_update_alt, size: 20),
-                              color: Colors.white,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                              tooltip: 'Check for update',
-                              onPressed: () => _checkAndPromptUpdate(context),
+                            GestureDetector(
+                              onLongPress: () => _forceDownload(context),
+                              child: IconButton(
+                                icon: const Icon(Icons.system_update_alt, size: 20),
+                                color: Colors.white,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                tooltip: 'Check for update (long press to force)',
+                                onPressed: () => _checkAndPromptUpdate(context),
+                              ),
                             ),
                           IconButton(
                             icon: const Icon(Icons.person, size: 22),
@@ -196,6 +199,19 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
 
     if (confirmed != true || !context.mounted) return;
+    _downloadUpdate(context, info.downloadUrl);
+  }
+
+  Future<void> _forceDownload(BuildContext context) async {
+    final apkSvc = ref.read(apkServiceProvider);
+    final info = await apkSvc.checkForUpdate();
+    if (!context.mounted) return;
+    if (info == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not reach server')),
+      );
+      return;
+    }
     _downloadUpdate(context, info.downloadUrl);
   }
 
