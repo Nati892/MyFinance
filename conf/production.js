@@ -31,5 +31,7 @@ module.exports = {
     cors: {
         origin: process.env.CORS_ORIGIN || '*',
         credentials: true
-    }
+    },
+
+    managerApiToken: process.env.MANAGER_API_TOKEN || 'household-manager-api-token'
 };
