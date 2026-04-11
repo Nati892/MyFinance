@@ -14,11 +14,13 @@ final apkRepositoryProvider = Provider<ApkRepository>(
 /// self-signed / IP-address certificate that fails hostname checking.
 Dio _buildDownloadDio() {
   final dio = Dio(BaseOptions(receiveTimeout: const Duration(minutes: 10)));
-  (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
-    final client = HttpClient();
-    client.badCertificateCallback = (_, __, ___) => true;
-    return client;
-  };
+  dio.httpClientAdapter = IOHttpClientAdapter(
+    createHttpClient: () {
+      return HttpClient(context: SecurityContext(withTrustedRoots: false))
+        ..badCertificateCallback = (cert, host, port) => true;
+    },
+    validateCertificate: (cert, host, port) => true,
+  );
   return dio;
 }
 
