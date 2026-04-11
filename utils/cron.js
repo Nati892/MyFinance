@@ -2,8 +2,8 @@ const { Worker } = require('worker_threads');
 const path = require('path');
 
 const WORKER_PATH = path.join(__dirname, '../workers/favoritesWorker.js');
-const RECALC_INTERVAL_MS = 60 * 60 * 1000; // 1 hour — skip if calculated within this window
-const CRON_INTERVAL_MS = 30 * 60 * 1000;   // Run cron every 30 minutes
+const RECALC_INTERVAL_MS = 60 * 60 * 1000;  // 1 hour
+const CRON_INTERVAL_MS = 30 * 60 * 1000;    // 30 minutes
 
 function runFavoritesWorker(householdId) {
   return new Promise((resolve, reject) => {
@@ -57,7 +57,6 @@ async function runFavoritesCron() {
 }
 
 function startCron() {
-  // Delay initial run so DB is ready
   setTimeout(() => runFavoritesCron().catch(console.error), 10000);
   setInterval(() => runFavoritesCron().catch(console.error), CRON_INTERVAL_MS);
   console.log('[Cron] Favorites cron scheduled (every 30 min)');

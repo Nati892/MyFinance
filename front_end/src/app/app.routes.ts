@@ -32,7 +32,7 @@ export const routes: Routes = [
       { path: 'settings', component: SettingsComponent },
       { path: 'app-users', component: AppUsersComponent },
       { path: 'households', component: HouseholdsComponent },
-      { path: 'apk-management', component: ApkManagementComponent },
+      { path: 'app-management', component: ApkManagementComponent },
     ]
   },
   {

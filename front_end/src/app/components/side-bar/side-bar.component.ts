@@ -39,8 +39,8 @@ export class SideBarComponent {
       icon: 'fa-solid fa-house-chimney'
     },
     {
-      path: '/apk-management',
-      label: 'APK Management',
+      path: '/app-management',
+      label: 'App Management',
       icon: 'fa-solid fa-mobile-screen-button'
     }
   ];

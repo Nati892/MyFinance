@@ -55,7 +55,7 @@ app.use(serve(path.join(__dirname, 'public/front')));
 app.use(serve(path.join(__dirname, 'public/apk'), { index: false }));
 
 app.use(async (ctx, next) => {
-  if (ctx.path.startsWith('/api') || ctx.path.startsWith('/apk')) {
+  if (ctx.path.startsWith('/api') || ctx.path.startsWith('/apk/')) {
     await next();
   } else if (ctx.method === 'GET' && !ctx.body) {
     await send(ctx, 'index.html', { root: path.join(__dirname, 'public/front') });

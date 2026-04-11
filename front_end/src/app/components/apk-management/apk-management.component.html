@@ -2,7 +2,7 @@
 
   <!-- Page Header -->
   <div class="page-header">
-    <h2>APK Management</h2>
+    <h2>App Management</h2>
     <button class="btn-primary" (click)="loadLatest()" [disabled]="loading">
       <i class="fa-solid fa-rotate"></i> Refresh
     </button>
@@ -33,6 +33,30 @@
       <div *ngIf="currentVersion === null" class="no-version">
         <i class="fa-solid fa-inbox"></i>
         No APK has been uploaded yet.
+      </div>
+    </div>
+  </div>
+
+  <!-- Public Download Link Card -->
+  <div class="card" *ngIf="!loading">
+    <div class="card-header">
+      <i class="fa-solid fa-link"></i>
+      Public Download Link
+    </div>
+    <div class="card-body">
+      <p class="instructions">
+        Share this permanent link to let anyone download the latest APK directly — no login required.
+        The link always points to the most recently uploaded version.
+      </p>
+      <div class="curl-block">
+        <div class="curl-header">
+          <span>Download URL</span>
+          <button class="btn-copy" (click)="copyLinkToClipboard()">
+            <i class="fa-solid" [class.fa-copy]="!copiedLink" [class.fa-check]="copiedLink"></i>
+            {{ copiedLink ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
+        <pre class="curl-command">{{ publicDownloadLink }}</pre>
       </div>
     </div>
   </div>

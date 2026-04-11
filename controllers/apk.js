@@ -75,6 +75,27 @@ class ApkController {
       ctx.body = { error: 'Failed to fetch latest APK info' };
     }
   }
+
+  /**
+   * GET /apk/download
+   * Public — no authentication required.
+   * Always redirects to the current latest APK file.
+   */
+  async publicDownload(ctx) {
+    try {
+      const release = await ApkRelease.findOne({ order: [['version', 'DESC']] });
+      if (!release) {
+        ctx.status = 404;
+        ctx.body = { error: 'No APK available' };
+        return;
+      }
+      ctx.redirect(`/${release.filename}`);
+    } catch (error) {
+      console.error('APK public download error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to process download request' };
+    }
+  }
 }
 
 module.exports = new ApkController();

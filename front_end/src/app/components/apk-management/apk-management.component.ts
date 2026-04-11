@@ -15,11 +15,16 @@ export class ApkManagementComponent implements OnInit {
     loading = false;
     error = '';
     copied = false;
+    copiedLink = false;
 
     readonly managerToken = 'household-manager-api-token';
 
     get serverUrl(): string {
         return getWebSocketUrl();
+    }
+
+    get publicDownloadLink(): string {
+        return `${this.serverUrl}/apk/download`;
     }
 
     get curlCommand(): string {
@@ -60,6 +65,13 @@ export class ApkManagementComponent implements OnInit {
         navigator.clipboard.writeText(this.curlCommand).then(() => {
             this.copied = true;
             setTimeout(() => this.copied = false, 2000);
+        });
+    }
+
+    copyLinkToClipboard(): void {
+        navigator.clipboard.writeText(this.publicDownloadLink).then(() => {
+            this.copiedLink = true;
+            setTimeout(() => this.copiedLink = false, 2000);
         });
     }
 }

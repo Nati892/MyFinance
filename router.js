@@ -1,4 +1,5 @@
 const Router = require('@koa/router');
+const apkController = require('./controllers/apk');
 const authRoutes = require('./routers/auth');
 const logRoutes = require('./routers/log');
 const settingsRoutes = require('./routers/settings');
@@ -33,6 +34,9 @@ router.use('/api', cardsRoutes.routes());
 router.use('/api', budgetsRoutes.routes());
 router.use('/api', shoppingRoutes.routes());
 router.use('/api', apkRoutes.routes());
+
+// Public APK download — no authentication required, always serves the latest APK
+router.get('/apk/download', apkController.publicDownload);
 
 // Health check
 router.get('/health', (ctx) => {
