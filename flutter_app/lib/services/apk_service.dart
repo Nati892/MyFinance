@@ -35,9 +35,11 @@ class ApkService {
       final data = await _repo.getLatest();
       final latestVersion = data['version'] as int;
       final downloadUrl = data['downloadUrl'] as String;
+      print('[APK] checkForUpdate → latestVersion=$latestVersion, downloadUrl=$downloadUrl');
 
       final info = await PackageInfo.fromPlatform();
       final currentBuild = int.tryParse(info.buildNumber) ?? 0;
+      print('[APK] currentBuildNumber=$currentBuild, updateAvailable=${latestVersion > currentBuild}');
 
       return ApkUpdateInfo(
         latestVersion: latestVersion,
@@ -71,12 +73,14 @@ class ApkService {
       }
     }
 
-    final dir = Platform.isAndroid
-        ? (await getExternalStorageDirectory() ??
-            await getApplicationDocumentsDirectory())
-        : await getApplicationDocumentsDirectory();
+    final externalDir = Platform.isAndroid ? await getExternalStorageDirectory() : null;
+    print('[APK] externalStorageDirectory: $externalDir');
+
+    final dir = (externalDir ?? await getApplicationDocumentsDirectory());
+    print('[APK] dir: $dir  path: ${dir.path}');
 
     final savePath = '${dir.path}/household_update.apk';
+    print('[APK] savePath resolved to: $savePath');
 
     await _repo.downloadApk(
       downloadUrl,

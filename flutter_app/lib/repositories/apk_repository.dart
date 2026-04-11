@@ -43,13 +43,30 @@ class ApkRepository {
     String savePath, {
     ProgressCallback? onReceiveProgress,
   }) async {
+    print('[APK] Original download URL from server: $url');
     final httpUrl = url.replaceFirst('https://', 'http://');
+    print('[APK] Final download URL (after http swap): $httpUrl');
+    print('[APK] Saving APK to: $savePath');
     final downloadDio = _buildDownloadDio();
-    await downloadDio.download(
-      httpUrl,
-      savePath,
-      onReceiveProgress: onReceiveProgress,
-      options: Options(responseType: ResponseType.bytes),
-    );
+    try {
+      await downloadDio.download(
+        httpUrl,
+        savePath,
+        onReceiveProgress: onReceiveProgress,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      print('[APK] Download completed successfully');
+    } on DioException catch (e) {
+      print('[APK] DioException type: ${e.type}');
+      print('[APK] DioException message: ${e.message}');
+      print('[APK] DioException response status: ${e.response?.statusCode}');
+      print('[APK] DioException response data: ${e.response?.data}');
+      print('[APK] DioException error: ${e.error}');
+      rethrow;
+    } catch (e, st) {
+      print('[APK] Unexpected error: $e');
+      print('[APK] Stack trace: $st');
+      rethrow;
+    }
   }
 }
