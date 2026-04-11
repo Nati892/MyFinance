@@ -6,7 +6,7 @@ import 'package:household/core/network/logging_interceptor.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Base URL — points to the production server.
-final String kBaseUrl = 'http://5.189.161.010:1236/api';
+final String kBaseUrl = 'http://5.189.161.10:1236/api';
 
 BaseOptions _baseOptions() => BaseOptions(
   baseUrl: kBaseUrl,
