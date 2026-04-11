@@ -108,7 +108,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                                 color: Colors.white,
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                tooltip: 'Check for update (long press to force)',
+                                tooltip: null,
                                 onPressed: () => _checkAndPromptUpdate(context),
                               ),
                             ),

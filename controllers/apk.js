@@ -11,6 +11,7 @@ class ApkController {
    * Accepts a single file field named "apk".
    */
   async upload(ctx) {
+    console.log("/apk/upload");
     try {
       const file = ctx.file;
       if (!file) {
