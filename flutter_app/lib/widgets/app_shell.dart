@@ -21,6 +21,10 @@ class _AppShellState extends ConsumerState<AppShell> {
   bool _showHouseholdDropdown = false;
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // APK download progress state
+  bool _isDownloading = false;
+  final _downloadProgress = ValueNotifier<(int, int)>((0, 0)); // (received, total)
+
   @override
   void initState() {
     super.initState();
@@ -102,14 +106,27 @@ class _AppShellState extends ConsumerState<AppShell> {
                         children: [
                           if (user?.isDeveloper == true)
                             GestureDetector(
-                              onLongPress: () => _forceDownload(context),
+                              onLongPress: () => _isDownloading
+                                  ? _showDownloadProgress(context)
+                                  : _forceDownload(context),
                               child: IconButton(
-                                icon: const Icon(Icons.system_update_alt, size: 20),
+                                icon: _isDownloading
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.system_update_alt, size: 20),
                                 color: Colors.white,
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 tooltip: null,
-                                onPressed: () => _checkAndPromptUpdate(context),
+                                onPressed: () => _isDownloading
+                                    ? _showDownloadProgress(context)
+                                    : _checkAndPromptUpdate(context),
                               ),
                             ),
                           IconButton(
@@ -217,26 +234,36 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   Future<void> _downloadUpdate(BuildContext context, String url) async {
     final apkSvc = ref.read(apkServiceProvider);
-    final messenger = ScaffoldMessenger.of(context);
 
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Downloading update...'),
-        duration: Duration(minutes: 5),
-      ),
-    );
+    setState(() {
+      _isDownloading = true;
+    });
+    _downloadProgress.value = (0, 0);
 
     try {
-      await apkSvc.downloadAndInstall(url);
-      messenger.hideCurrentSnackBar();
+      await apkSvc.downloadAndInstall(
+        url,
+        onProgress: (received, total) {
+          if (mounted) _downloadProgress.value = (received, total);
+        },
+      );
     } catch (e) {
-      messenger.hideCurrentSnackBar();
       if (context.mounted) {
-        messenger.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Download failed: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
     }
+  }
+
+  void _showDownloadProgress(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DownloadProgressSheet(progress: _downloadProgress),
+    );
   }
 
   Widget _buildTab(_TabItem tab) {
@@ -496,4 +523,98 @@ class _TabItem {
   final IconData icon;
   final String label;
   const _TabItem({required this.path, required this.icon, required this.label});
+}
+
+// ─── Download progress bottom sheet ──────────────────────────────────────────
+
+class _DownloadProgressSheet extends StatelessWidget {
+  final ValueNotifier<(int, int)> progress;
+
+  const _DownloadProgressSheet({required this.progress});
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) return '0 MB';
+    final mb = bytes / (1024 * 1024);
+    return '${mb.toStringAsFixed(1)} MB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 16,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: ValueListenableBuilder<(int, int)>(
+        valueListenable: progress,
+        builder: (_, value, __) {
+          final received = value.$1;
+          final total = value.$2;
+          final fraction = (total > 0) ? (received / total).clamp(0.0, 1.0) : 0.0;
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.system_update_alt,
+                      size: 18, color: Color(0xFF667EEA)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Downloading update',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${(fraction * 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF667EEA),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: fraction > 0 ? fraction : null,
+                  minHeight: 8,
+                  backgroundColor: const Color(0xFFE8EAF6),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF667EEA),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                total > 0
+                    ? '${_formatBytes(received)} of ${_formatBytes(total)}'
+                    : 'Starting download…',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF888888),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
