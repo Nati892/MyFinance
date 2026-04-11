@@ -16,10 +16,10 @@ Dio _buildDownloadDio() {
   final dio = Dio(BaseOptions(receiveTimeout: const Duration(minutes: 10)));
   dio.httpClientAdapter = IOHttpClientAdapter(
     createHttpClient: () {
-      return HttpClient(context: SecurityContext(withTrustedRoots: false))
-        ..badCertificateCallback = (cert, host, port) => true;
+      final client = HttpClient();
+      client.badCertificateCallback = (cert, host, port) => true;
+      return client;
     },
-    validateCertificate: (cert, host, port) => true,
   );
   return dio;
 }
