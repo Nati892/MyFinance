@@ -43,9 +43,10 @@ class ApkRepository {
     String savePath, {
     ProgressCallback? onReceiveProgress,
   }) async {
+    final httpUrl = url.replaceFirst('https://', 'http://');
     final downloadDio = _buildDownloadDio();
     await downloadDio.download(
-      url,
+      httpUrl,
       savePath,
       onReceiveProgress: onReceiveProgress,
       options: Options(responseType: ResponseType.bytes),
