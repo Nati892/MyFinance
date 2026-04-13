@@ -29,6 +29,8 @@ class TimelineTx {
   final String txType;
   final int? installmentCurrent;
   final int? installmentTotal;
+  final bool isRecurring;
+  final int? recurringExpenseId;
 
   const TimelineTx({
     required this.id,
@@ -50,6 +52,8 @@ class TimelineTx {
     this.txType = 'expense',
     this.installmentCurrent,
     this.installmentTotal,
+    this.isRecurring = false,
+    this.recurringExpenseId,
   });
 
   static TimelineTx fromExpense(Expense e, {Map<int, Category>? parentLookup}) {
@@ -75,6 +79,8 @@ class TimelineTx {
       txType: 'expense',
       installmentCurrent: e.installmentCurrent,
       installmentTotal: e.installmentTotal,
+      isRecurring: e.isRecurring,
+      recurringExpenseId: e.recurringExpenseId,
     );
   }
 
@@ -686,6 +692,27 @@ class _TxTile extends StatelessWidget {
                   Text(
                     '${tx.installmentCurrent ?? 1}/${tx.installmentTotal}',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: amountColor.withValues(alpha: 0.7)),
+                  ),
+                if (tx.isRecurring)
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9C27B0).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFF9C27B0).withValues(alpha: 0.4), width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.repeat, size: 8, color: Color(0xFF9C27B0)),
+                        const SizedBox(width: 2),
+                        Text(
+                          AppLocalizations.of(context)!.recurringBadge,
+                          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w600, color: Color(0xFF9C27B0)),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),

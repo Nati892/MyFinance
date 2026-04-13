@@ -111,6 +111,15 @@
   "budgetPlanNoCategories": "אין קטגוריות הוצאה. לחץ + להוספה.",
   "budgetPlanAdvanced": "מתקדם",
   "budgetPlanDeleteItem": "מחק פריט",
+  "budgetPlanMin": "מינימום",
+  "budgetPlanMax": "מקסימום",
+  "budgetPlanIncome": "הכנסה",
+  "budgetPlanPrediction": "תחזית",
+  "budgetPlanMonthPrediction": "תחזית חודשית",
+  "budgetPlanTotalMin": "סה\"כ מתוכנן (מינימום)",
+  "budgetPlanTotalMax": "סה\"כ מתוכנן (מקסימום)",
+  "budgetPlanRemainingMin": "נותר (מינימום)",
+  "budgetPlanRemainingMax": "נותר (מקסימום)",
 
   "assetsTitle": "נכסים",
   "assetsNew": "נכס חדש",
@@ -286,5 +295,34 @@
   "settingsVersion": "גרסה 1.0",
   "settingsAppName": "מנהל כספי הבית",
   "drawerSettings": "הגדרות",
-  "drawerSignOut": "התנתק"
+  "drawerSignOut": "התנתק",
+
+  "statsTitle": "סטטיסטיקה",
+  "statsThisMonth": "החודש הנוכחי",
+  "statsSavingsRate": "שיעור חיסכון",
+  "statsTopCategories": "קטגוריות ההוצאה המובילות",
+  "statsMonthlyTrend": "מגמה חודשית",
+  "statsBiggestExpense": "קטגוריית ההוצאה הגדולה ביותר",
+  "statsPaymentMethods": "לפי אמצעי תשלום",
+  "statsAvgMonthlyExpense": "ממוצע הוצאה חודשי",
+  "statsNoData": "אין מספיק נתונים עדיין",
+  "statsLast4Months": "4 חודשים אחרונים",
+
+  "categoryTranslate": "תרגם",
+  "categoryTranslating": "מתרגם...",
+
+  "transactionsInstallmentsOnly": "תשלומים בלבד",
+
+  "recurringTitle": "קבועים",
+  "recurringNew": "הוצאה קבועה חדשה",
+  "recurringEdit": "עריכת הוצאה קבועה",
+  "recurringBadge": "קבוע",
+  "recurringDayOfMonth": "יום בחודש",
+  "recurringAdd": "הוסף קבועה",
+  "recurringSave": "שמור",
+  "recurringDelete": "מחק",
+  "recurringDeleteConfirm": "למחוק את ההוצאה הקבועה?",
+  "recurringDeleteMessage": "היא לא תופיע בחודשים הבאים.",
+  "recurringStartMonth": "החל מ",
+  "recurringNoItems": "אין הוצאות קבועות עדיין"
 }

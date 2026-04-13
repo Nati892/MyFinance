@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// null  = use device system text scale (default)
 /// double = explicit override multiplier (0.75 – 1.5)
@@ -8,7 +8,6 @@ final fontScaleProvider = StateNotifierProvider<FontScaleNotifier, double?>((ref
 });
 
 class FontScaleNotifier extends StateNotifier<double?> {
-  static const _storage = FlutterSecureStorage();
   static const _key = 'font_scale';
 
   FontScaleNotifier() : super(null) {
@@ -16,7 +15,8 @@ class FontScaleNotifier extends StateNotifier<double?> {
   }
 
   Future<void> _restore() async {
-    final saved = await _storage.read(key: _key);
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_key);
     if (saved != null) {
       state = double.tryParse(saved);
     }
@@ -24,10 +24,11 @@ class FontScaleNotifier extends StateNotifier<double?> {
 
   Future<void> setScale(double? scale) async {
     state = scale;
+    final prefs = await SharedPreferences.getInstance();
     if (scale == null) {
-      await _storage.delete(key: _key);
+      await prefs.remove(_key);
     } else {
-      await _storage.write(key: _key, value: scale.toString());
+      await prefs.setString(_key, scale.toString());
     }
   }
 }

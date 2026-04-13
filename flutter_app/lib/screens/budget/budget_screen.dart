@@ -4,10 +4,7 @@ import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/budget.dart';
 import 'package:household/models/category.dart';
 import 'package:household/screens/budget/budget_view_model.dart';
-import 'package:household/screens/transactions/transactions_view_model.dart';
 import 'package:household/utils/icon_helper.dart';
-import 'package:household/widgets/create_category_sheet.dart';
-import 'package:household/widgets/expense_form_sheet.dart';
 
 class BudgetScreen extends ConsumerWidget {
   const BudgetScreen({super.key});
@@ -64,17 +61,6 @@ class BudgetScreen extends ConsumerWidget {
             ),
           ],
         ),
-        // ── FAB — table mode: add budget entry; plan mode handled inline ──────
-        if (vm.viewMode == BudgetViewMode.table)
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              onPressed: () => _showBudgetSheet(context, ref, null),
-              backgroundColor: _purple,
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
-          ),
       ],
     );
   }
@@ -234,12 +220,87 @@ class _NavArrow extends StatelessWidget {
 
 // ─── Table section ────────────────────────────────────────────────────────────
 
-class _TableSection extends ConsumerWidget {
+class _TableSection extends ConsumerStatefulWidget {
   final BudgetViewModel vm;
   const _TableSection({required this.vm});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TableSection> createState() => _TableSectionState();
+}
+
+class _TableSectionState extends ConsumerState<_TableSection> {
+  final Set<int> _expandedIds = {};
+
+  void _toggleExpand(int id) {
+    setState(() {
+      if (_expandedIds.contains(id)) {
+        _expandedIds.remove(id);
+      } else {
+        _expandedIds.add(id);
+      }
+    });
+  }
+
+  /// Sum effective budgets for parent + children. Returns null if none are set.
+  double? _sumBudgets(MonthBudgetRow parent, List<MonthBudgetRow> children) {
+    final all = [parent, ...children];
+    final withBudget = all.where((r) => r.effectiveBudget != null);
+    if (withBudget.isEmpty) return null;
+    return withBudget.fold<double>(0.0, (s, r) => s + r.effectiveBudget!);
+  }
+
+  List<Widget> _buildRows(BudgetViewModel vm) {
+    final rows = vm.budgetRows;
+    final parents = rows.where((r) => r.parentCategoryId == null).toList();
+    final childrenByParent = <int, List<MonthBudgetRow>>{};
+    for (final r in rows) {
+      if (r.parentCategoryId != null) {
+        childrenByParent.putIfAbsent(r.parentCategoryId!, () => []).add(r);
+      }
+    }
+
+    final widgets = <Widget>[];
+    for (final parent in parents) {
+      final children = childrenByParent[parent.id] ?? [];
+      if (children.isEmpty) {
+        widgets.add(_BudgetRow(row: parent, vm: vm));
+      } else {
+        final isExpanded = _expandedIds.contains(parent.id);
+        final totalSpent =
+            parent.spent + children.fold(0.0, (s, c) => s + c.spent);
+        final totalBudget = _sumBudgets(parent, children);
+        final totalResult =
+            totalBudget != null ? totalSpent - totalBudget : null;
+
+        widgets.add(_BudgetRow(
+          row: parent,
+          vm: vm,
+          hasChildren: true,
+          isExpanded: isExpanded,
+          onExpandToggle: () => _toggleExpand(parent.id),
+          displaySpent: totalSpent,
+          displayBudget: totalBudget,
+          displayResult: totalResult,
+        ));
+
+        if (isExpanded) {
+          for (final child in children) {
+            widgets.add(_BudgetRow(
+              row: child,
+              vm: vm,
+              parentRow: parent,
+              isChild: true,
+            ));
+          }
+        }
+      }
+    }
+    return widgets;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = widget.vm;
     if (vm.state == BudgetLoadState.loading) {
       return _buildSkeleton();
     }
@@ -251,7 +312,9 @@ class _TableSection extends ConsumerWidget {
             Text(AppLocalizations.of(context)!.budgetLoadFailed,
                 style: const TextStyle(color: Color(0xFF888888))),
             const SizedBox(height: 8),
-            ElevatedButton(onPressed: vm.load, child: Text(AppLocalizations.of(context)!.commonRetry)),
+            ElevatedButton(
+                onPressed: vm.load,
+                child: Text(AppLocalizations.of(context)!.commonRetry)),
           ],
         ),
       );
@@ -264,25 +327,37 @@ class _TableSection extends ConsumerWidget {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+    return Column(
       children: [
-        // Hint row
+        // Sticky hint + column header
         Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.edit, size: 13, color: Color(0xFFAAAAAA)),
-              const SizedBox(width: 4),
-              Text(AppLocalizations.of(context)!.budgetTapToSet,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA))),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit, size: 13, color: Color(0xFFAAAAAA)),
+                    const SizedBox(width: 4),
+                    Text(AppLocalizations.of(context)!.budgetTapToSet,
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFFAAAAAA))),
+                  ],
+                ),
+              ),
+              const _TableHeader(),
             ],
           ),
         ),
-        // Column header
-        _TableHeader(),
-        // Rows
-        ...vm.budgetRows.map((row) => _BudgetRow(row: row, vm: vm)),
+        // Scrollable rows
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+            children: _buildRows(vm),
+          ),
+        ),
       ],
     );
   }
@@ -360,7 +435,42 @@ class _BudgetRow extends ConsumerStatefulWidget {
   final MonthBudgetRow row;
   final BudgetViewModel vm;
 
-  const _BudgetRow({required this.row, required this.vm});
+  /// If set, show a parent icon badge in the top-right corner of the icon.
+  final MonthBudgetRow? parentRow;
+
+  /// Whether this row has children (shows expand/collapse chevron).
+  final bool hasChildren;
+
+  /// Expansion state (only meaningful when hasChildren == true).
+  final bool isExpanded;
+
+  /// Called when the row header is tapped and hasChildren == true.
+  final VoidCallback? onExpandToggle;
+
+  /// Whether this row is a child (adds indentation).
+  final bool isChild;
+
+  /// Override for the displayed "spent" value (parent shows child sum).
+  final double? displaySpent;
+
+  /// Override for the displayed "budget" value (parent shows child sum).
+  final double? displayBudget;
+
+  /// Override for the displayed "result" value (parent shows child sum).
+  final double? displayResult;
+
+  const _BudgetRow({
+    required this.row,
+    required this.vm,
+    this.parentRow,
+    this.hasChildren = false,
+    this.isExpanded = false,
+    this.onExpandToggle,
+    this.isChild = false,
+    this.displaySpent,
+    this.displayBudget,
+    this.displayResult,
+  });
 
   @override
   ConsumerState<_BudgetRow> createState() => _BudgetRowState();
@@ -393,29 +503,58 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
   Widget build(BuildContext context) {
     final row = widget.row;
     final vm = widget.vm;
+    final parentRow = widget.parentRow;
     final isEditing = vm.editingBudgetCategoryId == row.id;
     final catColor = _hexColor(row.color);
-    final overBudget = vm.isOverBudget(row);
-    final fraction = vm.spentFraction(row).clamp(0.0, 1.0);
     final isHe = Localizations.localeOf(context).languageCode == 'he';
     final displayName = isHe ? (row.nameHe ?? row.name) : row.name;
 
+    // Main row always shows the category's OWN values.
+    final effectiveBudget = row.effectiveBudget;
+    final spent = row.spent;
+    final result = row.result;
+    final overBudget = result != null && result > 0;
+    final fraction = (effectiveBudget != null && effectiveBudget > 0)
+        ? (spent / effectiveBudget).clamp(0.0, 1.0)
+        : 0.0;
+
+    // For parent rows with children: total summary values.
+    final totalBudget = widget.displayBudget;
+    final totalSpent = widget.displaySpent;
+    final totalResult = widget.displayResult;
+    final totalOverBudget = totalResult != null && totalResult > 0;
+    final totalFraction = (totalBudget != null && totalBudget > 0)
+        ? ((totalSpent ?? 0) / totalBudget).clamp(0.0, 1.0)
+        : 0.0;
+
+    void openEditor() {
+      if (!isEditing) {
+        _ctrl.text = row.effectiveBudget?.toStringAsFixed(0) ?? '';
+        vm.startEditBudget(row);
+      }
+    }
+
     return GestureDetector(
+      // Parent rows: tap toggles expand. Child/standalone: tap = edit budget.
       onTap: isEditing
           ? null
-          : () {
-              _ctrl.text = row.effectiveBudget?.toStringAsFixed(0) ?? '';
-              vm.startEditBudget(row);
-            },
+          : widget.hasChildren
+              ? widget.onExpandToggle
+              : openEditor,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(
+          bottom: 6,
+          left: widget.isChild ? 12 : 0,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isEditing
                 ? const Color(0xFF667EEA)
-                : const Color(0xFFEEEEEE),
+                : widget.hasChildren
+                    ? catColor.withValues(alpha: 0.3)
+                    : const Color(0xFFEEEEEE),
             width: isEditing ? 1.5 : 1,
           ),
           boxShadow: [
@@ -432,31 +571,86 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Row(
                 children: [
-                  // Icon + name
+                  // Icon (with optional parent badge) + name
                   Expanded(
                     flex: 5,
                     child: Row(
                       children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: catColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: row.icon.isNotEmpty
-                                ? Icon(iconDataFromName(row.icon),
-                                    size: 16, color: catColor)
-                                : Text(
-                                    displayName.isNotEmpty
-                                        ? displayName[0].toUpperCase()
-                                        : '?',
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: catColor),
+                        SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: catColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: row.icon.isNotEmpty
+                                      ? Icon(iconDataFromName(row.icon),
+                                          size: 16, color: catColor)
+                                      : Text(
+                                          displayName.isNotEmpty
+                                              ? displayName[0].toUpperCase()
+                                              : '?',
+                                          style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: catColor),
+                                        ),
+                                ),
+                              ),
+                              // Parent icon badge (for sub-categories)
+                              if (parentRow != null)
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: Container(
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      color: _hexColor(parentRow.color),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: Colors.white, width: 1.5),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        iconDataFromName(parentRow.icon),
+                                        size: 8,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
+                                ),
+                              // Expand/collapse chevron (for parent rows with children)
+                              if (widget.hasChildren)
+                                Positioned(
+                                  bottom: -4,
+                                  right: -4,
+                                  child: Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: catColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        widget.isExpanded
+                                            ? Icons.expand_less
+                                            : Icons.expand_more,
+                                        size: 10,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -464,8 +658,12 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
                           child: Text(
                             displayName,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: widget.hasChildren
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -475,13 +673,13 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
                   Expanded(
                     flex: 3,
                     child: Text(
-                      row.effectiveBudget != null
-                          ? '₪${row.effectiveBudget!.toStringAsFixed(0)}'
+                      effectiveBudget != null
+                          ? '₪${effectiveBudget.toStringAsFixed(0)}'
                           : AppLocalizations.of(context)!.budgetSetBudget,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
-                        color: row.effectiveBudget != null
+                        color: effectiveBudget != null
                             ? const Color(0xFF333333)
                             : const Color(0xFF667EEA),
                         fontWeight: FontWeight.w600,
@@ -492,7 +690,7 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
                   Expanded(
                     flex: 3,
                     child: Text(
-                      '₪${row.spent.toStringAsFixed(0)}',
+                      '₪${spent.toStringAsFixed(0)}',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontSize: 13, color: Color(0xFF555555)),
@@ -501,11 +699,11 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
                   // Result
                   Expanded(
                     flex: 3,
-                    child: row.result != null
+                    child: result != null
                         ? Text(
-                            row.result! > 0
-                                ? '-₪${row.result!.abs().toStringAsFixed(0)}'
-                                : '+₪${row.result!.abs().toStringAsFixed(0)}',
+                            result > 0
+                                ? '-₪${result.abs().toStringAsFixed(0)}'
+                                : '+₪${result.abs().toStringAsFixed(0)}',
                             textAlign: TextAlign.end,
                             style: TextStyle(
                               fontSize: 13,
@@ -523,10 +721,11 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
                 ],
               ),
             ),
-            // ── Progress bar ──────────────────────────────────────────────
-            if (row.effectiveBudget != null)
+            // ── Progress bar (own) ────────────────────────────────────────
+            if (effectiveBudget != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                padding: EdgeInsets.fromLTRB(
+                    12, 0, 12, widget.hasChildren ? 4 : 10),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
@@ -538,6 +737,101 @@ class _BudgetRowState extends ConsumerState<_BudgetRow> {
                           ? const Color(0xFFE53935)
                           : const Color(0xFF43A047),
                     ),
+                  ),
+                ),
+              ),
+            // ── Total summary row (parent with children only) ─────────────
+            if (widget.hasChildren && totalSpent != null)
+              GestureDetector(
+                onTap: openEditor,
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: Text(
+                              '∑ Total',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: catColor),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              totalBudget != null
+                                  ? '₪${totalBudget.toStringAsFixed(0)}'
+                                  : '—',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: catColor),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              '₪${totalSpent.toStringAsFixed(0)}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: catColor),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 3,
+                            child: totalResult != null
+                                ? Text(
+                                    totalResult > 0
+                                        ? '-₪${totalResult.abs().toStringAsFixed(0)}'
+                                        : '+₪${totalResult.abs().toStringAsFixed(0)}',
+                                    textAlign: TextAlign.end,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: totalOverBudget
+                                          ? const Color(0xFFE53935)
+                                          : const Color(0xFF43A047),
+                                    ),
+                                  )
+                                : const Text('—',
+                                    textAlign: TextAlign.end,
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFFCCCCCC))),
+                          ),
+                        ],
+                      ),
+                      if (totalBudget != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: LinearProgressIndicator(
+                              value: totalFraction,
+                              minHeight: 4,
+                              backgroundColor: const Color(0xFFE0E0E0),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                totalOverBudget
+                                    ? const Color(0xFFE53935)
+                                    : const Color(0xFF43A047),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -996,34 +1290,40 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RichText(
-                      text: TextSpan(
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF444444)),
-                        children: [
-                          const TextSpan(text: 'Min '),
-                          TextSpan(
-                            text: '₪${vm.planGrandMin.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF43A047)),
-                          ),
-                          const TextSpan(text: '   Max '),
-                          TextSpan(
-                            text: '₪${vm.planGrandMax.toStringAsFixed(0)}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (vm.planMonthConfig?.expectedIncome != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          'Income: ₪${vm.planMonthConfig!.expectedIncome!.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                              fontSize: 11, color: Color(0xFF888888)),
+                    Builder(builder: (context) {
+                      final l10n = AppLocalizations.of(context)!;
+                      return RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 13, color: Color(0xFF444444)),
+                          children: [
+                            TextSpan(text: '${l10n.budgetPlanMin} '),
+                            TextSpan(
+                              text: '₪${vm.planGrandMin.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF43A047)),
+                            ),
+                            TextSpan(text: '   ${l10n.budgetPlanMax} '),
+                            TextSpan(
+                              text: '₪${vm.planGrandMax.toStringAsFixed(0)}',
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ],
                         ),
-                      ),
+                      );
+                    }),
+                    if (vm.planMonthConfig?.expectedIncome != null)
+                      Builder(builder: (context) {
+                        final l10n = AppLocalizations.of(context)!;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '${l10n.budgetPlanIncome}: ₪${vm.planMonthConfig!.expectedIncome!.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xFF888888)),
+                          ),
+                        );
+                      }),
                   ],
                 ),
               ),
@@ -1037,13 +1337,13 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
                     color: _purple.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.tune, size: 15, color: _purple),
-                      SizedBox(width: 4),
-                      Text('Prediction',
-                          style: TextStyle(
+                      const Icon(Icons.tune, size: 15, color: _purple),
+                      const SizedBox(width: 4),
+                      Text(AppLocalizations.of(context)!.budgetPlanPrediction,
+                          style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: _purple)),
@@ -1175,31 +1475,34 @@ class _PlanSectionState extends ConsumerState<_PlanSection> {
     final amtW = small ? 62.0 : 70.0;
     const fs = 9.0;
     const color = Color(0xFFAAAAAA);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(hPad, 4, 4, 0),
-      child: Row(
-        children: [
-          const Expanded(
-              child: Text('Note',
-                  style: TextStyle(fontSize: fs, color: color))),
-          const SizedBox(width: 6),
-          SizedBox(
-            width: amtW,
-            child: const Text('Min',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: fs, color: color)),
-          ),
-          const SizedBox(width: 4),
-          SizedBox(
-            width: amtW,
-            child: const Text('Max',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: fs, color: color)),
-          ),
-          const SizedBox(width: 32),
-        ],
-      ),
-    );
+    return Builder(builder: (context) {
+      final l10n = AppLocalizations.of(context)!;
+      return Padding(
+        padding: EdgeInsets.fromLTRB(hPad, 4, 4, 0),
+        child: Row(
+          children: [
+            const Expanded(
+                child: Text('Note',
+                    style: TextStyle(fontSize: fs, color: color))),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: amtW,
+              child: Text(l10n.budgetPlanMin,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: fs, color: color)),
+            ),
+            const SizedBox(width: 4),
+            SizedBox(
+              width: amtW,
+              child: Text(l10n.budgetPlanMax,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: fs, color: color)),
+            ),
+            const SizedBox(width: 32),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildSubCategorySection(
@@ -1546,14 +1849,15 @@ class _MonthSettingsDialogState extends State<_MonthSettingsDialog> {
     final remMin = income != null ? income - grandMin : null;
     final remMax = income != null ? income - grandMax : null;
 
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.tune, color: _purple, size: 20),
-          SizedBox(width: 8),
-          Text('Month Prediction',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          const Icon(Icons.tune, color: _purple, size: 20),
+          const SizedBox(width: 8),
+          Text(l10n.budgetPlanMonthPrediction,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
         ],
       ),
       content: SingleChildScrollView(
@@ -1561,8 +1865,8 @@ class _MonthSettingsDialogState extends State<_MonthSettingsDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Expected Income',
-                style: TextStyle(
+            Text(l10n.budgetPlanIncome,
+                style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF444444))),
@@ -1603,21 +1907,21 @@ class _MonthSettingsDialogState extends State<_MonthSettingsDialog> {
               ),
             ),
             const SizedBox(height: 20),
-            _row('Total Planned (Min)',
+            _row(l10n.budgetPlanTotalMin,
                 '₪${grandMin.toStringAsFixed(0)}', const Color(0xFF43A047)),
-            _row('Total Planned (Max)',
+            _row(l10n.budgetPlanTotalMax,
                 '₪${grandMax.toStringAsFixed(0)}', const Color(0xFF888888)),
             if (remMin != null) ...[
               const Divider(height: 20),
               _row(
-                'Remaining (Min)',
+                l10n.budgetPlanRemainingMin,
                 '₪${remMin.toStringAsFixed(0)}',
                 remMin >= 0
                     ? const Color(0xFF43A047)
                     : const Color(0xFFE53935),
               ),
               _row(
-                'Remaining (Max)',
+                l10n.budgetPlanRemainingMax,
                 '₪${(remMax ?? 0).toStringAsFixed(0)}',
                 (remMax ?? 0) >= 0
                     ? const Color(0xFF43A047)
@@ -1630,8 +1934,8 @@ class _MonthSettingsDialogState extends State<_MonthSettingsDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel',
-              style: TextStyle(color: Color(0xFF888888))),
+          child: Text(l10n.commonCancel,
+              style: const TextStyle(color: Color(0xFF888888))),
         ),
         ElevatedButton(
           onPressed: () {
@@ -1645,7 +1949,7 @@ class _MonthSettingsDialogState extends State<_MonthSettingsDialog> {
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
-          child: const Text('Save'),
+          child: Text(l10n.commonSave),
         ),
       ],
     );

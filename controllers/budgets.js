@@ -1,4 +1,4 @@
-const { ExpenseCategory, CategoryBudgetOverride, Expense, HouseholdMember, BudgetPlanItem, BudgetMonthConfig, sequelize } = require('../models');
+const { ExpenseCategory, CategoryBudgetOverride, Expense, RecurringExpense, HouseholdMember, BudgetPlanItem, BudgetMonthConfig, sequelize } = require('../models');
 const { Op, fn, col, literal } = require('sequelize');
 
 class BudgetsController {
@@ -45,6 +45,20 @@ class BudgetsController {
         overrideMap[o.expenseCategoryId] = o;
       }
 
+      // Pre-fetch active recurring expenses for this household that apply to this month
+      const allRecurring = await RecurringExpense.findAll({
+        where: { householdId, isActive: true }
+      });
+
+      // Build a map of categoryId -> recurring total for this calendar month
+      const recurringTotalByCategory = {};
+      for (const rec of allRecurring) {
+        // Check startYear/startMonth <= yearInt/monthInt
+        if (rec.startYear > yearInt || (rec.startYear === yearInt && rec.startMonth > monthInt)) continue;
+        const catId = rec.expenseCategoryId;
+        recurringTotalByCategory[catId] = (recurringTotalByCategory[catId] || 0) + parseFloat(rec.amount);
+      }
+
       const result = await Promise.all(categories.map(async (category) => {
         const spendRow = await Expense.findOne({
           attributes: [[fn('SUM', col('amount')), 'total']],
@@ -55,7 +69,9 @@ class BudgetsController {
           raw: true
         });
 
-        const spent = parseFloat(spendRow.total) || 0;
+        const regularSpent  = parseFloat(spendRow.total) || 0;
+        const recurringSpent = recurringTotalByCategory[category.id] || 0;
+        const spent = regularSpent + recurringSpent;
         const override = overrideMap[category.id] || null;
         const baseBudget = category.monthlyBudget != null ? parseFloat(category.monthlyBudget) : null;
         const overrideAmount = override ? parseFloat(override.amount) : null;
@@ -68,6 +84,7 @@ class BudgetsController {
           nameHe: category.nameHe || null,
           icon: category.icon,
           color: category.color,
+          parentCategoryId: category.parentCategoryId || null,
           baseBudget,
           override: overrideAmount,
           effectiveBudget,

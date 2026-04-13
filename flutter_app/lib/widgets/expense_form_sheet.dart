@@ -9,6 +9,11 @@ import 'package:household/utils/icon_helper.dart';
 import 'package:household/screens/transactions/transactions_view_model.dart';
 import 'package:household/widgets/create_category_sheet.dart';
 
+const _monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 const kExpensePurple = Color(0xFF667EEA);
 
 // ─── Expense form sheet ────────────────────────────────────────────────────────
@@ -95,10 +100,50 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
             const SizedBox(height: 8),
             _buildCategoryChips(vm, vm.expenseCategories, l10n),
             const SizedBox(height: 16),
-            _buildLabel(l10n.expensesDate),
+            // Recurring toggle
+            _buildLabel(l10n.recurringTitle),
             const SizedBox(height: 8),
-            _buildDateTimePicker(vm),
+            Row(
+              children: [
+                Switch(
+                  value: vm.formIsRecurring,
+                  onChanged: vm.isEditMode ? null : vm.setFormIsRecurring,
+                  activeColor: const Color(0xFF9C27B0),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  vm.formIsRecurring ? l10n.recurringBadge : l10n.expensesDate,
+                  style: const TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                ),
+                if (vm.isEditMode && vm.formIsRecurring) ...[
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () async {
+                      await vm.deleteRecurringFromExpenseForm();
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ],
+            ),
             const SizedBox(height: 16),
+            if (!vm.formIsRecurring) ...[
+              _buildLabel(l10n.expensesDate),
+              const SizedBox(height: 8),
+              _buildDateTimePicker(vm),
+              const SizedBox(height: 16),
+            ],
+            if (vm.formIsRecurring) ...[
+              _buildLabel(l10n.recurringDayOfMonth),
+              const SizedBox(height: 8),
+              _buildDayOfMonthField(vm),
+              const SizedBox(height: 16),
+              _buildLabel(l10n.recurringStartMonth),
+              const SizedBox(height: 8),
+              _buildStartMonthRow(vm),
+              const SizedBox(height: 16),
+            ],
             _buildLabel(l10n.expensesPaymentMethod),
             const SizedBox(height: 8),
             _buildPaymentSegment(vm, kExpensePurple, l10n),
@@ -124,18 +169,101 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
               buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
             ),
             const SizedBox(height: 16),
-            _buildInstallmentsRow(vm),
-            const SizedBox(height: 20),
+            if (!vm.formIsRecurring) _buildInstallmentsRow(vm),
+            if (!vm.formIsRecurring) const SizedBox(height: 20),
+            if (vm.formIsRecurring) const SizedBox(height: 4),
             _buildSaveButton(
               vm: vm,
               color: kExpensePurple,
               editLabel: l10n.expensesSave,
               addLabel: l10n.expensesAdd,
-              onSave: vm.saveExpense,
+              onSave: () => _handleSave(context, vm),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _handleSave(BuildContext context, TransactionsViewModel vm) async {
+    if (!vm.shouldAskInstallmentScope) {
+      return vm.saveExpense();
+    }
+
+    final scope = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _InstallmentScopeSheet(),
+    );
+
+    if (scope == null) return; // cancelled
+    return vm.saveExpenseWithScope(scope);
+  }
+
+  Widget _buildDayOfMonthField(TransactionsViewModel vm) {
+    final ctrl = TextEditingController(text: vm.formDayOfMonth.toString());
+    ctrl.selection = TextSelection.fromPosition(
+        TextPosition(offset: ctrl.text.length));
+    return TextField(
+      controller: ctrl,
+      keyboardType: TextInputType.number,
+      decoration: _inputDeco('1–28', kExpensePurple),
+      onChanged: (v) {
+        final parsed = int.tryParse(v);
+        if (parsed != null) vm.setFormDayOfMonth(parsed);
+      },
+    );
+  }
+
+  Widget _buildStartMonthRow(TransactionsViewModel vm) {
+    final now = DateTime.now();
+    final years = List.generate(5, (i) => now.year + i - 1);
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
+              borderRadius: BorderRadius.circular(10),
+              color: const Color(0xFFFAFAFA),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: vm.formDayOfMonthStartMonth,
+                isExpanded: true,
+                items: List.generate(12, (i) => DropdownMenuItem(
+                  value: i + 1,
+                  child: Text(_monthNames[i]),
+                )),
+                onChanged: (v) { if (v != null) vm.setFormDayOfMonthStartMonth(v); },
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE0E0E0), width: 1.5),
+              borderRadius: BorderRadius.circular(10),
+              color: const Color(0xFFFAFAFA),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: vm.formDayOfMonthStartYear,
+                isExpanded: true,
+                items: years.map((y) => DropdownMenuItem(
+                  value: y,
+                  child: Text('$y'),
+                )).toList(),
+                onChanged: (v) { if (v != null) vm.setFormDayOfMonthStartYear(v); },
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1038,4 +1166,95 @@ class _TxCardFormSheetState extends ConsumerState<TxCardFormSheet> {
     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.5)),
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: focusColor, width: 1.5)),
   );
+}
+
+// ─── Installment scope picker ─────────────────────────────────────────────────
+
+class _InstallmentScopeSheet extends StatelessWidget {
+  const _InstallmentScopeSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, -4)),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 36, height: 4,
+            decoration: BoxDecoration(color: const Color(0xFFDDDDDD), borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 16),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Update installment amount',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A1A2E)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Which payments should be updated?',
+              style: TextStyle(fontSize: 13, color: Color(0xFF888888)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _option(context, 'all',     Icons.all_inclusive,        'All payments',        'Change every payment in this series'),
+          _option(context, 'forward', Icons.arrow_forward,        'This and forward',    'Change this payment and all future ones'),
+          _option(context, 'this',    Icons.looks_one_outlined,   'Only this one',       'Change only this single payment'),
+          const Divider(height: 1),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('Cancel', style: TextStyle(fontSize: 15, color: Color(0xFF888888))),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _option(BuildContext context, String scope, IconData icon, String title, String subtitle) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, scope),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: kExpensePurple.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 20, color: kExpensePurple),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E))),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 18, color: Color(0xFFCCCCCC)),
+          ],
+        ),
+      ),
+    );
+  }
 }

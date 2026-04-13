@@ -4,6 +4,7 @@ import 'package:household/models/category.dart';
 import 'package:household/models/credit_card.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
+import 'package:household/models/recurring_expense.dart';
 import 'package:household/repositories/category_repository.dart';
 import 'package:household/services/credit_card_service.dart';
 import 'package:household/services/household_service.dart';
@@ -39,6 +40,7 @@ class TransactionsViewModel extends ChangeNotifier {
   // ── Data ───────────────────────────────────────────────────────────────────
   List<Expense> expenses = [];
   List<Income> incomes = [];
+  List<RecurringExpense> recurringExpenses = [];
   List<Category> expenseCategories = [];
   List<Category> incomeCategories = [];
   List<Category> expenseFavoriteCategories = [];
@@ -62,6 +64,9 @@ class TransactionsViewModel extends ChangeNotifier {
   /// Optional price range filter
   double? priceMin;
   double? priceMax;
+
+  /// When true, only show expenses that have multiple installments
+  bool filterInstallmentsOnly = false;
 
   bool get noHousehold => _householdService.currentHouseholdId == null;
   int get householdId => _householdService.currentHouseholdId ?? 0;
@@ -110,6 +115,12 @@ class TransactionsViewModel extends ChangeNotifier {
           if (i.category?.id != filterCategoryId) return false;
         }
       }
+      if (filterInstallmentsOnly) {
+        if (tx.txType != 'expense') return false;
+        final e = expenses.firstWhere((x) => x.id == tx.id,
+            orElse: () => expenses.first);
+        if ((e.installmentTotal ?? 1) <= 1) return false;
+      }
       if (priceMin != null && tx.amount < priceMin!) return false;
       if (priceMax != null && tx.amount > priceMax!) return false;
       return true;
@@ -128,6 +139,7 @@ class TransactionsViewModel extends ChangeNotifier {
 
   // Form fields (shared between expense/income forms)
   double? formAmount;
+  double? _originalAmount; // tracks amount at edit-open time for installment change detection
   int? formCategoryId;
   DateTime formDateTime = DateTime.now();
   String formPaymentMethod = 'card';
@@ -136,6 +148,12 @@ class TransactionsViewModel extends ChangeNotifier {
   String formNote = '';
   int formInstallmentTotal = 1;
   int formInstallmentCurrent = 1;
+
+  // Recurring fields (used when formIsRecurring == true)
+  bool formIsRecurring = false;
+  int formDayOfMonth = 10;
+  int formDayOfMonthStartYear = DateTime.now().year;
+  int formDayOfMonthStartMonth = DateTime.now().month;
 
   // ── Load ───────────────────────────────────────────────────────────────────
 
@@ -164,20 +182,24 @@ class TransactionsViewModel extends ChangeNotifier {
     state = TransactionsLoadState.loading;
     notifyListeners();
     try {
-      final expensesFuture = _txService.getExpenses(
-        view: viewType,
-        periodOffset: periodOffset,
-        weekNumber: weekNumber,
-        date: date,
-      );
-      final incomesFuture = _txService.getIncomes(
-        view: viewType,
-        periodOffset: periodOffset,
-        weekNumber: weekNumber,
-        date: date,
-      );
-      expenses = await expensesFuture;
-      incomes = await incomesFuture;
+      final results = await Future.wait([
+        _txService.getExpenses(
+          view: viewType,
+          periodOffset: periodOffset,
+          weekNumber: weekNumber,
+          date: date,
+        ),
+        _txService.getIncomes(
+          view: viewType,
+          periodOffset: periodOffset,
+          weekNumber: weekNumber,
+          date: date,
+        ),
+        _txService.getRecurringExpenses(),
+      ]);
+      expenses          = results[0] as List<Expense>;
+      incomes           = results[1] as List<Income>;
+      recurringExpenses = results[2] as List<RecurringExpense>;
       state = TransactionsLoadState.idle;
     } catch (e) {
       state = TransactionsLoadState.error;
@@ -233,6 +255,21 @@ class TransactionsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setInstallmentsFilter(bool v) {
+    filterInstallmentsOnly = v;
+    notifyListeners();
+  }
+
+  /// True when saving an edited installment expense where the amount changed.
+  /// In this case the UI must ask the user which records to update.
+  bool get shouldAskInstallmentScope =>
+      isEditMode &&
+      isExpenseMode &&
+      formInstallmentTotal > 1 &&
+      formAmount != null &&
+      _originalAmount != null &&
+      formAmount != _originalAmount;
+
   // ── Modal open/close ───────────────────────────────────────────────────────
 
   void openAddExpenseModal({int? categoryId}) {
@@ -249,6 +286,10 @@ class TransactionsViewModel extends ChangeNotifier {
     formNote = '';
     formInstallmentTotal = 1;
     formInstallmentCurrent = 1;
+    formIsRecurring = false;
+    formDayOfMonth = 10;
+    formDayOfMonthStartYear = DateTime.now().year;
+    formDayOfMonthStartMonth = DateTime.now().month;
     modalOpen = true;
     notifyListeners();
   }
@@ -275,6 +316,7 @@ class TransactionsViewModel extends ChangeNotifier {
     editingId = expense.id;
     modalError = null;
     formAmount = expense.amount;
+    _originalAmount = expense.amount;
     formCategoryId = expense.category?.id;
     formDateTime = DateTime.parse(expense.dateTime).toLocal();
     final pm = expense.paymentMethod;
@@ -284,6 +326,26 @@ class TransactionsViewModel extends ChangeNotifier {
     formNote = expense.note ?? '';
     formInstallmentTotal = expense.installmentTotal ?? 1;
     formInstallmentCurrent = expense.installmentCurrent ?? 1;
+    formIsRecurring = false;
+    modalOpen = true;
+    notifyListeners();
+  }
+
+  void openEditRecurringAsExpenseModal(RecurringExpense rec) {
+    isExpenseMode = true;
+    isEditMode = true;
+    editingId = rec.id;
+    modalError = null;
+    formIsRecurring = true;
+    formAmount = rec.amount;
+    formCategoryId = rec.category?.id ?? rec.expenseCategoryId;
+    formPaymentMethod = rec.paymentMethod;
+    formCardId = null;
+    formDescription = rec.description ?? '';
+    formNote = rec.note ?? '';
+    formDayOfMonth = rec.dayOfMonth;
+    formDayOfMonthStartYear = rec.startYear;
+    formDayOfMonthStartMonth = rec.startMonth;
     modalOpen = true;
     notifyListeners();
   }
@@ -324,8 +386,52 @@ class TransactionsViewModel extends ChangeNotifier {
   void setFormNote(String v) { formNote = v; notifyListeners(); }
   void setFormInstallmentTotal(int v) { formInstallmentTotal = v.clamp(1, 99); notifyListeners(); }
   void setFormInstallmentCurrent(int v) { formInstallmentCurrent = v.clamp(1, formInstallmentTotal); notifyListeners(); }
+  void setFormIsRecurring(bool v) { formIsRecurring = v; notifyListeners(); }
+  void setFormDayOfMonth(int v) { formDayOfMonth = v.clamp(1, 28); notifyListeners(); }
+  void setFormDayOfMonthStartYear(int v) { formDayOfMonthStartYear = v; notifyListeners(); }
+  void setFormDayOfMonthStartMonth(int v) { formDayOfMonthStartMonth = v.clamp(1, 12); notifyListeners(); }
 
   // ── Save / Delete ──────────────────────────────────────────────────────────
+
+  /// Called when the user has chosen a scope for an installment amount update.
+  /// Handles the amount-only update for the chosen scope, then saves the rest
+  /// of the fields via the normal update path.
+  Future<void> saveExpenseWithScope(String scope) async {
+    if (formAmount == null || formAmount! <= 0 || editingId == null) return;
+
+    modalSaving = true;
+    modalError = null;
+    notifyListeners();
+
+    try {
+      // Update amount across the installment group according to scope
+      await _txService.updateExpenseInstallmentAmount(editingId!, formAmount!, scope);
+
+      // Update the remaining non-amount fields via the normal endpoint
+      final isoDateTime = formDateTime.toUtc().toIso8601String();
+      await _txService.updateExpense(editingId!, {
+        'dateTime': isoDateTime,
+        'paymentMethod': formPaymentMethod,
+        'cardId': formPaymentMethod == 'card' ? formCardId : null,
+        'expenseCategoryId': formCategoryId,
+        'description': formDescription,
+        'note': formNote,
+        if (formInstallmentTotal > 1) 'installmentTotal': formInstallmentTotal,
+        if (formInstallmentTotal > 1) 'installmentCurrent': formInstallmentCurrent,
+        if (formInstallmentTotal == 1) 'installmentTotal': null,
+        if (formInstallmentTotal == 1) 'installmentCurrent': null,
+      });
+
+      modalSaving = false;
+      modalOpen = false;
+      notifyListeners();
+      load();
+    } catch (e) {
+      modalSaving = false;
+      modalError = 'Failed to save. Please try again.';
+      notifyListeners();
+    }
+  }
 
   Future<void> saveExpense() async {
     if (formAmount == null || formAmount! <= 0) {
@@ -344,34 +450,61 @@ class TransactionsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final isoDateTime = formDateTime.toUtc().toIso8601String();
-
-      if (!isEditMode) {
-        await _txService.createExpense(
+      if (formIsRecurring && !isEditMode) {
+        await _txService.createRecurringExpense(
           amount: formAmount!,
-          dateTime: isoDateTime,
-          paymentMethod: formPaymentMethod,
           expenseCategoryId: formCategoryId!,
+          paymentMethod: formPaymentMethod,
+          dayOfMonth: formDayOfMonth,
+          startYear: formDayOfMonthStartYear,
+          startMonth: formDayOfMonthStartMonth,
           description: formDescription.isNotEmpty ? formDescription : null,
           note: formNote.isNotEmpty ? formNote : null,
-          cardId: formPaymentMethod == 'card' ? formCardId : null,
-          installmentTotal: formInstallmentTotal > 1 ? formInstallmentTotal : null,
-          installmentCurrent: formInstallmentTotal > 1 ? formInstallmentCurrent : null,
         );
-      } else {
-        await _txService.updateExpense(editingId!, {
+      } else if (formIsRecurring && isEditMode) {
+        await _txService.updateRecurringExpense(editingId!, {
           'amount': formAmount,
-          'dateTime': isoDateTime,
-          'paymentMethod': formPaymentMethod,
-          'cardId': formPaymentMethod == 'card' ? formCardId : null,
           'expenseCategoryId': formCategoryId,
+          'paymentMethod': formPaymentMethod,
+          'dayOfMonth': formDayOfMonth,
+          'startYear': formDayOfMonthStartYear,
+          'startMonth': formDayOfMonthStartMonth,
           'description': formDescription,
           'note': formNote,
-          if (formInstallmentTotal > 1) 'installmentTotal': formInstallmentTotal,
-          if (formInstallmentTotal > 1) 'installmentCurrent': formInstallmentCurrent,
-          if (formInstallmentTotal == 1) 'installmentTotal': null,
-          if (formInstallmentTotal == 1) 'installmentCurrent': null,
         });
+      } else {
+        final isoDateTime = formDateTime.toUtc().toIso8601String();
+
+        if (!isEditMode) {
+          final splitAmount = formInstallmentTotal > 1
+              ? formAmount! / formInstallmentTotal
+              : formAmount!;
+          await _txService.createExpense(
+            amount: splitAmount,
+            dateTime: isoDateTime,
+            paymentMethod: formPaymentMethod,
+            expenseCategoryId: formCategoryId!,
+            description: formDescription.isNotEmpty ? formDescription : null,
+            note: formNote.isNotEmpty ? formNote : null,
+            cardId: formPaymentMethod == 'card' ? formCardId : null,
+            installmentTotal: formInstallmentTotal > 1 ? formInstallmentTotal : null,
+            installmentCurrent: formInstallmentTotal > 1 ? formInstallmentCurrent : null,
+          );
+        } else {
+          await _txService.updateExpense(editingId!, {
+            'amount': formAmount,
+            'dateTime': isoDateTime,
+            'paymentMethod': formPaymentMethod,
+            'cardId': formPaymentMethod == 'card' ? formCardId : null,
+            'expenseCategoryId': formCategoryId,
+            'description': formDescription,
+            'note': formNote,
+            if (formInstallmentTotal > 1) 'installmentTotal': formInstallmentTotal,
+            if (formInstallmentTotal > 1) 'installmentCurrent': formInstallmentCurrent,
+            if (formInstallmentTotal == 1) 'installmentTotal': null,
+            if (formInstallmentTotal == 1) 'installmentCurrent': null,
+          });
+        }
       }
 
       modalSaving = false;
@@ -383,6 +516,16 @@ class TransactionsViewModel extends ChangeNotifier {
       modalError = 'Failed to save. Please try again.';
       notifyListeners();
     }
+  }
+
+  Future<void> deleteRecurringFromExpenseForm() async {
+    if (editingId == null) return;
+    try {
+      await _txService.deleteRecurringExpense(editingId!);
+      modalOpen = false;
+      notifyListeners();
+      loadTransactions();
+    } catch (_) {}
   }
 
   Future<void> saveIncome() async {

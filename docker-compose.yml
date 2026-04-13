@@ -11,9 +11,9 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: 12345678
     volumes:
-      - db_data:/var/lib/mysql
+      - /my_volumes/hously/db:/var/lib/mysql
     ports:
-      - "3309:3306"
+      - "1122:3306"
     networks:
       - app_network
     healthcheck:
@@ -41,7 +41,9 @@ services:
       BCRYPT_SALT_ROUNDS: 10
     restart: always
     ports:
-      - "1234:1234"
+      - "127.0.0.1:1235:1234"
+    volumes:
+      - /my_volumes/hously/apk:/app/public/apk
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +52,6 @@ services:
 
 volumes:
   db_data:
-  server_conf_folder:
 networks:
   app_network:
     driver: bridge

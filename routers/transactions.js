@@ -1,15 +1,23 @@
-const Router               = require('@koa/router');
-const expensesController   = require('../controllers/expenses');
-const incomesController    = require('../controllers/incomes');
-const { authenticateApp }  = require('../middleware/appAuth');
+const Router                      = require('@koa/router');
+const expensesController          = require('../controllers/expenses');
+const incomesController           = require('../controllers/incomes');
+const recurringExpensesController = require('../controllers/recurringExpenses');
+const { authenticateApp }         = require('../middleware/appAuth');
 
 const router = new Router();
 
 // ── Expenses ────────────────────────────────────────────────────────────────
-router.get   ('/app/expenses',     authenticateApp, expensesController.list);
-router.post  ('/app/expenses',     authenticateApp, expensesController.create);
-router.put   ('/app/expenses/:id', authenticateApp, expensesController.update);
-router.delete('/app/expenses/:id', authenticateApp, expensesController.delete);
+router.get   ('/app/expenses',                          authenticateApp, expensesController.list);
+router.post  ('/app/expenses',                          authenticateApp, expensesController.create);
+router.put   ('/app/expenses/:id',                      authenticateApp, expensesController.update);
+router.put   ('/app/expenses/:id/installment-amount',   authenticateApp, expensesController.updateInstallmentAmount);
+router.delete('/app/expenses/:id',                      authenticateApp, expensesController.delete);
+
+// ── Recurring Expenses ───────────────────────────────────────────────────────
+router.get   ('/app/recurring-expenses',     authenticateApp, recurringExpensesController.list);
+router.post  ('/app/recurring-expenses',     authenticateApp, recurringExpensesController.create);
+router.put   ('/app/recurring-expenses/:id', authenticateApp, recurringExpensesController.update);
+router.delete('/app/recurring-expenses/:id', authenticateApp, recurringExpensesController.delete);
 
 // ── Incomes ──────────────────────────────────────────────────────────────────
 router.get   ('/app/incomes',     authenticateApp, incomesController.list);

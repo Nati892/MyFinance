@@ -67,10 +67,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               viewMode: vm.viewMode,
               priceMin: vm.priceMin,
               priceMax: vm.priceMax,
+              filterInstallmentsOnly: vm.filterInstallmentsOnly,
               onFilterChanged: vm.onCategorySelected,
               onViewModeChanged: vm.setViewMode,
               onPriceMinChanged: vm.setPriceMin,
               onPriceMaxChanged: vm.setPriceMax,
+              onInstallmentsFilterChanged: vm.setInstallmentsFilter,
               onCategoryQuickAdd: (id) {
                 vm.onCategoryQuickAdd(id);
                 _showTransactionSheet(context, vm);
@@ -101,17 +103,29 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             view: view, offset: offset, week: week, dayDate: dayDate);
                       },
                       onEdit: (tx) {
-                        if (tx.txType == 'expense') {
+                        if (tx.isRecurring && tx.recurringExpenseId != null) {
+                          final rec = vm.recurringExpenses.firstWhere(
+                            (r) => r.id == tx.recurringExpenseId,
+                            orElse: () => vm.recurringExpenses.first,
+                          );
+                          vm.openEditRecurringAsExpenseModal(rec);
+                          _showTransactionSheet(context, vm);
+                        } else if (tx.txType == 'expense') {
                           final expense = vm.expenses.firstWhere((e) => e.id == tx.id);
                           vm.openEditExpenseModal(expense);
+                          _showTransactionSheet(context, vm);
                         } else {
                           final income = vm.incomes.firstWhere((i) => i.id == tx.id);
                           vm.openEditIncomeModal(income);
+                          _showTransactionSheet(context, vm);
                         }
-                        _showTransactionSheet(context, vm);
                       },
                       onDelete: (tx) {
-                        if (tx.txType == 'expense') {
+                        if (tx.isRecurring && tx.recurringExpenseId != null) {
+                          final rec = vm.recurringExpenses.firstWhere((r) => r.id == tx.recurringExpenseId);
+                          vm.openEditRecurringAsExpenseModal(rec);
+                          _showTransactionSheet(context, vm);
+                        } else if (tx.txType == 'expense') {
                           final expense = vm.expenses.firstWhere((e) => e.id == tx.id);
                           _confirmDeleteExpense(context, vm, expense);
                         } else {
@@ -422,10 +436,12 @@ class _TransactionsSidebar extends StatefulWidget {
   final String viewMode;
   final double? priceMin;
   final double? priceMax;
+  final bool filterInstallmentsOnly;
   final ValueChanged<int?> onFilterChanged;
   final ValueChanged<String> onViewModeChanged;
   final ValueChanged<double?> onPriceMinChanged;
   final ValueChanged<double?> onPriceMaxChanged;
+  final ValueChanged<bool> onInstallmentsFilterChanged;
   final ValueChanged<int> onCategoryQuickAdd;
   final void Function(Category)? onEditCategory;
   final void Function(Category)? onDeleteCategory;
@@ -442,10 +458,12 @@ class _TransactionsSidebar extends StatefulWidget {
     required this.viewMode,
     required this.priceMin,
     required this.priceMax,
+    required this.filterInstallmentsOnly,
     required this.onFilterChanged,
     required this.onViewModeChanged,
     required this.onPriceMinChanged,
     required this.onPriceMaxChanged,
+    required this.onInstallmentsFilterChanged,
     required this.onCategoryQuickAdd,
     this.onEditCategory,
     this.onDeleteCategory,
@@ -505,6 +523,7 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
               viewMode: widget.viewMode,
               priceMin: widget.priceMin,
               priceMax: widget.priceMax,
+              filterInstallmentsOnly: widget.filterInstallmentsOnly,
             ),
           ),
           const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
@@ -544,7 +563,7 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
                         style: TextStyle(fontSize: 10, color: Color(0xFFAAAAAA))),
                   ),
                   ...widget.favoriteCategories.map((cat) => _QuickAddTileWidget(
-                        label: cat.name,
+                        label: (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true) ? cat.nameHe! : cat.name,
                         color: cat.color,
                         icon: cat.icon,
                         hasSubCategories: false,
@@ -760,6 +779,7 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
           viewMode: widget.viewMode,
           priceMin: widget.priceMin,
           priceMax: widget.priceMax,
+          filterInstallmentsOnly: widget.filterInstallmentsOnly,
           scrollController: scrollController,
           onFilterChanged: (id) {
             Navigator.pop(context);
@@ -768,6 +788,7 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
           onViewModeChanged: widget.onViewModeChanged,
           onPriceMinChanged: widget.onPriceMinChanged,
           onPriceMaxChanged: widget.onPriceMaxChanged,
+          onInstallmentsFilterChanged: widget.onInstallmentsFilterChanged,
         ),
       ),
     );
@@ -781,19 +802,21 @@ class _FilterTileWidget extends StatelessWidget {
   final String viewMode;
   final double? priceMin;
   final double? priceMax;
+  final bool filterInstallmentsOnly;
 
   const _FilterTileWidget({
     this.category,
     required this.viewMode,
     this.priceMin,
     this.priceMax,
+    this.filterInstallmentsOnly = false,
   });
 
   @override
   Widget build(BuildContext context) {
     const indigo = Color(0xFF6366F1);
     final base = category != null ? _hexColor(category!.color) : indigo;
-    final hasFilters = viewMode != 'all' || priceMin != null || priceMax != null;
+    final hasFilters = viewMode != 'all' || priceMin != null || priceMax != null || filterInstallmentsOnly;
 
     return Container(
       width: double.infinity,
@@ -1512,11 +1535,13 @@ class _TransactionFilterSheet extends StatefulWidget {
   final String viewMode;
   final double? priceMin;
   final double? priceMax;
+  final bool filterInstallmentsOnly;
   final ScrollController scrollController;
   final ValueChanged<int?> onFilterChanged;
   final ValueChanged<String> onViewModeChanged;
   final ValueChanged<double?> onPriceMinChanged;
   final ValueChanged<double?> onPriceMaxChanged;
+  final ValueChanged<bool> onInstallmentsFilterChanged;
 
   const _TransactionFilterSheet({
     required this.categories,
@@ -1524,11 +1549,13 @@ class _TransactionFilterSheet extends StatefulWidget {
     required this.viewMode,
     required this.priceMin,
     required this.priceMax,
+    required this.filterInstallmentsOnly,
     required this.scrollController,
     required this.onFilterChanged,
     required this.onViewModeChanged,
     required this.onPriceMinChanged,
     required this.onPriceMaxChanged,
+    required this.onInstallmentsFilterChanged,
   });
 
   @override
@@ -1537,6 +1564,7 @@ class _TransactionFilterSheet extends StatefulWidget {
 
 class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
   late String _viewMode;
+  late bool _filterInstallmentsOnly;
   late TextEditingController _minCtrl;
   late TextEditingController _maxCtrl;
 
@@ -1544,6 +1572,7 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
   void initState() {
     super.initState();
     _viewMode = widget.viewMode;
+    _filterInstallmentsOnly = widget.filterInstallmentsOnly;
     _minCtrl = TextEditingController(
         text: widget.priceMin != null ? widget.priceMin.toString() : '');
     _maxCtrl = TextEditingController(
@@ -1626,6 +1655,49 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+
+              // ── Installments section ──────────────────────────────────────────
+              Text(AppLocalizations.of(context)!.transactionsInstallmentsOnly,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                      color: Color(0xFF555555))),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () {
+                  setState(() => _filterInstallmentsOnly = !_filterInstallmentsOnly);
+                  widget.onInstallmentsFilterChanged(_filterInstallmentsOnly);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: _filterInstallmentsOnly
+                        ? const Color(0xFF6366F1)
+                        : const Color(0xFFF0F0F0),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.credit_card_outlined,
+                          size: 14,
+                          color: _filterInstallmentsOnly
+                              ? Colors.white
+                              : const Color(0xFF555555)),
+                      const SizedBox(width: 6),
+                      Text(
+                        AppLocalizations.of(context)!.transactionsInstallmentsOnly,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: _filterInstallmentsOnly
+                              ? Colors.white
+                              : const Color(0xFF555555),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 

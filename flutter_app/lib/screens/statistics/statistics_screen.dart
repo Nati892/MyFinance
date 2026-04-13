@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
-import 'package:household/models/expense.dart';
+import 'package:household/models/category.dart';
 import 'package:household/screens/statistics/statistics_view_model.dart';
+import 'package:household/utils/icon_helper.dart';
 import 'package:intl/intl.dart' as intl;
 
 // ─── Color constants ──────────────────────────────────────────────────────────
@@ -95,9 +96,12 @@ class StatisticsScreen extends ConsumerWidget {
             _AvgExpenseCard(vm: vm),
             const SizedBox(height: 16),
 
-            // ── Biggest single expense ─────────────────────────────────────
-            if (vm.biggestSingleExpense != null) ...[
-              _BiggestExpenseCard(expense: vm.biggestSingleExpense!),
+            // ── Biggest expense category ───────────────────────────────────
+            if (vm.biggestExpenseCategory != null) ...[
+              _BiggestCategoryCard(
+                category: vm.biggestExpenseCategory!['category'] as Category,
+                total: vm.biggestExpenseCategory!['total'] as double,
+              ),
               const SizedBox(height: 16),
             ],
 
@@ -592,11 +596,12 @@ class _AvgExpenseCard extends StatelessWidget {
   }
 }
 
-// ─── Biggest Expense Card ─────────────────────────────────────────────────────
+// ─── Biggest Category Card ────────────────────────────────────────────────────
 
-class _BiggestExpenseCard extends StatelessWidget {
-  final Expense expense;
-  const _BiggestExpenseCard({required this.expense});
+class _BiggestCategoryCard extends StatelessWidget {
+  final Category category;
+  final double total;
+  const _BiggestCategoryCard({required this.category, required this.total});
 
   Color _parseColor(String? hex) {
     try {
@@ -613,9 +618,9 @@ class _BiggestExpenseCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final isHe = Localizations.localeOf(context).languageCode == 'he';
     final catName = isHe
-        ? (expense.category?.nameHe ?? expense.category?.name ?? '—')
-        : (expense.category?.name ?? '—');
-    final catColor = _parseColor(expense.category?.color);
+        ? (category.nameHe ?? category.name)
+        : category.name;
+    final catColor = _parseColor(category.color);
 
     return _Card(
       child: Column(
@@ -633,36 +638,27 @@ class _BiggestExpenseCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: Text(
-                    expense.category?.icon ?? '💸',
-                    style: const TextStyle(fontSize: 18),
+                  child: Icon(
+                    iconDataFromName(category.icon),
+                    size: 20,
+                    color: catColor,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      expense.description ?? catName,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A2E),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      catName,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF888888)),
-                    ),
-                  ],
+                child: Text(
+                  catName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
-                '₪${expense.amount.toStringAsFixed(0)}',
+                '₪${total.toStringAsFixed(0)}',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,

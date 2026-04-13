@@ -41,6 +41,7 @@ const ShoppingListItem = require('./shopping-list-item')(sequelize, Sequelize.Da
 const ShoppingSession = require('./shopping-session')(sequelize, Sequelize.DataTypes);
 const ShoppingSessionItem = require('./shopping-session-item')(sequelize, Sequelize.DataTypes);
 const ApkRelease = require('./apkRelease')(sequelize, Sequelize.DataTypes);
+const RecurringExpense = require('./recurringExpense')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 User.hasMany(Log, {
@@ -189,6 +190,18 @@ ShoppingSessionItem.belongsTo(ShoppingItem, { foreignKey: 'itemId', as: 'item' }
 ShoppingStore.hasMany(ShoppingSessionItem, { foreignKey: 'storeId' });
 ShoppingSessionItem.belongsTo(ShoppingStore, { foreignKey: 'storeId', as: 'store' });
 
+// Household <-> RecurringExpense
+Household.hasMany(RecurringExpense, { foreignKey: 'householdId', onDelete: 'CASCADE' });
+RecurringExpense.belongsTo(Household, { foreignKey: 'householdId' });
+
+// AppUser <-> RecurringExpense
+AppUser.hasMany(RecurringExpense, { foreignKey: 'appUserId' });
+RecurringExpense.belongsTo(AppUser, { foreignKey: 'appUserId' });
+
+// ExpenseCategory <-> RecurringExpense
+ExpenseCategory.hasMany(RecurringExpense, { foreignKey: 'expenseCategoryId' });
+RecurringExpense.belongsTo(ExpenseCategory, { foreignKey: 'expenseCategoryId' });
+
 // ExpenseCategory self-referential (sub-categories)
 ExpenseCategory.hasMany(ExpenseCategory, { as: 'subCategories', foreignKey: 'parentCategoryId' });
 ExpenseCategory.belongsTo(ExpenseCategory, { as: 'parentCategory', foreignKey: 'parentCategoryId' });
@@ -228,7 +241,8 @@ const db = {
   ShoppingListItem,
   ShoppingSession,
   ShoppingSessionItem,
-  ApkRelease
+  ApkRelease,
+  RecurringExpense
 };
 
 module.exports = db;

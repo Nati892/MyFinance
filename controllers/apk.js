@@ -67,7 +67,8 @@ class ApkController {
         success: true,
         version: release.version,
         filename: release.filename,
-        downloadUrl: `${baseUrl}/${release.filename}`
+        downloadUrl: `${baseUrl}/${release.filename}`,
+        uploadedAt: release.uploadedAt
       };
     } catch (error) {
       console.error('APK latest error:', error);

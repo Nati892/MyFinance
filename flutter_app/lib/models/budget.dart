@@ -6,6 +6,7 @@ class MonthBudgetRow {
   final String? nameHe;
   final String icon;
   final String color;
+  final int? parentCategoryId;
 
   /// Budget set for every month (base).
   final double? baseBudget;
@@ -28,6 +29,7 @@ class MonthBudgetRow {
     this.nameHe,
     required this.icon,
     required this.color,
+    this.parentCategoryId,
     this.baseBudget,
     this.override,
     this.effectiveBudget,
@@ -41,6 +43,7 @@ class MonthBudgetRow {
         nameHe: json['nameHe'] as String?,
         icon: json['icon'] as String? ?? '',
         color: json['color'] as String? ?? '#888888',
+        parentCategoryId: json['parentCategoryId'] as int?,
         baseBudget: (json['baseBudget'] as num?)?.toDouble(),
         override: (json['override'] as num?)?.toDouble(),
         effectiveBudget: (json['effectiveBudget'] as num?)?.toDouble(),

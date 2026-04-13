@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/core/network/dio_provider.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
+import 'package:household/models/recurring_expense.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>(
   (ref) => TransactionRepository(ref.read(dioProvider)),
@@ -27,8 +28,33 @@ class TransactionRepository {
   Future<void> updateExpense(int id, Map<String, dynamic> body) =>
       _dio.put('/app/expenses/$id', data: body);
 
+  Future<void> updateExpenseInstallmentAmount(int id, double amount, String scope) =>
+      _dio.put('/app/expenses/$id/installment-amount', data: {'amount': amount, 'scope': scope});
+
   Future<void> deleteExpense(int id) =>
       _dio.delete('/app/expenses/$id');
+
+  // ── Recurring Expenses ────────────────────────────────────────────────────
+
+  Future<List<RecurringExpense>> getRecurringExpenses(Map<String, dynamic> params) async {
+    final res = await _dio.get('/app/recurring-expenses', queryParameters: params);
+    return (res.data['recurringExpenses'] as List)
+        .map((e) => RecurringExpense.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<RecurringExpense> createRecurringExpense(Map<String, dynamic> body) async {
+    final res = await _dio.post('/app/recurring-expenses', data: body);
+    return RecurringExpense.fromJson(res.data['recurringExpense'] as Map<String, dynamic>);
+  }
+
+  Future<RecurringExpense> updateRecurringExpense(int id, Map<String, dynamic> body) async {
+    final res = await _dio.put('/app/recurring-expenses/$id', data: body);
+    return RecurringExpense.fromJson(res.data['recurringExpense'] as Map<String, dynamic>);
+  }
+
+  Future<void> deleteRecurringExpense(int id) =>
+      _dio.delete('/app/recurring-expenses/$id');
 
   // ── Incomes ───────────────────────────────────────────────────────────────
 

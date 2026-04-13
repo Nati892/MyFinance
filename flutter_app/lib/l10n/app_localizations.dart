@@ -716,6 +716,60 @@ abstract class AppLocalizations {
   /// **'Delete item'**
   String get budgetPlanDeleteItem;
 
+  /// No description provided for @budgetPlanMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Min'**
+  String get budgetPlanMin;
+
+  /// No description provided for @budgetPlanMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Max'**
+  String get budgetPlanMax;
+
+  /// No description provided for @budgetPlanIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get budgetPlanIncome;
+
+  /// No description provided for @budgetPlanPrediction.
+  ///
+  /// In en, this message translates to:
+  /// **'Prediction'**
+  String get budgetPlanPrediction;
+
+  /// No description provided for @budgetPlanMonthPrediction.
+  ///
+  /// In en, this message translates to:
+  /// **'Month Prediction'**
+  String get budgetPlanMonthPrediction;
+
+  /// No description provided for @budgetPlanTotalMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Planned (Min)'**
+  String get budgetPlanTotalMin;
+
+  /// No description provided for @budgetPlanTotalMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Planned (Max)'**
+  String get budgetPlanTotalMax;
+
+  /// No description provided for @budgetPlanRemainingMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining (Min)'**
+  String get budgetPlanRemainingMin;
+
+  /// No description provided for @budgetPlanRemainingMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining (Max)'**
+  String get budgetPlanRemainingMax;
+
   /// No description provided for @assetsTitle.
   ///
   /// In en, this message translates to:
@@ -1724,6 +1778,18 @@ abstract class AppLocalizations {
   /// **'Sign out'**
   String get drawerSignOut;
 
+  /// No description provided for @categoryTranslate.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get categoryTranslate;
+
+  /// No description provided for @categoryTranslating.
+  ///
+  /// In en, this message translates to:
+  /// **'Translating...'**
+  String get categoryTranslating;
+
   /// No description provided for @statsTitle.
   ///
   /// In en, this message translates to:
@@ -1757,7 +1823,7 @@ abstract class AppLocalizations {
   /// No description provided for @statsBiggestExpense.
   ///
   /// In en, this message translates to:
-  /// **'Biggest expense'**
+  /// **'Biggest expense category'**
   String get statsBiggestExpense;
 
   /// No description provided for @statsPaymentMethods.
@@ -1783,6 +1849,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last 4 months'**
   String get statsLast4Months;
+
+  /// No description provided for @transactionsInstallmentsOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Installments only'**
+  String get transactionsInstallmentsOnly;
+
+  /// No description provided for @recurringTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring'**
+  String get recurringTitle;
+
+  /// No description provided for @recurringNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New Recurring Expense'**
+  String get recurringNew;
+
+  /// No description provided for @recurringEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Recurring Expense'**
+  String get recurringEdit;
+
+  /// No description provided for @recurringBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring'**
+  String get recurringBadge;
+
+  /// No description provided for @recurringDayOfMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Day of month'**
+  String get recurringDayOfMonth;
+
+  /// No description provided for @recurringAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Recurring'**
+  String get recurringAdd;
+
+  /// No description provided for @recurringSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get recurringSave;
+
+  /// No description provided for @recurringDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get recurringDelete;
+
+  /// No description provided for @recurringDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this recurring expense?'**
+  String get recurringDeleteConfirm;
+
+  /// No description provided for @recurringDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'It will stop appearing in future months.'**
+  String get recurringDeleteMessage;
+
+  /// No description provided for @recurringStartMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting from'**
+  String get recurringStartMonth;
+
+  /// No description provided for @recurringNoItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No recurring expenses yet'**
+  String get recurringNoItems;
 }
 
 class _AppLocalizationsDelegate

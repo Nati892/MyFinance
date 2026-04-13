@@ -318,6 +318,33 @@ class AppLocalizationsHe extends AppLocalizations {
   String get budgetPlanDeleteItem => 'מחק פריט';
 
   @override
+  String get budgetPlanMin => 'מינימום';
+
+  @override
+  String get budgetPlanMax => 'מקסימום';
+
+  @override
+  String get budgetPlanIncome => 'הכנסה';
+
+  @override
+  String get budgetPlanPrediction => 'תחזית';
+
+  @override
+  String get budgetPlanMonthPrediction => 'תחזית חודשית';
+
+  @override
+  String get budgetPlanTotalMin => 'סה\"כ מתוכנן (מינימום)';
+
+  @override
+  String get budgetPlanTotalMax => 'סה\"כ מתוכנן (מקסימום)';
+
+  @override
+  String get budgetPlanRemainingMin => 'נותר (מינימום)';
+
+  @override
+  String get budgetPlanRemainingMax => 'נותר (מקסימום)';
+
+  @override
   String get assetsTitle => 'נכסים';
 
   @override
@@ -822,32 +849,77 @@ class AppLocalizationsHe extends AppLocalizations {
   String get drawerSignOut => 'התנתק';
 
   @override
-  String get statsTitle => 'Statistics';
+  String get categoryTranslate => 'תרגם';
 
   @override
-  String get statsThisMonth => 'This month';
+  String get categoryTranslating => 'מתרגם...';
 
   @override
-  String get statsSavingsRate => 'Savings rate';
+  String get statsTitle => 'סטטיסטיקה';
 
   @override
-  String get statsTopCategories => 'Top expense categories';
+  String get statsThisMonth => 'החודש הנוכחי';
 
   @override
-  String get statsMonthlyTrend => 'Monthly trend';
+  String get statsSavingsRate => 'שיעור חיסכון';
 
   @override
-  String get statsBiggestExpense => 'Biggest expense';
+  String get statsTopCategories => 'קטגוריות ההוצאה המובילות';
 
   @override
-  String get statsPaymentMethods => 'By payment method';
+  String get statsMonthlyTrend => 'מגמה חודשית';
 
   @override
-  String get statsAvgMonthlyExpense => 'Avg. monthly expense';
+  String get statsBiggestExpense => 'קטגוריית ההוצאה הגדולה ביותר';
 
   @override
-  String get statsNoData => 'Not enough data yet';
+  String get statsPaymentMethods => 'לפי אמצעי תשלום';
 
   @override
-  String get statsLast4Months => 'Last 4 months';
+  String get statsAvgMonthlyExpense => 'ממוצע הוצאה חודשי';
+
+  @override
+  String get statsNoData => 'אין מספיק נתונים עדיין';
+
+  @override
+  String get statsLast4Months => '4 חודשים אחרונים';
+
+  @override
+  String get transactionsInstallmentsOnly => 'תשלומים בלבד';
+
+  @override
+  String get recurringTitle => 'קבועים';
+
+  @override
+  String get recurringNew => 'הוצאה קבועה חדשה';
+
+  @override
+  String get recurringEdit => 'עריכת הוצאה קבועה';
+
+  @override
+  String get recurringBadge => 'קבוע';
+
+  @override
+  String get recurringDayOfMonth => 'יום בחודש';
+
+  @override
+  String get recurringAdd => 'הוסף קבועה';
+
+  @override
+  String get recurringSave => 'שמור';
+
+  @override
+  String get recurringDelete => 'מחק';
+
+  @override
+  String get recurringDeleteConfirm => 'למחוק את ההוצאה הקבועה?';
+
+  @override
+  String get recurringDeleteMessage => 'היא לא תופיע בחודשים הבאים.';
+
+  @override
+  String get recurringStartMonth => 'החל מ';
+
+  @override
+  String get recurringNoItems => 'אין הוצאות קבועות עדיין';
 }

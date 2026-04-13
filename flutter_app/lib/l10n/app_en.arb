@@ -111,6 +111,15 @@
   "budgetPlanNoCategories": "No expense categories. Tap + to add one.",
   "budgetPlanAdvanced": "Advanced",
   "budgetPlanDeleteItem": "Delete item",
+  "budgetPlanMin": "Min",
+  "budgetPlanMax": "Max",
+  "budgetPlanIncome": "Income",
+  "budgetPlanPrediction": "Prediction",
+  "budgetPlanMonthPrediction": "Month Prediction",
+  "budgetPlanTotalMin": "Total Planned (Min)",
+  "budgetPlanTotalMax": "Total Planned (Max)",
+  "budgetPlanRemainingMin": "Remaining (Min)",
+  "budgetPlanRemainingMax": "Remaining (Max)",
 
   "assetsTitle": "Assets",
   "assetsNew": "New Asset",
@@ -288,14 +297,32 @@
   "drawerSettings": "Settings",
   "drawerSignOut": "Sign out",
 
+  "categoryTranslate": "Translate",
+  "categoryTranslating": "Translating...",
+
   "statsTitle": "Statistics",
   "statsThisMonth": "This month",
   "statsSavingsRate": "Savings rate",
   "statsTopCategories": "Top expense categories",
   "statsMonthlyTrend": "Monthly trend",
-  "statsBiggestExpense": "Biggest expense",
+  "statsBiggestExpense": "Biggest expense category",
   "statsPaymentMethods": "By payment method",
   "statsAvgMonthlyExpense": "Avg. monthly expense",
   "statsNoData": "Not enough data yet",
-  "statsLast4Months": "Last 4 months"
+  "statsLast4Months": "Last 4 months",
+
+  "transactionsInstallmentsOnly": "Installments only",
+
+  "recurringTitle": "Recurring",
+  "recurringNew": "New Recurring Expense",
+  "recurringEdit": "Edit Recurring Expense",
+  "recurringBadge": "Recurring",
+  "recurringDayOfMonth": "Day of month",
+  "recurringAdd": "Add Recurring",
+  "recurringSave": "Save",
+  "recurringDelete": "Delete",
+  "recurringDeleteConfirm": "Delete this recurring expense?",
+  "recurringDeleteMessage": "It will stop appearing in future months.",
+  "recurringStartMonth": "Starting from",
+  "recurringNoItems": "No recurring expenses yet"
 }

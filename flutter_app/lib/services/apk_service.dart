@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_file/open_file.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -28,6 +29,18 @@ class ApkService {
   final ApkRepository _repo;
   ApkService(this._repo);
 
+  static const _channel = MethodChannel('household/package_info');
+
+  /// Returns the app's first-install timestamp in milliseconds, or null if unavailable.
+  Future<int?> _getInstallTimeMs() async {
+    try {
+      final ms = await _channel.invokeMethod<int>('getInstallTime');
+      return ms;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Check if a newer APK version is available.
   /// Returns null if the check fails (network error, no APK uploaded, etc.).
   Future<ApkUpdateInfo?> checkForUpdate() async {
@@ -35,16 +48,34 @@ class ApkService {
       final data = await _repo.getLatest();
       final latestVersion = data['version'] as int;
       final downloadUrl = data['downloadUrl'] as String;
-      print('[APK] checkForUpdate → latestVersion=$latestVersion, downloadUrl=$downloadUrl');
+      final uploadedAtRaw = data['uploadedAt'];
+      print('[APK] checkForUpdate → latestVersion=$latestVersion, downloadUrl=$downloadUrl, uploadedAt=$uploadedAtRaw');
 
       final info = await PackageInfo.fromPlatform();
       final currentBuild = int.tryParse(info.buildNumber) ?? 0;
-      print('[APK] currentBuildNumber=$currentBuild, updateAvailable=${latestVersion > currentBuild}');
+
+      bool isUpdateAvailable = latestVersion > currentBuild;
+
+      // If the app was installed AFTER this APK was uploaded, the device
+      // already has a newer build — skip the update prompt.
+      if (isUpdateAvailable && uploadedAtRaw != null) {
+        final uploadedAt = DateTime.tryParse(uploadedAtRaw.toString());
+        final installTimeMs = await _getInstallTimeMs();
+        if (uploadedAt != null && installTimeMs != null) {
+          final installTime = DateTime.fromMillisecondsSinceEpoch(installTimeMs);
+          if (installTime.isAfter(uploadedAt)) {
+            print('[APK] Install time ($installTime) > uploadedAt ($uploadedAt) — skipping update prompt');
+            isUpdateAvailable = false;
+          }
+        }
+      }
+
+      print('[APK] currentBuildNumber=$currentBuild, updateAvailable=$isUpdateAvailable');
 
       return ApkUpdateInfo(
         latestVersion: latestVersion,
         downloadUrl: downloadUrl,
-        isUpdateAvailable: latestVersion > currentBuild,
+        isUpdateAvailable: isUpdateAvailable,
       );
     } catch (_) {
       return null;

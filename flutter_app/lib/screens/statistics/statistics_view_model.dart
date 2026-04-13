@@ -1,7 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:household/models/category.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
+import 'package:household/repositories/category_repository.dart';
 import 'package:household/services/transaction_service.dart';
 import 'package:household/services/household_service.dart';
 
@@ -48,6 +50,7 @@ final statisticsViewModelProvider =
   final vm = StatisticsViewModel(
     ref.read(transactionServiceProvider),
     ref.read(householdServiceProvider),
+    ref.read(categoryRepositoryProvider),
   );
   vm.load();
   return vm;
@@ -56,8 +59,9 @@ final statisticsViewModelProvider =
 class StatisticsViewModel extends ChangeNotifier {
   final TransactionService _transactionService;
   final HouseholdService _householdService;
+  final CategoryRepository _categoryRepo;
 
-  StatisticsViewModel(this._transactionService, this._householdService);
+  StatisticsViewModel(this._transactionService, this._householdService, this._categoryRepo);
 
   // ── State ──────────────────────────────────────────────────────────────────
   bool isLoading = false;
@@ -76,19 +80,21 @@ class StatisticsViewModel extends ChangeNotifier {
   List<CategoryStat> topExpenseCategories = [];
   List<MonthTrend> monthlyTrend = [];
   double avgMonthlyExpense = 0;
-  Expense? biggestSingleExpense;
+  Map<String, dynamic>? biggestExpenseCategory; // {category: Category, total: double}
   Map<String, double> paymentMethodBreakdown = {};
+  List<Category> _expenseCategories = [];
 
   // ── Load ───────────────────────────────────────────────────────────────────
   Future<void> load() async {
-    if (_householdService.currentHouseholdId == null) return;
+    final hid = _householdService.currentHouseholdId;
+    if (hid == null) return;
 
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
-      // Fetch current month (offset=0) and past 3 months (offset -1,-2,-3)
+      // Fetch categories + current month (offset=0) and past 3 months (offset -1,-2,-3)
       final results = await Future.wait([
         _transactionService.getExpenses(view: 'monthly', periodOffset: 0),
         _transactionService.getIncomes(view: 'monthly', periodOffset: 0),
@@ -98,6 +104,7 @@ class StatisticsViewModel extends ChangeNotifier {
         _transactionService.getIncomes(view: 'monthly', periodOffset: -2),
         _transactionService.getExpenses(view: 'monthly', periodOffset: -3),
         _transactionService.getIncomes(view: 'monthly', periodOffset: -3),
+        _categoryRepo.getExpenseCategories(hid),
       ]);
 
       final expenses0 = results[0] as List<Expense>;
@@ -108,6 +115,7 @@ class StatisticsViewModel extends ChangeNotifier {
       final incomes2 = results[5] as List<Income>;
       final expenses3 = results[6] as List<Expense>;
       final incomes3 = results[7] as List<Income>;
+      _expenseCategories = results[8] as List<Category>;
 
       // ── This month totals ──────────────────────────────────────────────────
       totalExpenses = expenses0.fold(0.0, (s, e) => s + e.amount);
@@ -172,10 +180,37 @@ class StatisticsViewModel extends ChangeNotifier {
       ];
       avgMonthlyExpense = pastExpenses.reduce((a, b) => a + b) / 3;
 
-      // ── Biggest single expense ─────────────────────────────────────────────
-      biggestSingleExpense = expenses0.isEmpty
-          ? null
-          : expenses0.reduce((a, b) => a.amount >= b.amount ? a : b);
+      // ── Biggest expense category (with sub-category rollup) ───────────────
+      biggestExpenseCategory = null;
+      if (expenses0.isNotEmpty && _expenseCategories.isNotEmpty) {
+        // Build lookup: category id -> root category
+        final rootLookup = <int, Category>{};
+        for (final cat in _expenseCategories) {
+          rootLookup[cat.id] = cat;
+          for (final sub in cat.subCategories) {
+            rootLookup[sub.id] = cat;
+          }
+        }
+        // Sum amounts per root category
+        final rootTotals = <int, double>{};
+        for (final e in expenses0) {
+          final catId = e.category?.id;
+          if (catId == null) continue;
+          final root = rootLookup[catId];
+          if (root == null) continue;
+          rootTotals[root.id] = (rootTotals[root.id] ?? 0) + e.amount;
+        }
+        if (rootTotals.isNotEmpty) {
+          final bestId = rootTotals.entries
+              .reduce((a, b) => a.value >= b.value ? a : b)
+              .key;
+          final bestCat = _expenseCategories.firstWhere((c) => c.id == bestId);
+          biggestExpenseCategory = {
+            'category': bestCat,
+            'total': rootTotals[bestId]!,
+          };
+        }
+      }
 
       // ── Payment method breakdown ───────────────────────────────────────────
       final pmMap = <String, double>{};

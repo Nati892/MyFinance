@@ -321,6 +321,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get budgetPlanDeleteItem => 'Delete item';
 
   @override
+  String get budgetPlanMin => 'Min';
+
+  @override
+  String get budgetPlanMax => 'Max';
+
+  @override
+  String get budgetPlanIncome => 'Income';
+
+  @override
+  String get budgetPlanPrediction => 'Prediction';
+
+  @override
+  String get budgetPlanMonthPrediction => 'Month Prediction';
+
+  @override
+  String get budgetPlanTotalMin => 'Total Planned (Min)';
+
+  @override
+  String get budgetPlanTotalMax => 'Total Planned (Max)';
+
+  @override
+  String get budgetPlanRemainingMin => 'Remaining (Min)';
+
+  @override
+  String get budgetPlanRemainingMax => 'Remaining (Max)';
+
+  @override
   String get assetsTitle => 'Assets';
 
   @override
@@ -826,6 +853,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerSignOut => 'Sign out';
 
   @override
+  String get categoryTranslate => 'Translate';
+
+  @override
+  String get categoryTranslating => 'Translating...';
+
+  @override
   String get statsTitle => 'Statistics';
 
   @override
@@ -841,7 +874,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsMonthlyTrend => 'Monthly trend';
 
   @override
-  String get statsBiggestExpense => 'Biggest expense';
+  String get statsBiggestExpense => 'Biggest expense category';
 
   @override
   String get statsPaymentMethods => 'By payment method';
@@ -854,4 +887,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statsLast4Months => 'Last 4 months';
+
+  @override
+  String get transactionsInstallmentsOnly => 'Installments only';
+
+  @override
+  String get recurringTitle => 'Recurring';
+
+  @override
+  String get recurringNew => 'New Recurring Expense';
+
+  @override
+  String get recurringEdit => 'Edit Recurring Expense';
+
+  @override
+  String get recurringBadge => 'Recurring';
+
+  @override
+  String get recurringDayOfMonth => 'Day of month';
+
+  @override
+  String get recurringAdd => 'Add Recurring';
+
+  @override
+  String get recurringSave => 'Save';
+
+  @override
+  String get recurringDelete => 'Delete';
+
+  @override
+  String get recurringDeleteConfirm => 'Delete this recurring expense?';
+
+  @override
+  String get recurringDeleteMessage =>
+      'It will stop appearing in future months.';
+
+  @override
+  String get recurringStartMonth => 'Starting from';
+
+  @override
+  String get recurringNoItems => 'No recurring expenses yet';
 }

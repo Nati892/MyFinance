@@ -1,4 +1,4 @@
-const { Expense, ExpenseCategory, AppUser, HouseholdMember, Card, sequelize } = require('../models');
+const { Expense, ExpenseCategory, AppUser, HouseholdMember, Card, RecurringExpense, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const {
   getCurrentFinancialPeriod,
@@ -7,6 +7,26 @@ const {
   getHourlySlots,
   getDailySlots
 } = require('../utils/financialCalendar');
+
+/**
+ * Given a recurring expense's dayOfMonth and the full financial period,
+ * returns the Date when it occurs within that period, or null if it doesn't.
+ */
+function getRecurringOccurrence(dayOfMonth, period) {
+  // Try the first calendar month of the period (period.start month)
+  const startYear  = period.start.getFullYear();
+  const startMonth = period.start.getMonth();
+  const d1 = new Date(startYear, startMonth, dayOfMonth, 12, 0, 0, 0);
+  if (d1 >= period.start && d1 <= period.end) return d1;
+
+  // Try the second calendar month of the period (period.end month)
+  const endYear  = period.end.getFullYear();
+  const endMonth = period.end.getMonth();
+  const d2 = new Date(endYear, endMonth, dayOfMonth, 12, 0, 0, 0);
+  if (d2 >= period.start && d2 <= period.end) return d2;
+
+  return null;
+}
 
 class ExpensesController {
   /**
@@ -109,7 +129,7 @@ class ExpensesController {
         where.expenseCategoryId = Number(categoryId);
       }
 
-      // --- Fetch expenses ---
+      // --- Fetch regular expenses ---
       const expenses = await Expense.findAll({
         where,
         include: [
@@ -131,13 +151,57 @@ class ExpensesController {
         order: [['dateTime', 'DESC']]
       });
 
+      // --- Fetch and merge recurring expenses ---
+      const allRecurring = await RecurringExpense.findAll({
+        where: { householdId: Number(householdId), isActive: true },
+        include: [
+          { model: ExpenseCategory, attributes: ['id', 'name', 'nameHe', 'icon', 'color'] },
+          { model: AppUser,         attributes: ['id', 'username'] }
+        ]
+      });
+
+      const recurringEntries = [];
+      for (const rec of allRecurring) {
+        const occurrenceDate = getRecurringOccurrence(rec.dayOfMonth, period);
+        if (!occurrenceDate) continue;
+
+        // Check it falls within the (potentially narrower) sub-period window
+        if (occurrenceDate < dateStart || occurrenceDate > dateEnd) continue;
+
+        // Check startYear/startMonth <= occurrence calendar month
+        const occYear  = occurrenceDate.getFullYear();
+        const occMonth = occurrenceDate.getMonth() + 1; // 1-based
+        if (rec.startYear > occYear || (rec.startYear === occYear && rec.startMonth > occMonth)) continue;
+
+        const r = rec.toJSON();
+        recurringEntries.push({
+          ...r,
+          dateTime:           occurrenceDate.toISOString(),
+          isRecurring:        true,
+          recurringExpenseId: r.id,
+          // Reshape associations to match Expense format expected by Flutter
+          ExpenseCategory: r.ExpenseCategory,
+          AppUser:         r.AppUser,
+          card:            null,
+          cardId:          null,
+          installmentTotal:   null,
+          installmentCurrent: null,
+          parentExpenseId:    null
+        });
+      }
+
+      const allExpenses = [
+        ...expenses.map(e => e.toJSON()),
+        ...recurringEntries
+      ].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
+
       // --- Compute total ---
-      const totalAmount = expenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
+      const totalAmount = allExpenses.reduce((sum, e) => sum + parseFloat(e.amount), 0);
 
       // --- Build response ---
       const response = {
         success:     true,
-        expenses:    expenses.map(e => e.toJSON()),
+        expenses:    allExpenses,
         period:      { start: period.start, end: period.end, label: period.label },
         totalAmount: Math.round(totalAmount * 100) / 100
       };
@@ -365,6 +429,67 @@ class ExpensesController {
       console.error('Expenses update error:', error);
       ctx.status = 500;
       ctx.body   = { error: 'Failed to update expense' };
+    }
+  }
+
+  /**
+   * PUT /api/app/expenses/:id/installment-amount
+   * Update the amount of an installment expense across a chosen scope.
+   *
+   * Body: { amount, scope }  — scope: 'all' | 'forward' | 'this'
+   *   all     → update every record in the installment group
+   *   forward → update this record and every later installment (installmentCurrent >=)
+   *   this    → update only this record
+   */
+  async updateInstallmentAmount(ctx) {
+    try {
+      const { id }    = ctx.params;
+      const appUserId = ctx.state.appUser.id;
+      const { amount, scope } = ctx.request.body;
+
+      if (amount === undefined || !scope || !['all', 'forward', 'this'].includes(scope)) {
+        ctx.status = 400;
+        ctx.body   = { error: 'amount and scope (all|forward|this) are required' };
+        return;
+      }
+
+      const expense = await Expense.findByPk(id);
+      if (!expense) {
+        ctx.status = 404;
+        ctx.body   = { error: 'Expense not found' };
+        return;
+      }
+
+      if (expense.appUserId !== appUserId) {
+        ctx.status = 403;
+        ctx.body   = { error: 'You can only update your own expenses' };
+        return;
+      }
+
+      if (scope === 'this') {
+        await expense.update({ amount });
+        ctx.body = { success: true };
+        return;
+      }
+
+      // Determine the root of this installment group
+      const rootId = expense.parentExpenseId ?? expense.id;
+
+      const where = {
+        [Op.or]: [{ id: rootId }, { parentExpenseId: rootId }]
+      };
+
+      if (scope === 'forward') {
+        where.installmentCurrent = { [Op.gte]: expense.installmentCurrent };
+      }
+
+      await Expense.update({ amount }, { where });
+
+      ctx.body = { success: true };
+    } catch (error) {
+      console.error('Expenses updateInstallmentAmount error:', error);
+      ctx.status = 500;
+      ctx.body   = { error: 'Failed to update installment amounts' };
     }
   }
 

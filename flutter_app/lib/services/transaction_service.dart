@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
+import 'package:household/models/recurring_expense.dart';
 import 'package:household/repositories/transaction_repository.dart';
 import 'package:household/services/household_service.dart';
 
@@ -68,7 +69,42 @@ class TransactionService {
   Future<void> updateExpense(int id, Map<String, dynamic> fields) =>
       _repo.updateExpense(id, fields);
 
+  Future<void> updateExpenseInstallmentAmount(int id, double amount, String scope) =>
+      _repo.updateExpenseInstallmentAmount(id, amount, scope);
+
   Future<void> deleteExpense(int id) => _repo.deleteExpense(id);
+
+  // ── Recurring Expenses ────────────────────────────────────────────────────
+
+  Future<List<RecurringExpense>> getRecurringExpenses() =>
+      _repo.getRecurringExpenses({'householdId': _householdId});
+
+  Future<RecurringExpense> createRecurringExpense({
+    required double amount,
+    required int expenseCategoryId,
+    required String paymentMethod,
+    required int dayOfMonth,
+    required int startYear,
+    required int startMonth,
+    String? description,
+    String? note,
+  }) =>
+      _repo.createRecurringExpense({
+        'amount': amount,
+        'expenseCategoryId': expenseCategoryId,
+        'householdId': _householdId,
+        'paymentMethod': paymentMethod,
+        'dayOfMonth': dayOfMonth,
+        'startYear': startYear,
+        'startMonth': startMonth,
+        if (description != null && description.isNotEmpty) 'description': description,
+        if (note != null && note.isNotEmpty) 'note': note,
+      });
+
+  Future<RecurringExpense> updateRecurringExpense(int id, Map<String, dynamic> fields) =>
+      _repo.updateRecurringExpense(id, fields);
+
+  Future<void> deleteRecurringExpense(int id) => _repo.deleteRecurringExpense(id);
 
   // ── Incomes ───────────────────────────────────────────────────────────────
 

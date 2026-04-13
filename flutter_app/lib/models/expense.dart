@@ -17,6 +17,8 @@ class Expense {
   final int? installmentCurrent;
   final int? installmentTotal;
   final int? parentExpenseId;
+  final bool isRecurring;
+  final int? recurringExpenseId;
 
   const Expense({
     required this.id,
@@ -33,6 +35,8 @@ class Expense {
     this.installmentCurrent,
     this.installmentTotal,
     this.parentExpenseId,
+    this.isRecurring = false,
+    this.recurringExpenseId,
   });
 
   factory Expense.fromJson(Map<String, dynamic> json) => Expense(
@@ -56,6 +60,8 @@ class Expense {
     installmentCurrent: json['installmentCurrent'] as int?,
     installmentTotal:   json['installmentTotal'] as int?,
     parentExpenseId:    json['parentExpenseId'] as int?,
+    isRecurring:        json['isRecurring'] as bool? ?? false,
+    recurringExpenseId: json['recurringExpenseId'] as int?,
   );
 
   Map<String, dynamic> toCreateJson({

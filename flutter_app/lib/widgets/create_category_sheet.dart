@@ -1,9 +1,44 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/category.dart';
 import 'package:household/repositories/category_repository.dart';
+
+class _TranslateButton extends StatelessWidget {
+  final bool translating;
+  final VoidCallback onTap;
+  final String label;
+
+  const _TranslateButton({
+    required this.translating,
+    required this.onTap,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: translating ? null : onTap,
+        icon: translating
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 1.5),
+              )
+            : const Icon(Icons.translate, size: 16),
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFF667EEA),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          visualDensity: VisualDensity.compact,
+        ),
+      ),
+    );
+  }
+}
 
 // 18 preset colors for category picker
 const _kCategoryColors = [
@@ -63,6 +98,7 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
   String? _selectedIcon;
   int? _selectedParentId;
   bool _saving = false;
+  bool _translating = false;
   String? _error;
   List<String> _filteredIcons = _kCategoryIcons;
 
@@ -97,6 +133,46 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
           ? _kCategoryIcons
           : _kCategoryIcons.where((i) => i.contains(q)).toList();
     });
+  }
+
+  Future<void> _translate() async {
+    final heText = _nameHeController.text.trim();
+    final enText = _nameController.text.trim();
+
+    String from, to, sourceText;
+    TextEditingController targetController;
+
+    if (heText.isNotEmpty && enText.isEmpty) {
+      from = 'he';
+      to = 'en';
+      sourceText = heText;
+      targetController = _nameController;
+    } else if (enText.isNotEmpty && heText.isEmpty) {
+      from = 'en';
+      to = 'he';
+      sourceText = enText;
+      targetController = _nameHeController;
+    } else {
+      return;
+    }
+
+    setState(() => _translating = true);
+    try {
+      final dio = Dio();
+      final response = await dio.get<Map<String, dynamic>>(
+        'https://api.mymemory.translated.net/get',
+        queryParameters: {'q': sourceText, 'langpair': '$from|$to'},
+      );
+      final translated =
+          response.data?['responseData']?['translatedText'] as String?;
+      if (translated != null && mounted) {
+        targetController.text = translated;
+      }
+    } catch (_) {
+      // silently fail — user can type manually
+    } finally {
+      if (mounted) setState(() => _translating = false);
+    }
   }
 
   @override
@@ -258,6 +334,8 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
     final accentColor =
         isExpense ? const Color(0xFF667EEA) : const Color(0xFF4CAF50);
 
+    final isHebrew = Localizations.localeOf(context).languageCode == 'he';
+
     final title = _isEditMode
         ? l10n.categoryEdit
         : (isExpense ? l10n.categoryNewExpense : l10n.categoryNewIncome);
@@ -354,43 +432,92 @@ class _CreateCategorySheetState extends ConsumerState<CreateCategorySheet> {
               ),
             ),
             const SizedBox(height: 16),
-            // Name field
-            Text(l10n.categoryName,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: Color(0xFF555555))),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: l10n.categoryNamePlaceholder,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+            // Name fields — Hebrew first when app is in Hebrew mode
+            if (isHebrew) ...[
+              Text(l10n.categoryNameHe,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(0xFF555555))),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _nameHeController,
+                textDirection: TextDirection.rtl,
+                decoration: InputDecoration(
+                  hintText: 'מכולת',
+                  hintTextDirection: TextDirection.rtl,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            // Hebrew name field
-            Text(l10n.categoryNameHe,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: Color(0xFF555555))),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _nameHeController,
-              textDirection: TextDirection.rtl,
-              decoration: InputDecoration(
-                hintText: 'מכולת',
-                hintTextDirection: TextDirection.rtl,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+              const SizedBox(height: 8),
+              _TranslateButton(
+                translating: _translating,
+                onTap: _translate,
+                label: _translating ? l10n.categoryTranslating : l10n.categoryTranslate,
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(l10n.categoryName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(0xFF555555))),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  hintText: l10n.categoryNamePlaceholder,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                ),
+              ),
+            ] else ...[
+              Text(l10n.categoryName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(0xFF555555))),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  hintText: l10n.categoryNamePlaceholder,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _TranslateButton(
+                translating: _translating,
+                onTap: _translate,
+                label: _translating ? l10n.categoryTranslating : l10n.categoryTranslate,
+              ),
+              const SizedBox(height: 8),
+              Text(l10n.categoryNameHe,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(0xFF555555))),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _nameHeController,
+                textDirection: TextDirection.rtl,
+                decoration: InputDecoration(
+                  hintText: 'מכולת',
+                  hintTextDirection: TextDirection.rtl,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                ),
+              ),
+            ],
             // Parent category picker (only when top-level cats are provided)
             if (topLevelCats.isNotEmpty) ...[
               const SizedBox(height: 16),
