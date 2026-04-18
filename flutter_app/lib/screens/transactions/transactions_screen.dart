@@ -9,6 +9,7 @@ import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
 import 'package:household/services/household_service.dart';
 import 'package:household/utils/icon_helper.dart';
+import 'package:household/models/expense_schedule.dart';
 import 'package:household/screens/transactions/transactions_view_model.dart';
 import 'package:household/widgets/create_category_sheet.dart';
 import 'package:household/widgets/expense_form_sheet.dart';
@@ -91,11 +92,23 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 _expandedCategoryYCenter = yCenter;
               }),
             ),
-            // Timeline
+            // Timeline (with optional suggestions banner)
             Expanded(
               child: vm.state == TransactionsLoadState.error
                   ? _buildError(vm)
-                  : TransactionTimeline(
+                  : Column(
+                      children: [
+                        if (vm.visibleSuggestions.isNotEmpty)
+                          _SuggestionsBanner(
+                            suggestions: vm.visibleSuggestions,
+                            onDismiss: vm.dismissSuggestion,
+                            onQuickAdd: (s) {
+                              vm.openQuickAddFromSchedule(s);
+                              _showTransactionSheet(context, vm);
+                            },
+                          ),
+                        Expanded(
+                          child: TransactionTimeline(
                       transactions: vm.filteredTransactions,
                       loading: vm.state == TransactionsLoadState.loading,
                       onViewChanged: ({required view, required offset, week, dayDate}) {
@@ -133,6 +146,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           _confirmDeleteIncome(context, vm, income);
                         }
                       },
+                    ),
+                        ),
+                      ],
                     ),
             ),
           ],
@@ -552,25 +568,6 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
                     ),
                   );
                 }),
-                if (widget.favoriteCategories.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Divider(
-                        height: 1, thickness: 1, indent: 8, endIndent: 8),
-                  ),
-                  const Center(
-                    child: Text('★',
-                        style: TextStyle(fontSize: 10, color: Color(0xFFAAAAAA))),
-                  ),
-                  ...widget.favoriteCategories.map((cat) => _QuickAddTileWidget(
-                        label: (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true) ? cat.nameHe! : cat.name,
-                        color: cat.color,
-                        icon: cat.icon,
-                        hasSubCategories: false,
-                        isExpanded: false,
-                        onTap: () => widget.onCategoryQuickAdd(cat.id),
-                      )),
-                ],
                 // ── Add category button ──────────────────────────────────────
                 if (widget.onAddCategory != null)
                   GestureDetector(
@@ -602,6 +599,27 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
               ],
             ),
           ),
+          // ── Favorites (pinned, always visible) ───────────────────────────
+          if (widget.favoriteCategories.isNotEmpty) ...[
+            const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
+            const Padding(
+              padding: EdgeInsets.only(top: 4, bottom: 2),
+              child: Center(
+                child: Text('★',
+                    style: TextStyle(fontSize: 10, color: Color(0xFFAAAAAA))),
+              ),
+            ),
+            ...widget.favoriteCategories.map((cat) => _QuickAddTileWidget(
+                  label: (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true)
+                      ? cat.nameHe!
+                      : cat.name,
+                  color: cat.color,
+                  icon: cat.icon,
+                  hasSubCategories: false,
+                  isExpanded: false,
+                  onTap: () => widget.onCategoryQuickAdd(cat.id),
+                )),
+          ],
           // ── Search button (pinned at bottom) ──────────────────────────────
           const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
           GestureDetector(
@@ -2542,6 +2560,115 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
     } catch (_) {
       return const Color(0xFF888888);
     }
+  }
+}
+
+// ─── Suggestions banner ───────────────────────────────────────────────────────
+
+class _SuggestionsBanner extends StatelessWidget {
+  final List<ExpenseSchedule> suggestions;
+  final void Function(int scheduleId) onDismiss;
+  final void Function(ExpenseSchedule) onQuickAdd;
+
+  const _SuggestionsBanner({
+    required this.suggestions,
+    required this.onDismiss,
+    required this.onQuickAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final isHe = locale.languageCode == 'he';
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFEEF2FF),
+        border: Border(bottom: BorderSide(color: Color(0xFFD8DEFF), width: 1)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      child: Row(
+        children: [
+          const Icon(Icons.schedule, size: 13, color: Color(0xFF5C6BC0)),
+          const SizedBox(width: 5),
+          Text(
+            AppLocalizations.of(context)!.scheduleSuggestionLabel,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF5C6BC0),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: suggestions.map((s) {
+                  final cat = s.category;
+                  final catName = cat == null
+                      ? ''
+                      : (isHe && cat.nameHe?.isNotEmpty == true)
+                          ? cat.nameHe!
+                          : cat.name;
+                  final label = catName.isNotEmpty
+                      ? '$catName · ${s.description}'
+                      : s.description;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFC5CAE9)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 8),
+                          Text(
+                            label,
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xFF3949AB)),
+                          ),
+                          // Quick-add button
+                          GestureDetector(
+                            onTap: () => onQuickAdd(s),
+                            child: Container(
+                              margin: const EdgeInsets.only(left: 5),
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF5C6BC0),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.add,
+                                  size: 11, color: Colors.white),
+                            ),
+                          ),
+                          // Dismiss button
+                          GestureDetector(
+                            onTap: () => onDismiss(s.id),
+                            child: Container(
+                              margin: const EdgeInsets.only(left: 2, right: 4),
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE8EAF6),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close,
+                                  size: 9, color: Color(0xFF9FA8DA)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

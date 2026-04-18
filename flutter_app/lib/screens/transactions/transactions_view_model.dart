@@ -5,6 +5,7 @@ import 'package:household/models/credit_card.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
 import 'package:household/models/recurring_expense.dart';
+import 'package:household/models/expense_schedule.dart';
 import 'package:household/repositories/category_repository.dart';
 import 'package:household/services/credit_card_service.dart';
 import 'package:household/services/household_service.dart';
@@ -44,6 +45,13 @@ class TransactionsViewModel extends ChangeNotifier {
   List<Category> expenseCategories = [];
   List<Category> incomeCategories = [];
   List<Category> expenseFavoriteCategories = [];
+
+  // Today's schedule suggestions (loaded on init, dismissed per session)
+  List<ExpenseSchedule> todayScheduleSuggestions = [];
+  final Set<int> _dismissedSuggestionIds = {};
+  List<ExpenseSchedule> get visibleSuggestions => todayScheduleSuggestions
+      .where((s) => !_dismissedSuggestionIds.contains(s.id))
+      .toList();
 
   // ── State ──────────────────────────────────────────────────────────────────
   TransactionsLoadState state = TransactionsLoadState.loading;
@@ -160,6 +168,7 @@ class TransactionsViewModel extends ChangeNotifier {
   void load() {
     loadCategories();
     loadTransactions();
+    loadTodaySuggestions();
   }
 
   Future<void> loadCategories() async {
@@ -205,6 +214,42 @@ class TransactionsViewModel extends ChangeNotifier {
       state = TransactionsLoadState.error;
       errorMessage = e.toString();
     }
+    notifyListeners();
+  }
+
+  Future<void> loadTodaySuggestions() async {
+    final hid = _householdService.currentHouseholdId;
+    if (hid == null) return;
+    try {
+      todayScheduleSuggestions = await _txService.getTodayScheduleSuggestions();
+      notifyListeners();
+    } catch (_) {
+      // Suggestions are non-critical — silently ignore errors
+    }
+  }
+
+  void dismissSuggestion(int scheduleId) {
+    _dismissedSuggestionIds.add(scheduleId);
+    notifyListeners();
+  }
+
+  /// Pre-fills the expense form from a schedule suggestion and opens it.
+  void openQuickAddFromSchedule(ExpenseSchedule schedule) {
+    isExpenseMode = true;
+    isEditMode = false;
+    editingId = null;
+    modalError = null;
+    formAmount = schedule.amount;
+    formCategoryId = schedule.expenseCategoryId;
+    formDateTime = DateTime.now();
+    formPaymentMethod = schedule.paymentMethod ?? 'card';
+    formCardId = null;
+    formDescription = schedule.description;
+    formNote = '';
+    formInstallmentTotal = 1;
+    formInstallmentCurrent = 1;
+    formIsRecurring = false;
+    modalOpen = true;
     notifyListeners();
   }
 
@@ -390,6 +435,114 @@ class TransactionsViewModel extends ChangeNotifier {
   void setFormDayOfMonth(int v) { formDayOfMonth = v.clamp(1, 28); notifyListeners(); }
   void setFormDayOfMonthStartYear(int v) { formDayOfMonthStartYear = v; notifyListeners(); }
   void setFormDayOfMonthStartMonth(int v) { formDayOfMonthStartMonth = v.clamp(1, 12); notifyListeners(); }
+
+  // ── Recurring expense form state (for RecurringExpenseFormSheet) ───────────
+  double? recurringFormAmount;
+  int? recurringFormCategoryId;
+  String recurringFormDescription = '';
+  String recurringFormNote = '';
+  int recurringFormDayOfMonth = 10;
+  int recurringFormStartMonth = DateTime.now().month;
+  int recurringFormStartYear = DateTime.now().year;
+  String recurringFormPaymentMethod = 'bank_transfer';
+  bool recurringIsEditMode = false;
+  int? recurringEditingId;
+  String? recurringModalError;
+  bool recurringModalSaving = false;
+
+  void setRecurringFormAmount(double? v) { recurringFormAmount = v; notifyListeners(); }
+  void setRecurringFormCategory(int? id) { recurringFormCategoryId = id; notifyListeners(); }
+  void setRecurringFormDescription(String v) { recurringFormDescription = v; notifyListeners(); }
+  void setRecurringFormNote(String v) { recurringFormNote = v; notifyListeners(); }
+  void setRecurringFormDay(int v) { recurringFormDayOfMonth = v.clamp(1, 28); notifyListeners(); }
+  void setRecurringFormStartMonth(int v) { recurringFormStartMonth = v.clamp(1, 12); notifyListeners(); }
+  void setRecurringFormStartYear(int v) { recurringFormStartYear = v; notifyListeners(); }
+  void setRecurringFormPayment(String v) { recurringFormPaymentMethod = v; notifyListeners(); }
+
+  void openAddRecurringModal() {
+    recurringIsEditMode = false;
+    recurringEditingId = null;
+    recurringFormAmount = null;
+    recurringFormCategoryId = null;
+    recurringFormDescription = '';
+    recurringFormNote = '';
+    recurringFormDayOfMonth = 10;
+    recurringFormStartMonth = DateTime.now().month;
+    recurringFormStartYear = DateTime.now().year;
+    recurringFormPaymentMethod = 'bank_transfer';
+    recurringModalError = null;
+    notifyListeners();
+  }
+
+  void openEditRecurringModal(RecurringExpense rec) {
+    recurringIsEditMode = true;
+    recurringEditingId = rec.id;
+    recurringFormAmount = rec.amount;
+    recurringFormCategoryId = rec.expenseCategoryId;
+    recurringFormDescription = rec.description ?? '';
+    recurringFormNote = rec.note ?? '';
+    recurringFormDayOfMonth = rec.dayOfMonth;
+    recurringFormStartMonth = rec.startMonth;
+    recurringFormStartYear = rec.startYear;
+    recurringFormPaymentMethod = rec.paymentMethod;
+    recurringModalError = null;
+    notifyListeners();
+  }
+
+  Future<void> saveRecurring() async {
+    if (recurringFormAmount == null || recurringFormAmount! <= 0) {
+      recurringModalError = 'Please enter a valid amount.';
+      notifyListeners();
+      return;
+    }
+    if (recurringFormCategoryId == null) {
+      recurringModalError = 'Please select a category.';
+      notifyListeners();
+      return;
+    }
+    recurringModalSaving = true;
+    recurringModalError = null;
+    notifyListeners();
+    try {
+      if (!recurringIsEditMode) {
+        await _txService.createRecurringExpense(
+          amount: recurringFormAmount!,
+          expenseCategoryId: recurringFormCategoryId!,
+          paymentMethod: recurringFormPaymentMethod,
+          dayOfMonth: recurringFormDayOfMonth,
+          startYear: recurringFormStartYear,
+          startMonth: recurringFormStartMonth,
+          description: recurringFormDescription.isNotEmpty ? recurringFormDescription : null,
+          note: recurringFormNote.isNotEmpty ? recurringFormNote : null,
+        );
+      } else {
+        await _txService.updateRecurringExpense(recurringEditingId!, {
+          'amount': recurringFormAmount,
+          'expenseCategoryId': recurringFormCategoryId,
+          'paymentMethod': recurringFormPaymentMethod,
+          'dayOfMonth': recurringFormDayOfMonth,
+          'startYear': recurringFormStartYear,
+          'startMonth': recurringFormStartMonth,
+          'description': recurringFormDescription,
+          'note': recurringFormNote,
+        });
+      }
+      recurringModalSaving = false;
+      notifyListeners();
+      loadTransactions();
+    } catch (_) {
+      recurringModalSaving = false;
+      recurringModalError = 'Failed to save. Please try again.';
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteRecurring(int id) async {
+    try {
+      await _txService.deleteRecurringExpense(id);
+      loadTransactions();
+    } catch (_) {}
+  }
 
   // ── Save / Delete ──────────────────────────────────────────────────────────
 

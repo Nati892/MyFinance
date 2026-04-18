@@ -922,4 +922,99 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get recurringNoItems => 'אין הוצאות קבועות עדיין';
+
+  @override
+  String get scheduleSettingsSection => 'אוטומציה';
+
+  @override
+  String get scheduleSettingsTitle => 'לוח זמנים להוצאות';
+
+  @override
+  String get scheduleSettingsSubtitle =>
+      'הגדר אילו הוצאות צפויות בימים מסוימים';
+
+  @override
+  String get schedulesScreenTitle => 'לוח זמנים להוצאות';
+
+  @override
+  String get scheduleNew => 'לוח זמנים חדש';
+
+  @override
+  String get scheduleEdit => 'עריכת לוח זמנים';
+
+  @override
+  String get scheduleDescription => 'תיאור *';
+
+  @override
+  String get scheduleDescriptionHint => 'למשל: חניה במשרד';
+
+  @override
+  String get scheduleCategory => 'קטגוריה *';
+
+  @override
+  String get scheduleDays => 'ימים פעילים *';
+
+  @override
+  String get scheduleDaysHint => 'הקש על הימים שבהם ההוצאה צפויה.';
+
+  @override
+  String get scheduleAmount => 'סכום ברירת מחדל (אופציונלי)';
+
+  @override
+  String get scheduleAmountHint => 'השאר ריק לשאלה בכל פעם';
+
+  @override
+  String get schedulePaymentMethod => 'אמצעי תשלום ברירת מחדל (אופציונלי)';
+
+  @override
+  String get scheduleActive => 'פעיל';
+
+  @override
+  String get scheduleNote => 'הערה (אופציונלי)';
+
+  @override
+  String get scheduleSave => 'שמור שינויים';
+
+  @override
+  String get scheduleAdd => 'הוסף לוח זמנים';
+
+  @override
+  String get scheduleDeleteConfirm => 'למחוק את לוח הזמנים?';
+
+  @override
+  String get scheduleDeleteMessage => 'ההצעה היומית תפסיק להופיע.';
+
+  @override
+  String get scheduleEmpty => 'אין לוחות זמנים עדיין';
+
+  @override
+  String get scheduleEmptySub =>
+      'הקש + כדי להגדיר מתי אתה מצפה להוצאה.\nהאפליקציה תזכיר לך באותם ימים.';
+
+  @override
+  String get scheduleLoadFailed => 'טעינת לוחות הזמנים נכשלה.';
+
+  @override
+  String get scheduleSuggestionLabel => 'צפוי היום:';
+
+  @override
+  String get scheduleDaySun => 'א\'';
+
+  @override
+  String get scheduleDayMon => 'ב\'';
+
+  @override
+  String get scheduleDayTue => 'ג\'';
+
+  @override
+  String get scheduleDayWed => 'ד\'';
+
+  @override
+  String get scheduleDayThu => 'ה\'';
+
+  @override
+  String get scheduleDayFri => 'ו\'';
+
+  @override
+  String get scheduleDaySat => 'ש\'';
 }

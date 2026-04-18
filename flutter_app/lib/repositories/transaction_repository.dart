@@ -4,6 +4,7 @@ import 'package:household/core/network/dio_provider.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
 import 'package:household/models/recurring_expense.dart';
+import 'package:household/models/expense_schedule.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>(
   (ref) => TransactionRepository(ref.read(dioProvider)),
@@ -55,6 +56,35 @@ class TransactionRepository {
 
   Future<void> deleteRecurringExpense(int id) =>
       _dio.delete('/app/recurring-expenses/$id');
+
+  // ── Expense Schedules ─────────────────────────────────────────────────────
+
+  Future<List<ExpenseSchedule>> getExpenseSchedules(Map<String, dynamic> params) async {
+    final res = await _dio.get('/app/expense-schedules', queryParameters: params);
+    return (res.data['expenseSchedules'] as List)
+        .map((e) => ExpenseSchedule.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<ExpenseSchedule> createExpenseSchedule(Map<String, dynamic> body) async {
+    final res = await _dio.post('/app/expense-schedules', data: body);
+    return ExpenseSchedule.fromJson(res.data['expenseSchedule'] as Map<String, dynamic>);
+  }
+
+  Future<ExpenseSchedule> updateExpenseSchedule(int id, Map<String, dynamic> body) async {
+    final res = await _dio.put('/app/expense-schedules/$id', data: body);
+    return ExpenseSchedule.fromJson(res.data['expenseSchedule'] as Map<String, dynamic>);
+  }
+
+  Future<void> deleteExpenseSchedule(int id) =>
+      _dio.delete('/app/expense-schedules/$id');
+
+  Future<List<ExpenseSchedule>> getTodayScheduleSuggestions(Map<String, dynamic> params) async {
+    final res = await _dio.get('/app/expense-schedules/today-suggestions', queryParameters: params);
+    return (res.data['suggestions'] as List)
+        .map((e) => ExpenseSchedule.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   // ── Incomes ───────────────────────────────────────────────────────────────
 

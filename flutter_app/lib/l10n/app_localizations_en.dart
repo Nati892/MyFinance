@@ -927,4 +927,99 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recurringNoItems => 'No recurring expenses yet';
+
+  @override
+  String get scheduleSettingsSection => 'Automation';
+
+  @override
+  String get scheduleSettingsTitle => 'Expense Schedules';
+
+  @override
+  String get scheduleSettingsSubtitle =>
+      'Define which expenses to expect on specific days';
+
+  @override
+  String get schedulesScreenTitle => 'Expense Schedules';
+
+  @override
+  String get scheduleNew => 'New Schedule';
+
+  @override
+  String get scheduleEdit => 'Edit Schedule';
+
+  @override
+  String get scheduleDescription => 'Description *';
+
+  @override
+  String get scheduleDescriptionHint => 'e.g. Office parking';
+
+  @override
+  String get scheduleCategory => 'Category *';
+
+  @override
+  String get scheduleDays => 'Active days *';
+
+  @override
+  String get scheduleDaysHint => 'Tap the days when this expense is expected.';
+
+  @override
+  String get scheduleAmount => 'Default amount (optional)';
+
+  @override
+  String get scheduleAmountHint => 'Leave blank to ask each time';
+
+  @override
+  String get schedulePaymentMethod => 'Default payment method (optional)';
+
+  @override
+  String get scheduleActive => 'Active';
+
+  @override
+  String get scheduleNote => 'Note (optional)';
+
+  @override
+  String get scheduleSave => 'Save Changes';
+
+  @override
+  String get scheduleAdd => 'Add Schedule';
+
+  @override
+  String get scheduleDeleteConfirm => 'Delete this schedule?';
+
+  @override
+  String get scheduleDeleteMessage => 'This will stop the daily suggestion.';
+
+  @override
+  String get scheduleEmpty => 'No schedules yet';
+
+  @override
+  String get scheduleEmptySub =>
+      'Tap + to define when you expect an expense.\nThe app will remind you on those days.';
+
+  @override
+  String get scheduleLoadFailed => 'Failed to load schedules.';
+
+  @override
+  String get scheduleSuggestionLabel => 'Expected today:';
+
+  @override
+  String get scheduleDaySun => 'Sun';
+
+  @override
+  String get scheduleDayMon => 'Mon';
+
+  @override
+  String get scheduleDayTue => 'Tue';
+
+  @override
+  String get scheduleDayWed => 'Wed';
+
+  @override
+  String get scheduleDayThu => 'Thu';
+
+  @override
+  String get scheduleDayFri => 'Fri';
+
+  @override
+  String get scheduleDaySat => 'Sat';
 }

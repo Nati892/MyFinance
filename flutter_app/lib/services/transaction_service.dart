@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
 import 'package:household/models/recurring_expense.dart';
+import 'package:household/models/expense_schedule.dart';
 import 'package:household/repositories/transaction_repository.dart';
 import 'package:household/services/household_service.dart';
 
@@ -105,6 +106,39 @@ class TransactionService {
       _repo.updateRecurringExpense(id, fields);
 
   Future<void> deleteRecurringExpense(int id) => _repo.deleteRecurringExpense(id);
+
+  // ── Expense Schedules ─────────────────────────────────────────────────────
+
+  Future<List<ExpenseSchedule>> getExpenseSchedules() =>
+      _repo.getExpenseSchedules({'householdId': _householdId});
+
+  Future<ExpenseSchedule> createExpenseSchedule({
+    required String description,
+    required int expenseCategoryId,
+    required List<int> daysOfWeek,
+    double? amount,
+    String? paymentMethod,
+    String? note,
+    bool isActive = true,
+  }) =>
+      _repo.createExpenseSchedule({
+        'description': description,
+        'expenseCategoryId': expenseCategoryId,
+        'householdId': _householdId,
+        'daysOfWeek': daysOfWeek,
+        if (amount != null) 'amount': amount,
+        if (paymentMethod != null && paymentMethod.isNotEmpty) 'paymentMethod': paymentMethod,
+        if (note != null && note.isNotEmpty) 'note': note,
+        'isActive': isActive,
+      });
+
+  Future<ExpenseSchedule> updateExpenseSchedule(int id, Map<String, dynamic> fields) =>
+      _repo.updateExpenseSchedule(id, fields);
+
+  Future<void> deleteExpenseSchedule(int id) => _repo.deleteExpenseSchedule(id);
+
+  Future<List<ExpenseSchedule>> getTodayScheduleSuggestions() =>
+      _repo.getTodayScheduleSuggestions({'householdId': _householdId});
 
   // ── Incomes ───────────────────────────────────────────────────────────────
 

@@ -1927,6 +1927,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No recurring expenses yet'**
   String get recurringNoItems;
+
+  /// No description provided for @scheduleSettingsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Automation'**
+  String get scheduleSettingsSection;
+
+  /// No description provided for @scheduleSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense Schedules'**
+  String get scheduleSettingsTitle;
+
+  /// No description provided for @scheduleSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Define which expenses to expect on specific days'**
+  String get scheduleSettingsSubtitle;
+
+  /// No description provided for @schedulesScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense Schedules'**
+  String get schedulesScreenTitle;
+
+  /// No description provided for @scheduleNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New Schedule'**
+  String get scheduleNew;
+
+  /// No description provided for @scheduleEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Schedule'**
+  String get scheduleEdit;
+
+  /// No description provided for @scheduleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description *'**
+  String get scheduleDescription;
+
+  /// No description provided for @scheduleDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Office parking'**
+  String get scheduleDescriptionHint;
+
+  /// No description provided for @scheduleCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category *'**
+  String get scheduleCategory;
+
+  /// No description provided for @scheduleDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Active days *'**
+  String get scheduleDays;
+
+  /// No description provided for @scheduleDaysHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the days when this expense is expected.'**
+  String get scheduleDaysHint;
+
+  /// No description provided for @scheduleAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Default amount (optional)'**
+  String get scheduleAmount;
+
+  /// No description provided for @scheduleAmountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank to ask each time'**
+  String get scheduleAmountHint;
+
+  /// No description provided for @schedulePaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Default payment method (optional)'**
+  String get schedulePaymentMethod;
+
+  /// No description provided for @scheduleActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get scheduleActive;
+
+  /// No description provided for @scheduleNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get scheduleNote;
+
+  /// No description provided for @scheduleSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Changes'**
+  String get scheduleSave;
+
+  /// No description provided for @scheduleAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Schedule'**
+  String get scheduleAdd;
+
+  /// No description provided for @scheduleDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this schedule?'**
+  String get scheduleDeleteConfirm;
+
+  /// No description provided for @scheduleDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This will stop the daily suggestion.'**
+  String get scheduleDeleteMessage;
+
+  /// No description provided for @scheduleEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No schedules yet'**
+  String get scheduleEmpty;
+
+  /// No description provided for @scheduleEmptySub.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to define when you expect an expense.\nThe app will remind you on those days.'**
+  String get scheduleEmptySub;
+
+  /// No description provided for @scheduleLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load schedules.'**
+  String get scheduleLoadFailed;
+
+  /// No description provided for @scheduleSuggestionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected today:'**
+  String get scheduleSuggestionLabel;
+
+  /// No description provided for @scheduleDaySun.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get scheduleDaySun;
+
+  /// No description provided for @scheduleDayMon.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get scheduleDayMon;
+
+  /// No description provided for @scheduleDayTue.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get scheduleDayTue;
+
+  /// No description provided for @scheduleDayWed.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get scheduleDayWed;
+
+  /// No description provided for @scheduleDayThu.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get scheduleDayThu;
+
+  /// No description provided for @scheduleDayFri.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get scheduleDayFri;
+
+  /// No description provided for @scheduleDaySat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get scheduleDaySat;
 }
 
 class _AppLocalizationsDelegate
