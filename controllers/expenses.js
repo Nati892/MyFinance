@@ -9,6 +9,79 @@ const {
 } = require('../utils/financialCalendar');
 
 /**
+ * Create one Expense row (or a chain of installment rows).
+ * Shared by the HTTP `create` handler and by shopping-session completion.
+ *
+ * Returns the first Expense (the head of the installment chain), reloaded
+ * with ExpenseCategory + AppUser includes.
+ */
+async function createExpenseRecord({
+  amount,
+  dateTime,
+  description,
+  note,
+  paymentMethod,
+  cardId,
+  expenseCategoryId,
+  householdId,
+  appUserId,
+  installmentTotal,
+  installmentCurrent
+}) {
+  const total   = installmentTotal && Number(installmentTotal) > 1 ? Number(installmentTotal) : null;
+  const current = total ? (installmentCurrent ? Number(installmentCurrent) : 1) : null;
+
+  let firstExpense;
+  let parentId = null;
+  if (total && total > 1) {
+    const baseDate = new Date(dateTime);
+    for (let i = 0; i < total; i++) {
+      const paymentDate = new Date(baseDate);
+      paymentDate.setMonth(paymentDate.getMonth() + i);
+      const rec = await Expense.create({
+        amount,
+        dateTime:           paymentDate.toISOString(),
+        description:        description || null,
+        note:               note        || null,
+        paymentMethod,
+        cardId:             cardId ? Number(cardId) : null,
+        expenseCategoryId:  Number(expenseCategoryId),
+        appUserId,
+        householdId:        Number(householdId),
+        installmentTotal:   total,
+        installmentCurrent: current + i,
+        parentExpenseId:    i === 0 ? null : parentId
+      });
+      if (i === 0) {
+        firstExpense = rec;
+        parentId = rec.id;
+      }
+    }
+  } else {
+    firstExpense = await Expense.create({
+      amount,
+      dateTime,
+      description: description || null,
+      note:        note        || null,
+      paymentMethod,
+      cardId:      cardId ? Number(cardId) : null,
+      expenseCategoryId: Number(expenseCategoryId),
+      appUserId,
+      householdId: Number(householdId),
+      installmentTotal:  null,
+      installmentCurrent: null
+    });
+  }
+
+  return Expense.findByPk(firstExpense.id, {
+    include: [
+      { model: ExpenseCategory, attributes: ['id', 'name', 'nameHe', 'icon', 'color'] },
+      { model: AppUser,         attributes: ['id', 'username'] }
+    ]
+  });
+}
+
+/**
  * Given a recurring expense's dayOfMonth and the full financial period,
  * returns the Date when it occurs within that period, or null if it doesn't.
  */
@@ -274,66 +347,18 @@ class ExpensesController {
         return;
       }
 
-      const total   = installmentTotal && Number(installmentTotal) > 1 ? Number(installmentTotal) : null;
-      const current = total ? (installmentCurrent ? Number(installmentCurrent) : 1) : null;
-
-      // --- Create installment records ---
-      // If installmentTotal > 1, create one record per remaining payment month.
-      // The first record uses the given date, subsequent ones are bumped +N months.
-      let firstExpense;
-      let parentId = null;
-      if (total && total > 1) {
-        const baseDate = new Date(dateTime);
-        for (let i = 0; i < total; i++) {
-          const paymentDate = new Date(baseDate);
-          paymentDate.setMonth(paymentDate.getMonth() + i);
-          const rec = await Expense.create({
-            amount,
-            dateTime:           paymentDate.toISOString(),
-            description:        description || null,
-            note:               note        || null,
-            paymentMethod,
-            cardId:             cardId ? Number(cardId) : null,
-            expenseCategoryId:  Number(expenseCategoryId),
-            appUserId,
-            householdId:        Number(householdId),
-            installmentTotal:   total,
-            installmentCurrent: current + i,
-            parentExpenseId:    i === 0 ? null : parentId
-          });
-          if (i === 0) {
-            firstExpense = rec;
-            parentId = rec.id;
-          }
-        }
-      } else {
-        firstExpense = await Expense.create({
-          amount,
-          dateTime,
-          description: description || null,
-          note:        note        || null,
-          paymentMethod,
-          cardId:      cardId ? Number(cardId) : null,
-          expenseCategoryId: Number(expenseCategoryId),
-          appUserId,
-          householdId: Number(householdId),
-          installmentTotal:  null,
-          installmentCurrent: null
-        });
-      }
-
-      // --- Reload with includes ---
-      const created = await Expense.findByPk(firstExpense.id, {
-        include: [
-          {
-            model:      ExpenseCategory,
-            attributes: ['id', 'name', 'nameHe', 'icon', 'color']
-          },
-          {
-            model:      AppUser,
-            attributes: ['id', 'username']
-          }
-        ]
+      const created = await createExpenseRecord({
+        amount,
+        dateTime,
+        description,
+        note,
+        paymentMethod,
+        cardId,
+        expenseCategoryId,
+        householdId,
+        appUserId,
+        installmentTotal,
+        installmentCurrent
       });
 
       ctx.status = 201;
@@ -531,3 +556,4 @@ class ExpensesController {
 }
 
 module.exports = new ExpensesController();
+module.exports.createExpenseRecord = createExpenseRecord;

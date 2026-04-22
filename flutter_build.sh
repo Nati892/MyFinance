@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the Flutter app and produce a release APK.
-# Output: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+# Output: household/build/app/outputs/flutter-apk/app-release.apk
 
 set -euo pipefail
 
@@ -11,7 +11,7 @@ export FLUTTER_ALLOW_ROOT=1
 export PATH="$PATH:/opt/flutter/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FLUTTER_APP_DIR="$SCRIPT_DIR/flutter_app"
+FLUTTER_APP_DIR="$SCRIPT_DIR/household"
 
 echo "==> Building Flutter APK (release)..."
 cd "$FLUTTER_APP_DIR"

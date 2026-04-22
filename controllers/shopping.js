@@ -7,9 +7,56 @@ const {
   ShoppingSession,
   ShoppingSessionItem,
   HouseholdMember,
-  AppUser
+  AppUser,
+  ExpenseCategory,
+  Expense,
+  BudgetPlanItem
 } = require('../models');
 const { getIO } = require('../utils/socket');
+const { createExpenseRecord } = require('./expenses');
+
+// Plan + lifecycle fields accepted by createSession and updateSession
+const PLAN_FIELDS = [
+  'mode',
+  'plannedMinPrice',
+  'plannedMaxPrice',
+  'plannedYear',
+  'plannedMonth',
+  'plannedWeekOfMonth',
+  'expenseCategoryId'
+];
+
+function pickPlanFields(body) {
+  const out = {};
+  for (const k of PLAN_FIELDS) {
+    if (body[k] !== undefined) out[k] = body[k];
+  }
+  return out;
+}
+
+async function upsertBudgetPlanItemForSession(session) {
+  if (!session.expenseCategoryId || !session.plannedYear || !session.plannedMonth) {
+    return null;
+  }
+  const [item] = await BudgetPlanItem.findOrCreate({
+    where: {
+      householdId: session.householdId,
+      expenseCategoryId: session.expenseCategoryId,
+      year: session.plannedYear,
+      month: session.plannedMonth
+    },
+    defaults: {
+      minAmount: session.plannedMinPrice || 0,
+      maxAmount: session.plannedMaxPrice || 0,
+      description: session.name
+    }
+  });
+  await item.update({
+    minAmount: session.plannedMinPrice || 0,
+    maxAmount: session.plannedMaxPrice || 0
+  });
+  return item;
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -463,7 +510,8 @@ class ShoppingController {
         listId: listId || null,
         noteColor: noteColor || '#fff9c4',
         householdId,
-        createdBy: appUser.id
+        createdBy: appUser.id,
+        ...pickPlanFields(ctx.request.body)
       });
 
       // Clone items from template list OR use provided items array
@@ -540,7 +588,15 @@ class ShoppingController {
       if (height !== undefined) updates.height = height;
       if (noteColor !== undefined) updates.noteColor = noteColor;
       if (name !== undefined) updates.name = name;
+      Object.assign(updates, pickPlanFields(ctx.request.body));
       await session.update(updates);
+
+      // If this session is already linked to a plan item and any plan field changed,
+      // propagate the change to the linked BudgetPlanItem.
+      const planFieldChanged = PLAN_FIELDS.some(k => k in updates);
+      if (session.linkedBudgetPlanItemId && planFieldChanged) {
+        await upsertBudgetPlanItemForSession(session);
+      }
 
       const io = getIO();
       if (io) {
@@ -548,6 +604,130 @@ class ShoppingController {
       }
 
       ctx.body = { success: true, session };
+    } catch (e) {
+      console.error(e);
+      ctx.status = 500; ctx.body = { error: 'Failed' };
+    }
+  }
+
+  async completeSession(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { id } = ctx.params;
+      const {
+        actualAmount,
+        dateTime,
+        expenseCategoryId,
+        description,
+        note,
+        paymentMethod,
+        cardId,
+        installmentTotal
+      } = ctx.request.body;
+
+      const session = await ShoppingSession.findByPk(id, {
+        include: [{ model: ShoppingSessionItem, as: 'sessionItems' }]
+      });
+      if (!session) { ctx.status = 404; ctx.body = { error: 'Not found' }; return; }
+      if (!await assertMember(session.householdId, appUser.id, ctx)) return;
+
+      if (session.completedAt) {
+        ctx.status = 400;
+        ctx.body = { error: 'Session already completed' };
+        return;
+      }
+
+      // Resolve amount: prefer explicit, otherwise sum obtained/partial item prices.
+      let amount = actualAmount !== undefined ? Number(actualAmount) : null;
+      if (amount === null) {
+        amount = session.sessionItems
+          .filter(it => it.status === 'got' || it.status === 'partial')
+          .reduce((s, it) => s + (parseFloat(it.price) || 0), 0);
+      }
+      if (!amount || amount <= 0) {
+        ctx.status = 400;
+        ctx.body = { error: 'Cannot create expense with amount 0. Enter prices on items or pass actualAmount.' };
+        return;
+      }
+
+      const categoryId = expenseCategoryId || session.expenseCategoryId;
+      if (!categoryId) {
+        ctx.status = 400;
+        ctx.body = { error: 'expenseCategoryId is required (either on body or session)' };
+        return;
+      }
+
+      // Validate category belongs to household
+      const category = await ExpenseCategory.findOne({
+        where: { id: Number(categoryId), householdId: session.householdId }
+      });
+      if (!category) {
+        ctx.status = 400;
+        ctx.body = { error: 'Invalid expenseCategoryId for this household' };
+        return;
+      }
+
+      const expense = await createExpenseRecord({
+        amount,
+        dateTime: dateTime || new Date().toISOString(),
+        description: description || session.name,
+        note,
+        paymentMethod: paymentMethod || 'card',
+        cardId,
+        expenseCategoryId: categoryId,
+        householdId: session.householdId,
+        appUserId: appUser.id,
+        installmentTotal,
+        installmentCurrent: installmentTotal ? 1 : null
+      });
+
+      await session.update({
+        completedAt: new Date(),
+        linkedExpenseId: expense.id,
+        expenseCategoryId: categoryId
+      });
+
+      const io = getIO();
+      if (io) {
+        io.to(`household:${session.householdId}`).emit('shopping:completed', {
+          sessionId: session.id,
+          expenseId: expense.id,
+          amount
+        });
+      }
+
+      ctx.body = { success: true, expense: expense.toJSON(), session };
+    } catch (e) {
+      console.error(e);
+      ctx.status = 500; ctx.body = { error: 'Failed' };
+    }
+  }
+
+  async attachToPlan(ctx) {
+    try {
+      const appUser = ctx.state.appUser;
+      const { id } = ctx.params;
+
+      const session = await ShoppingSession.findByPk(id);
+      if (!session) { ctx.status = 404; ctx.body = { error: 'Not found' }; return; }
+      if (!await assertMember(session.householdId, appUser.id, ctx)) return;
+
+      if (!session.expenseCategoryId || !session.plannedYear || !session.plannedMonth) {
+        ctx.status = 400;
+        ctx.body = { error: 'Session must have expenseCategoryId, plannedYear and plannedMonth set' };
+        return;
+      }
+
+      const item = await upsertBudgetPlanItemForSession(session);
+      if (!item) {
+        ctx.status = 500;
+        ctx.body = { error: 'Failed to create plan item' };
+        return;
+      }
+
+      await session.update({ linkedBudgetPlanItemId: item.id });
+
+      ctx.body = { success: true, budgetPlanItem: item, session };
     } catch (e) {
       console.error(e);
       ctx.status = 500; ctx.body = { error: 'Failed' };

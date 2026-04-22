@@ -20,10 +20,14 @@ class ApkController {
         return;
       }
 
-      // Determine next version
-      const latest = await ApkRelease.findOne({ order: [['version', 'DESC']] });
-      const nextVersion = latest ? latest.version + 1 : 1;
-      const filename = `app_v${nextVersion}.apk`;
+      const version = ctx.request.body?.version;
+      if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
+        ctx.status = 400;
+        ctx.body = { error: 'Missing or invalid "version" field. Expected format: 1.0.x' };
+        return;
+      }
+
+      const filename = `app_v${version}.apk`;
       const destPath = path.join(APK_DIR, filename);
 
       // Ensure directory exists
@@ -34,12 +38,12 @@ class ApkController {
       // Write buffer to disk
       fs.writeFileSync(destPath, file.buffer);
 
-      await ApkRelease.create({ version: nextVersion, filename });
+      await ApkRelease.create({ version, filename });
 
-      console.log(`[APK] Uploaded version ${nextVersion} (${filename})`);
+      console.log(`[APK] Uploaded version ${version} (${filename})`);
 
       ctx.status = 201;
-      ctx.body = { success: true, version: nextVersion, filename };
+      ctx.body = { success: true, version, filename };
     } catch (error) {
       console.error('APK upload error:', error);
       ctx.status = 500;
@@ -55,7 +59,7 @@ class ApkController {
   async latest(ctx) {
     console.log("/apk/latest");
     try {
-      const release = await ApkRelease.findOne({ order: [['version', 'DESC']] });
+      const release = await ApkRelease.findOne({ order: [['id', 'DESC']] });
       if (!release) {
         ctx.status = 404;
         ctx.body = { error: 'No APK available' };
@@ -84,7 +88,7 @@ class ApkController {
    */
   async publicDownload(ctx) {
     try {
-      const release = await ApkRelease.findOne({ order: [['version', 'DESC']] });
+      const release = await ApkRelease.findOne({ order: [['id', 'DESC']] });
       if (!release) {
         ctx.status = 404;
         ctx.body = { error: 'No APK available' };

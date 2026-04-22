@@ -14,15 +14,18 @@ SERVER_URL="${SERVER_URL:-http://5.189.161.010:1236}"
 MANAGER_TOKEN="${MANAGER_TOKEN:-household-manager-api-token}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_APK="${SCRIPT_DIR}/flutter_app/build/app/outputs/flutter-apk/app-release.apk"
+DEFAULT_APK="${SCRIPT_DIR}/household/build/app/outputs/flutter-apk/app-release.apk"
+PUBSPEC="${SCRIPT_DIR}/household/pubspec.yaml"
 
 APK_PATH="${1:-$DEFAULT_APK}"
+
+APP_VERSION=$(grep '^version:' "$PUBSPEC" | head -1 | sed 's/version: *//;s/+.*//')
 
 if [ ! -f "$APK_PATH" ]; then
   echo "Error: APK not found at: $APK_PATH"
   echo ""
   echo "Build first with:"
-  echo "  cd flutter_app && flutter build apk --release"
+  echo "  cd household && flutter build apk --release"
   echo ""
   echo "Or provide the path explicitly:"
   echo "  ./upload_apk.sh /path/to/app-release.apk"
@@ -30,14 +33,16 @@ if [ ! -f "$APK_PATH" ]; then
 fi
 
 echo "Uploading APK..."
-echo "  File:   $APK_PATH"
-echo "  Server: $SERVER_URL"
+echo "  File:    $APK_PATH"
+echo "  Server:  $SERVER_URL"
+echo "  Version: $APP_VERSION"
 echo ""
 
 RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X POST \
   -H "Authorization: Bearer $MANAGER_TOKEN" \
   -F "apk=@$APK_PATH" \
+  -F "version=$APP_VERSION" \
   "$SERVER_URL/api/apk/upload")
 
 HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | sed 's/HTTP_STATUS://')

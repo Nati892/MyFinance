@@ -1,0 +1,1083 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Hebrew (`he`).
+class AppLocalizationsHe extends AppLocalizations {
+  AppLocalizationsHe([String locale = 'he']) : super(locale);
+
+  @override
+  String get navAssets => 'נכסים';
+
+  @override
+  String get navBudget => 'תקציב';
+
+  @override
+  String get navTransactions => 'תנועות';
+
+  @override
+  String get navStatistics => 'סטטיסטיקה';
+
+  @override
+  String get navBoard => 'לוח';
+
+  @override
+  String get navExpenses => 'הוצאות';
+
+  @override
+  String get navIncomes => 'הכנסות';
+
+  @override
+  String get headerSignOut => 'התנתק';
+
+  @override
+  String get headerBrand => 'הבית שלי';
+
+  @override
+  String get loginTitle => 'Household';
+
+  @override
+  String get loginSubtitle => 'נהל את כספי המשפחה שלך';
+
+  @override
+  String get loginUsername => 'שם משתמש';
+
+  @override
+  String get loginUsernamePlaceholder => 'הכנס שם משתמש';
+
+  @override
+  String get loginPassword => 'סיסמה';
+
+  @override
+  String get loginPasswordPlaceholder => 'הכנס סיסמה';
+
+  @override
+  String get loginSignIn => 'כניסה';
+
+  @override
+  String get loginSigningIn => 'מתחבר...';
+
+  @override
+  String get loginNoHousehold => 'לא הוקצה משק בית. צור קשר עם המנהל.';
+
+  @override
+  String get expensesTitle => 'הוצאות';
+
+  @override
+  String get expensesNew => 'הוצאה חדשה';
+
+  @override
+  String get expensesEdit => 'עריכת הוצאה';
+
+  @override
+  String get expensesCategory => 'קטגוריה';
+
+  @override
+  String get expensesDate => 'תאריך ושעה';
+
+  @override
+  String get expensesPaymentMethod => 'אמצעי תשלום';
+
+  @override
+  String get expensesDescription => 'תיאור';
+
+  @override
+  String get expensesDescriptionPlaceholder => 'למה זה היה?';
+
+  @override
+  String get expensesNote => 'הערה';
+
+  @override
+  String get expensesNotePlaceholder => 'הוסף הערה...';
+
+  @override
+  String get expensesAdd => 'הוסף הוצאה';
+
+  @override
+  String get expensesSave => 'שמור שינויים';
+
+  @override
+  String get expensesSaving => 'שומר...';
+
+  @override
+  String get expensesNoCategories => 'אין קטגוריות';
+
+  @override
+  String get expensesLoadFailed => 'טעינת ההוצאות נכשלה. נסה שוב.';
+
+  @override
+  String get incomesTitle => 'הכנסות';
+
+  @override
+  String get incomesNew => 'הכנסה חדשה';
+
+  @override
+  String get incomesEdit => 'עריכת הכנסה';
+
+  @override
+  String get incomesCategory => 'קטגוריה';
+
+  @override
+  String get incomesDate => 'תאריך ושעה';
+
+  @override
+  String get incomesPaymentMethod => 'אמצעי תשלום';
+
+  @override
+  String get incomesDescription => 'תיאור';
+
+  @override
+  String get incomesDescriptionPlaceholder => 'לדוגמה: משכורת חודשית';
+
+  @override
+  String get incomesNote => 'הערה';
+
+  @override
+  String get incomesNotePlaceholder => 'הערות נוספות…';
+
+  @override
+  String get incomesAdd => 'הוסף הכנסה';
+
+  @override
+  String get incomesSave => 'שמור שינויים';
+
+  @override
+  String get incomesSaving => 'שומר…';
+
+  @override
+  String get incomesNoCategories => 'אין קטגוריות';
+
+  @override
+  String get incomesLoadFailed => 'טעינת ההכנסות נכשלה.';
+
+  @override
+  String get transactionsAll => 'הכל';
+
+  @override
+  String get transactionsExpensesOnly => 'הוצאות';
+
+  @override
+  String get transactionsIncomesOnly => 'הכנסות';
+
+  @override
+  String get transactionsFilters => 'פילטרים';
+
+  @override
+  String get transactionsMinAmount => 'סכום מינימלי';
+
+  @override
+  String get transactionsMaxAmount => 'סכום מקסימלי';
+
+  @override
+  String get transactionsReset => 'אפס';
+
+  @override
+  String get transactionsApply => 'החל';
+
+  @override
+  String get transactionsLoadFailed => 'טעינת התנועות נכשלה. נסה שוב.';
+
+  @override
+  String get transactionsShow => 'הצג';
+
+  @override
+  String get transactionsPriceRange => 'טווח מחירים';
+
+  @override
+  String get transactionsMinUnlimited => 'מינימום (ללא הגבלה)';
+
+  @override
+  String get transactionsMaxUnlimited => 'מקסימום (ללא הגבלה)';
+
+  @override
+  String get transactionsCategory => 'קטגוריה';
+
+  @override
+  String get transactionsExpenseLabel => 'הוצאה';
+
+  @override
+  String get transactionsIncomeLabel => 'הכנסה';
+
+  @override
+  String get paymentCard => 'כרטיס';
+
+  @override
+  String get paymentDebit => 'דביט';
+
+  @override
+  String get paymentCash => 'מזומן';
+
+  @override
+  String get paymentTransfer => 'העברה';
+
+  @override
+  String get budgetTitle => 'תקציב';
+
+  @override
+  String get budgetMonth => 'חודש';
+
+  @override
+  String get budgetSpent => 'הוצא';
+
+  @override
+  String get budgetLeft => 'יתרה';
+
+  @override
+  String get budgetOf => 'תקציב';
+
+  @override
+  String get budgetSetBudget => 'הגדר';
+
+  @override
+  String get budgetSave => 'שמור';
+
+  @override
+  String get budgetCancel => 'ביטול';
+
+  @override
+  String get budgetNoBudget => 'לא נמצאו קטגוריות תקציב.';
+
+  @override
+  String get budgetOnTrack => 'בתקציב';
+
+  @override
+  String get budgetWarning => 'אזהרה';
+
+  @override
+  String get budgetOverBudget => 'חרג מהתקציב';
+
+  @override
+  String get budgetLoadFailed => 'טעינת התקציב נכשלה';
+
+  @override
+  String get budgetNoCategories => 'לא נמצאו קטגוריות הוצאה.';
+
+  @override
+  String get budgetTable => 'טבלה';
+
+  @override
+  String get budgetGraph => 'גרף';
+
+  @override
+  String get budgetCategory => 'קטגוריה';
+
+  @override
+  String get budgetEveryMonth => 'כל חודש';
+
+  @override
+  String get budgetTapToSet => 'לחץ על שורה להגדרת תקציב';
+
+  @override
+  String get budgetAllCategories => 'כל הקטגוריות';
+
+  @override
+  String get budgetByWeek => 'לפי שבוע';
+
+  @override
+  String get budgetByMonth => 'לפי חודש';
+
+  @override
+  String get budgetNoData => 'אין נתונים לתקופה זו.';
+
+  @override
+  String get budgetPlan => 'תכנון';
+
+  @override
+  String get budgetPlanSave => 'שמור תקציב חודשי';
+
+  @override
+  String get budgetPlanHint => 'הגדר תקציב לכל קטגוריה לחודש זה';
+
+  @override
+  String get budgetPlanAddCategory => 'הוסף קטגוריה';
+
+  @override
+  String get budgetPlanAddItem => 'הוסף פריט';
+
+  @override
+  String get budgetPlanStartAmount => 'תקציב התחלתי';
+
+  @override
+  String get budgetPlanTotal => 'סה״כ מתוכנן';
+
+  @override
+  String get budgetPlanBalance => 'יתרה';
+
+  @override
+  String get budgetPlanDescriptionHint => 'תיאור';
+
+  @override
+  String get budgetPlanNoCategories => 'אין קטגוריות הוצאה. לחץ + להוספה.';
+
+  @override
+  String get budgetPlanAdvanced => 'מתקדם';
+
+  @override
+  String get budgetPlanDeleteItem => 'מחק פריט';
+
+  @override
+  String get budgetPlanMin => 'מינימום';
+
+  @override
+  String get budgetPlanMax => 'מקסימום';
+
+  @override
+  String get budgetPlanIncome => 'הכנסה';
+
+  @override
+  String get budgetPlanPrediction => 'תחזית';
+
+  @override
+  String get budgetPlanMonthPrediction => 'תחזית חודשית';
+
+  @override
+  String get budgetPlanTotalMin => 'סה\"כ מתוכנן (מינימום)';
+
+  @override
+  String get budgetPlanTotalMax => 'סה\"כ מתוכנן (מקסימום)';
+
+  @override
+  String get budgetPlanRemainingMin => 'נותר (מינימום)';
+
+  @override
+  String get budgetPlanRemainingMax => 'נותר (מקסימום)';
+
+  @override
+  String get assetsTitle => 'נכסים';
+
+  @override
+  String get assetsNew => 'נכס חדש';
+
+  @override
+  String get assetsEdit => 'עריכת נכס';
+
+  @override
+  String get assetsName => 'שם';
+
+  @override
+  String get assetsValue => 'שווי';
+
+  @override
+  String get assetsLiquidity => 'נזילות';
+
+  @override
+  String get assetsLiquidityHigh => 'גבוהה';
+
+  @override
+  String get assetsLiquidityMedium => 'בינונית';
+
+  @override
+  String get assetsLiquidityLow => 'נמוכה';
+
+  @override
+  String get assetsDescription => 'תיאור';
+
+  @override
+  String get assetsDate => 'תאריך';
+
+  @override
+  String get assetsSave => 'שמור שינויים';
+
+  @override
+  String get assetsAdd => 'הוסף נכס';
+
+  @override
+  String get assetsCancel => 'ביטול';
+
+  @override
+  String get assetsDelete => 'מחק';
+
+  @override
+  String get assetsLoadFailed => 'טעינת הנכסים נכשלה';
+
+  @override
+  String get assetsNoAssets => 'אין נכסים עדיין';
+
+  @override
+  String get assetsNoAssetsSub => 'לחץ + להוספת הנכס הראשון.';
+
+  @override
+  String get assetsTotal => 'סך הכל';
+
+  @override
+  String get assetsLiquid => 'נזיל';
+
+  @override
+  String get assetsSemi => 'חלקית';
+
+  @override
+  String get assetsIlliquid => 'לא נזיל';
+
+  @override
+  String get assetsGroupTotal => 'סה\"כ קבוצה';
+
+  @override
+  String get assetsSetLiquidity => 'הגדר נזילות';
+
+  @override
+  String get assetsExitDate => 'תאריך יציאה';
+
+  @override
+  String get assetsExitType => 'סוג יציאה';
+
+  @override
+  String get assetsExitNone => 'ללא';
+
+  @override
+  String get assetsExitSingle => 'תאריך יחיד';
+
+  @override
+  String get assetsExitSeries => 'סדרה';
+
+  @override
+  String get assetsExitSeriesStart => 'תאריך התחלה';
+
+  @override
+  String get assetsRepeatEvery => 'חזור כל';
+
+  @override
+  String get assetsRecurringIncome => 'הכנסה חוזרת';
+
+  @override
+  String get assetsAmountPerInterval => 'סכום לתקופה';
+
+  @override
+  String get assetsSelectDate => 'בחר תאריך';
+
+  @override
+  String get assetsSelectExitDate => 'בחר תאריך יציאה';
+
+  @override
+  String get assetsSelectStartDate => 'בחר תאריך התחלה';
+
+  @override
+  String get assetsCompany => 'חברה';
+
+  @override
+  String get assetsCompanyPlaceholder => 'לדוג׳ טסלה, אפל…';
+
+  @override
+  String get boardTitle => 'לוח';
+
+  @override
+  String get boardAddNote => 'הוסף פתק';
+
+  @override
+  String get boardNewNote => 'פתק חדש';
+
+  @override
+  String get boardNoteType => 'סוג פתק';
+
+  @override
+  String get boardTypeText => 'טקסט';
+
+  @override
+  String get boardTypeHeart => 'לב';
+
+  @override
+  String get boardTypeImage => 'תמונה';
+
+  @override
+  String get boardNoteColor => 'צבע פתק';
+
+  @override
+  String get boardHeartColor => 'צבע לב';
+
+  @override
+  String get boardPost => 'פרסם פתק';
+
+  @override
+  String get boardEmpty => 'הלוח ריק';
+
+  @override
+  String get boardEmptySubtitle => 'היה הראשון לפרסם!';
+
+  @override
+  String get boardDelete => 'מחק';
+
+  @override
+  String get boardDeleteConfirm => 'למחוק את הפתק?';
+
+  @override
+  String get boardDeleteMessage => 'לא ניתן לבטל פעולה זו.';
+
+  @override
+  String get boardCancel => 'ביטול';
+
+  @override
+  String get boardJustNow => 'עכשיו';
+
+  @override
+  String get boardLoadFailed => 'משהו השתבש.';
+
+  @override
+  String get boardSelectHousehold => 'בחר משק בית תחילה.';
+
+  @override
+  String get boardWritePlaceholder => 'כתוב את הפתק שלך…';
+
+  @override
+  String get boardImagePlaceholder => 'הדבק כתובת URL של תמונה...';
+
+  @override
+  String get boardTryAgain => 'נסה שוב';
+
+  @override
+  String get shoppingTab => 'קניות';
+
+  @override
+  String get shoppingNewList => 'רשימה חדשה';
+
+  @override
+  String get shoppingPickTemplate => 'השתמש ברשימה קיימת כתבנית';
+
+  @override
+  String get shoppingAddItem => 'הוסף פריט';
+
+  @override
+  String get shoppingItemName => 'שם הפריט (אנגלית)';
+
+  @override
+  String get shoppingItemNameHe => 'שם הפריט (עברית)';
+
+  @override
+  String get shoppingUnit => 'יחידה';
+
+  @override
+  String get shoppingAmount => 'כמות';
+
+  @override
+  String get shoppingCategory => 'קטגוריה';
+
+  @override
+  String get shoppingStore => 'חנות';
+
+  @override
+  String get shoppingAddStore => 'הוסף חנות';
+
+  @override
+  String get shoppingGotIt => 'יש';
+
+  @override
+  String get shoppingPartial => 'חלקית';
+
+  @override
+  String get shoppingNope => 'אין';
+
+  @override
+  String get shoppingPrice => 'מחיר';
+
+  @override
+  String get shoppingNote => 'הערה';
+
+  @override
+  String get shoppingListName => 'שם הרשימה';
+
+  @override
+  String get shoppingSave => 'שמור רשימה';
+
+  @override
+  String get shoppingSearchItems => 'חיפוש פריטים…';
+
+  @override
+  String get shoppingNewItemTitle => 'פריט קניות חדש';
+
+  @override
+  String get shoppingSelectItems => 'בחר פריטים לרשימה זו';
+
+  @override
+  String get shoppingNoItems => 'אין פריטים עדיין. צור אחד!';
+
+  @override
+  String get shoppingSessionCardTitle => 'רשימת קניות';
+
+  @override
+  String get shoppingDeleteSession => 'מחק רשימה';
+
+  @override
+  String get shoppingAddNewCategory => 'קטגוריה חדשה';
+
+  @override
+  String get shoppingPlanForLater => 'תכנן להמשך';
+
+  @override
+  String get shoppingPlanCategory => 'קטגוריית הוצאה';
+
+  @override
+  String get shoppingPlanMinPrice => 'מחיר מינימלי';
+
+  @override
+  String get shoppingPlanMaxPrice => 'מחיר מקסימלי';
+
+  @override
+  String get shoppingPlanMonth => 'בחר חודש';
+
+  @override
+  String get shoppingPlanPickMonth => 'בחר חודש לתוכנית';
+
+  @override
+  String get shoppingPlanWeek => 'שבוע';
+
+  @override
+  String get shoppingPlanWholeMonth => 'כל החודש';
+
+  @override
+  String get shoppingPlanAddToBudget => 'הוסף לתקציב';
+
+  @override
+  String get shoppingTotalSoFar => 'סה״כ עד עכשיו';
+
+  @override
+  String get shoppingSaveAndExit => 'שמור וצא';
+
+  @override
+  String get shoppingDoneCreateExpense => 'סיימתי → צור הוצאה';
+
+  @override
+  String get shoppingCreateExpense => 'צור הוצאה';
+
+  @override
+  String get shoppingConfirmCreateExpense => 'צור';
+
+  @override
+  String get shoppingExpenseCreated => 'נוצרה הוצאה';
+
+  @override
+  String get shoppingCompleteFailed => 'יצירת ההוצאה נכשלה';
+
+  @override
+  String get shoppingNoTotalYet => 'יש להזין מחירים תחילה';
+
+  @override
+  String get shoppingMissingFields => 'יש למלא סכום וקטגוריה';
+
+  @override
+  String get categoryNewExpense => 'קטגוריית הוצאה חדשה';
+
+  @override
+  String get categoryNewIncome => 'קטגוריית הכנסה חדשה';
+
+  @override
+  String get categoryName => 'שם';
+
+  @override
+  String get categoryNamePlaceholder => 'לדוגמה: מכולת';
+
+  @override
+  String get categoryNameHe => 'שם בעברית (אופציונלי)';
+
+  @override
+  String get categoryNameHePlaceholder => 'מכולת';
+
+  @override
+  String get categoryColor => 'צבע';
+
+  @override
+  String get categoryIcon => 'אייקון (אופציונלי)';
+
+  @override
+  String get categoryIconSearch => 'חפש אייקונים...';
+
+  @override
+  String get categoryCancel => 'ביטול';
+
+  @override
+  String get categorySave => 'צור קטגוריה';
+
+  @override
+  String get categoryFailed => 'יצירת הקטגוריה נכשלה';
+
+  @override
+  String get categoryFilterByCategory => 'סנן לפי קטגוריה';
+
+  @override
+  String get categorySearch => 'חיפוש';
+
+  @override
+  String get categoryFavorites => 'מועדפים';
+
+  @override
+  String get categoryEdit => 'עריכה';
+
+  @override
+  String get categoryDelete => 'מחיקה';
+
+  @override
+  String get categoryDeleteConfirm => 'למחוק קטגוריה זו?';
+
+  @override
+  String get categoryDeleteRefs => 'גם להסיר מכל ההוצאות/הכנסות הקודמות';
+
+  @override
+  String get categoryParent => 'קטגוריית אב (אופציונלי)';
+
+  @override
+  String get categorySubNew => 'תת-קטגוריה חדשה';
+
+  @override
+  String get categoryGeneral => 'כללי';
+
+  @override
+  String get timelineTotal => 'סך הכל';
+
+  @override
+  String get timelineMonthly => 'חודש';
+
+  @override
+  String get timelineWeekly => 'שבוע';
+
+  @override
+  String get timelineDaily => 'יום';
+
+  @override
+  String get timelineNoTransactions => 'אין תנועות';
+
+  @override
+  String get timelineNoTransactionsMonth => 'אין תנועות החודש';
+
+  @override
+  String get timelineNoTransactionsWeek => 'אין תנועות השבוע';
+
+  @override
+  String get timelineNoTransactionsDay => 'אין תנועות היום';
+
+  @override
+  String get timelinePrev => 'הקודם';
+
+  @override
+  String get timelineNext => 'הבא';
+
+  @override
+  String get timelineActions => 'פעולות';
+
+  @override
+  String get timelineEdit => 'עריכה';
+
+  @override
+  String get timelineDelete => 'מחיקה';
+
+  @override
+  String get timelineWk => 'שב׳';
+
+  @override
+  String get commonCancel => 'ביטול';
+
+  @override
+  String get commonDelete => 'מחק';
+
+  @override
+  String get commonConfirm => 'אישור';
+
+  @override
+  String get commonSave => 'שמור';
+
+  @override
+  String get commonRetry => 'נסה שוב';
+
+  @override
+  String get commonLoading => 'טוען…';
+
+  @override
+  String get commonError => 'משהו השתבש.';
+
+  @override
+  String get commonNoHousehold => 'לא נבחר משק בית';
+
+  @override
+  String get commonNoHouseholdMsg => 'צור קשר עם המנהל כדי להצטרף למשק בית.';
+
+  @override
+  String get commonOptional => '(אופציונלי)';
+
+  @override
+  String get commonNew => 'חדש';
+
+  @override
+  String get commonDeleteExpense => 'מחק הוצאה?';
+
+  @override
+  String get commonDeleteIncome => 'מחק הכנסה?';
+
+  @override
+  String get commonDeleteAsset => 'מחק נכס?';
+
+  @override
+  String get commonThisMonthSummary => 'סיכום החודש';
+
+  @override
+  String get commonNetBalance => 'יתרה נטו';
+
+  @override
+  String get commonRecentTransactions => 'תנועות אחרונות';
+
+  @override
+  String get commonNoTransactionsMonth => 'אין תנועות החודש';
+
+  @override
+  String get commonToday => 'היום';
+
+  @override
+  String get commonYesterday => 'אתמול';
+
+  @override
+  String get commonExpense => 'הוצאה';
+
+  @override
+  String get commonIncome => 'הכנסה';
+
+  @override
+  String get homeStartBalance => 'יתרת פתיחה';
+
+  @override
+  String get homePredicted => 'חיזוי';
+
+  @override
+  String get homeConfirmed => 'מאושר';
+
+  @override
+  String get homePredictedEnd => 'סוף חזוי';
+
+  @override
+  String get homeSetStartBalance => 'הגדר יתרת פתיחה';
+
+  @override
+  String get cardsPageTitle => 'כרטיסים';
+
+  @override
+  String get cardsNone => 'ללא';
+
+  @override
+  String get cardsAddCard => 'הוסף כרטיס';
+
+  @override
+  String get cardsEditCard => 'ערוך כרטיס';
+
+  @override
+  String get cardsLastFour => '4 ספרות אחרונות';
+
+  @override
+  String get cardsNickname => 'כינוי';
+
+  @override
+  String get cardsBankName => 'שם הבנק';
+
+  @override
+  String get cardsTypeCredit => 'אשראי';
+
+  @override
+  String get cardsTypeDebit => 'דביט';
+
+  @override
+  String get cardsDeleteConfirm => 'למחוק כרטיס זה?';
+
+  @override
+  String get settingsTitle => 'הגדרות';
+
+  @override
+  String get settingsTextSize => 'גודל טקסט';
+
+  @override
+  String get settingsTextSizeHint => 'ברירת המחדל לפי הגדרות המכשיר';
+
+  @override
+  String get settingsTextSizePreview => 'טקסט לדוגמה';
+
+  @override
+  String get settingsLanguage => 'שפה';
+
+  @override
+  String get settingsLanguageHint => 'החלף בין אנגלית לעברית';
+
+  @override
+  String get settingsAbout => 'אודות';
+
+  @override
+  String get settingsVersion => 'גרסה 1.0';
+
+  @override
+  String get settingsAppName => 'מנהל כספי הבית';
+
+  @override
+  String get drawerSettings => 'הגדרות';
+
+  @override
+  String get drawerSignOut => 'התנתק';
+
+  @override
+  String get categoryTranslate => 'תרגם';
+
+  @override
+  String get categoryTranslating => 'מתרגם...';
+
+  @override
+  String get statsTitle => 'סטטיסטיקה';
+
+  @override
+  String get statsThisMonth => 'החודש הנוכחי';
+
+  @override
+  String get statsSavingsRate => 'שיעור חיסכון';
+
+  @override
+  String get statsTopCategories => 'קטגוריות ההוצאה המובילות';
+
+  @override
+  String get statsMonthlyTrend => 'מגמה חודשית';
+
+  @override
+  String get statsBiggestExpense => 'קטגוריית ההוצאה הגדולה ביותר';
+
+  @override
+  String get statsPaymentMethods => 'לפי אמצעי תשלום';
+
+  @override
+  String get statsAvgMonthlyExpense => 'ממוצע הוצאה חודשי';
+
+  @override
+  String get statsNoData => 'אין מספיק נתונים עדיין';
+
+  @override
+  String get statsLast4Months => '4 חודשים אחרונים';
+
+  @override
+  String get transactionsInstallmentsOnly => 'תשלומים בלבד';
+
+  @override
+  String get recurringTitle => 'קבועים';
+
+  @override
+  String get recurringNew => 'הוצאה קבועה חדשה';
+
+  @override
+  String get recurringEdit => 'עריכת הוצאה קבועה';
+
+  @override
+  String get recurringBadge => 'קבוע';
+
+  @override
+  String get recurringDayOfMonth => 'יום בחודש';
+
+  @override
+  String get recurringAdd => 'הוסף קבועה';
+
+  @override
+  String get recurringSave => 'שמור';
+
+  @override
+  String get recurringDelete => 'מחק';
+
+  @override
+  String get recurringDeleteConfirm => 'למחוק את ההוצאה הקבועה?';
+
+  @override
+  String get recurringDeleteMessage => 'היא לא תופיע בחודשים הבאים.';
+
+  @override
+  String get recurringStartMonth => 'החל מ';
+
+  @override
+  String get recurringNoItems => 'אין הוצאות קבועות עדיין';
+
+  @override
+  String get recurringGroupLabel => 'הוצאות קבועות';
+
+  @override
+  String get scheduleSettingsSection => 'אוטומציה';
+
+  @override
+  String get scheduleSettingsTitle => 'לוח זמנים להוצאות';
+
+  @override
+  String get scheduleSettingsSubtitle =>
+      'הגדר אילו הוצאות צפויות בימים מסוימים';
+
+  @override
+  String get schedulesScreenTitle => 'לוח זמנים להוצאות';
+
+  @override
+  String get scheduleNew => 'לוח זמנים חדש';
+
+  @override
+  String get scheduleEdit => 'עריכת לוח זמנים';
+
+  @override
+  String get scheduleDescription => 'תיאור *';
+
+  @override
+  String get scheduleDescriptionHint => 'למשל: חניה במשרד';
+
+  @override
+  String get scheduleCategory => 'קטגוריה *';
+
+  @override
+  String get scheduleDays => 'ימים פעילים *';
+
+  @override
+  String get scheduleDaysHint => 'הקש על הימים שבהם ההוצאה צפויה.';
+
+  @override
+  String get scheduleAmount => 'סכום ברירת מחדל (אופציונלי)';
+
+  @override
+  String get scheduleAmountHint => 'השאר ריק לשאלה בכל פעם';
+
+  @override
+  String get schedulePaymentMethod => 'אמצעי תשלום ברירת מחדל (אופציונלי)';
+
+  @override
+  String get scheduleActive => 'פעיל';
+
+  @override
+  String get scheduleNote => 'הערה (אופציונלי)';
+
+  @override
+  String get scheduleSave => 'שמור שינויים';
+
+  @override
+  String get scheduleAdd => 'הוסף לוח זמנים';
+
+  @override
+  String get scheduleDeleteConfirm => 'למחוק את לוח הזמנים?';
+
+  @override
+  String get scheduleDeleteMessage => 'ההצעה היומית תפסיק להופיע.';
+
+  @override
+  String get scheduleEmpty => 'אין לוחות זמנים עדיין';
+
+  @override
+  String get scheduleEmptySub =>
+      'הקש + כדי להגדיר מתי אתה מצפה להוצאה.\nהאפליקציה תזכיר לך באותם ימים.';
+
+  @override
+  String get scheduleLoadFailed => 'טעינת לוחות הזמנים נכשלה.';
+
+  @override
+  String get scheduleSuggestionLabel => 'צפוי היום:';
+
+  @override
+  String get constantExpensesLabel => 'הוצאות קבועות';
+
+  @override
+  String get scheduleDaySun => 'א\'';
+
+  @override
+  String get scheduleDayMon => 'ב\'';
+
+  @override
+  String get scheduleDayTue => 'ג\'';
+
+  @override
+  String get scheduleDayWed => 'ד\'';
+
+  @override
+  String get scheduleDayThu => 'ה\'';
+
+  @override
+  String get scheduleDayFri => 'ו\'';
+
+  @override
+  String get scheduleDaySat => 'ש\'';
+}

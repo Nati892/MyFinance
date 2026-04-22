@@ -179,6 +179,18 @@ ShoppingSession.belongsTo(AppUser, { foreignKey: 'createdBy', as: 'creator' });
 ShoppingList.hasMany(ShoppingSession, { foreignKey: 'listId' });
 ShoppingSession.belongsTo(ShoppingList, { foreignKey: 'listId', as: 'sourceList' });
 
+// ExpenseCategory <-> ShoppingSession (default category for completion / plan link)
+ExpenseCategory.hasMany(ShoppingSession, { foreignKey: 'expenseCategoryId' });
+ShoppingSession.belongsTo(ExpenseCategory, { foreignKey: 'expenseCategoryId', as: 'expenseCategory' });
+
+// Expense <-> ShoppingSession (the expense created when session is completed)
+Expense.hasMany(ShoppingSession, { foreignKey: 'linkedExpenseId' });
+ShoppingSession.belongsTo(Expense, { foreignKey: 'linkedExpenseId', as: 'linkedExpense' });
+
+// BudgetPlanItem <-> ShoppingSession (plan row this session feeds into)
+BudgetPlanItem.hasMany(ShoppingSession, { foreignKey: 'linkedBudgetPlanItemId' });
+ShoppingSession.belongsTo(BudgetPlanItem, { foreignKey: 'linkedBudgetPlanItemId', as: 'linkedBudgetPlanItem' });
+
 // ShoppingSession <-> ShoppingSessionItem
 ShoppingSession.hasMany(ShoppingSessionItem, { foreignKey: 'sessionId', as: 'sessionItems', onDelete: 'CASCADE' });
 ShoppingSessionItem.belongsTo(ShoppingSession, { foreignKey: 'sessionId' });

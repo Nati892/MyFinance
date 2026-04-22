@@ -1,0 +1,131 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_file/open_file.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import 'package:household/repositories/apk_repository.dart';
+
+final apkServiceProvider = Provider<ApkService>(
+  (ref) => ApkService(ref.read(apkRepositoryProvider)),
+);
+
+class ApkUpdateInfo {
+  final String latestVersion;
+  final String downloadUrl;
+  final bool isUpdateAvailable;
+
+  const ApkUpdateInfo({
+    required this.latestVersion,
+    required this.downloadUrl,
+    required this.isUpdateAvailable,
+  });
+}
+
+class ApkService {
+  final ApkRepository _repo;
+  ApkService(this._repo);
+
+  static const _channel = MethodChannel('household/package_info');
+
+  /// Returns the app's first-install timestamp in milliseconds, or null if unavailable.
+  Future<int?> _getInstallTimeMs() async {
+    try {
+      final ms = await _channel.invokeMethod<int>('getInstallTime');
+      return ms;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Check if a newer APK version is available.
+  /// Returns null if the check fails (network error, no APK uploaded, etc.).
+  Future<ApkUpdateInfo?> checkForUpdate() async {
+    try {
+      final data = await _repo.getLatest();
+      final latestVersion = data['version'] as String;
+      final downloadUrl = data['downloadUrl'] as String;
+      final uploadedAtRaw = data['uploadedAt'];
+      debugPrint('[APK] checkForUpdate → latestVersion=$latestVersion, downloadUrl=$downloadUrl, uploadedAt=$uploadedAtRaw');
+
+      final info = await PackageInfo.fromPlatform();
+      final serverPatch = int.tryParse(latestVersion.split('.').last) ?? 0;
+      final currentPatch = int.tryParse(info.version.split('.').last) ?? 0;
+
+      bool isUpdateAvailable = serverPatch > currentPatch;
+
+      // If the app was installed AFTER this APK was uploaded, the device
+      // already has a newer build — skip the update prompt.
+      if (isUpdateAvailable && uploadedAtRaw != null) {
+        final uploadedAt = DateTime.tryParse(uploadedAtRaw.toString());
+        final installTimeMs = await _getInstallTimeMs();
+        if (uploadedAt != null && installTimeMs != null) {
+          final installTime = DateTime.fromMillisecondsSinceEpoch(installTimeMs);
+          if (installTime.isAfter(uploadedAt)) {
+            debugPrint('[APK] Install time ($installTime) > uploadedAt ($uploadedAt) — skipping update prompt');
+            isUpdateAvailable = false;
+          }
+        }
+      }
+
+      debugPrint('[APK] currentVersion=${info.version}, updateAvailable=$isUpdateAvailable');
+
+      return ApkUpdateInfo(
+        latestVersion: latestVersion,
+        downloadUrl: downloadUrl,
+        isUpdateAvailable: isUpdateAvailable,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Download the APK at [downloadUrl] and trigger the system installer.
+  Future<void> downloadAndInstall(
+    String downloadUrl, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    if (Platform.isAndroid) {
+      // Storage permission (needed on Android < 10 for external storage)
+      final storageStatus = await Permission.storage.request();
+      if (storageStatus.isPermanentlyDenied) {
+        throw Exception('Storage permission permanently denied');
+      }
+
+      // Install packages permission (Android 8+)
+      final installStatus = await Permission.requestInstallPackages.request();
+      if (!installStatus.isGranted) {
+        throw Exception(
+          'Install packages permission not granted. '
+          'Please enable "Install unknown apps" for this app in system settings.',
+        );
+      }
+    }
+
+    final externalDir = Platform.isAndroid ? await getExternalStorageDirectory() : null;
+    debugPrint('[APK] externalStorageDirectory: $externalDir');
+
+    final dir = (externalDir ?? await getApplicationDocumentsDirectory());
+    debugPrint('[APK] dir: $dir  path: ${dir.path}');
+
+    final savePath = '${dir.path}/household_update.apk';
+    debugPrint('[APK] savePath resolved to: $savePath');
+
+    await _repo.downloadApk(
+      downloadUrl,
+      savePath,
+      onReceiveProgress: onProgress != null
+          ? (received, total) => onProgress(received, total)
+          : null,
+    );
+
+    final result = await OpenFile.open(savePath);
+    if (result.type != ResultType.done) {
+      throw Exception('Failed to open installer: ${result.message}');
+    }
+  }
+}

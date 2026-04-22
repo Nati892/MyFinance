@@ -37,6 +37,8 @@ router.get('/app/shopping/sessions', authenticateApp, c.listSessions);
 router.post('/app/shopping/sessions', authenticateApp, c.createSession);
 router.put('/app/shopping/sessions/:id', authenticateApp, c.updateSession);
 router.delete('/app/shopping/sessions/:id', authenticateApp, c.deleteSession);
+router.post('/app/shopping/sessions/:id/complete', authenticateApp, c.completeSession);
+router.post('/app/shopping/sessions/:id/attach-to-plan', authenticateApp, c.attachToPlan);
 router.patch('/app/shopping/sessions/:id/items/:itemId', authenticateApp, c.patchSessionItem);
 router.post('/app/shopping/sessions/:id/items', authenticateApp, c.addSessionItem);
 

@@ -1,0 +1,65 @@
+name: household
+description: Household finance app — Flutter client for /app routes.
+publish_to: 'none'
+version: 1.0.9+9
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # HTTP
+  dio: ^5.7.0
+
+  # Secure token storage
+  flutter_secure_storage: ^9.2.2
+
+  # Simple key-value storage for non-sensitive prefs (locale, font scale)
+  shared_preferences: ^2.3.0
+
+  # Material Symbols icons — bundled font, zero network requests
+  material_symbols_icons: ^4.2906.0
+
+  # Image picker (for board image notes)
+  image_picker: ^1.1.2
+
+  # Color picker (full HSV palette for board notes)
+  flutter_colorpicker: ^1.1.0
+
+  # Utilities
+  intl: ^0.20.2
+
+  # APK self-update (developer users only)
+  path_provider: ^2.1.4
+  permission_handler: ^11.3.1
+  open_file: ^3.3.2
+  package_info_plus: ^8.1.1
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
+  riverpod_generator: ^2.6.1
+  custom_lint: ^0.7.0
+  riverpod_lint: ^2.6.1
+
+flutter:
+  uses-material-design: true
+  generate: true   # enables Flutter's built-in ARB/i18n gen
+
+  assets:
+    - assets/i18n/
