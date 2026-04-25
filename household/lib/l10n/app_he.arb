@@ -378,5 +378,17 @@
   "scheduleDayWed": "ד'",
   "scheduleDayThu": "ה'",
   "scheduleDayFri": "ו'",
-  "scheduleDaySat": "ש'"
+  "scheduleDaySat": "ש'",
+
+  "attachments": "קבצים מצורפים",
+  "attachmentsAddCamera": "מצלמה",
+  "attachmentsAddFiles": "קבצים",
+  "attachmentsRemove": "הסר",
+  "attachmentsName": "שם קובץ",
+  "attachmentsCount": "{count} קבצים",
+  "@attachmentsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
 }

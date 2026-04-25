@@ -42,7 +42,7 @@ class TransactionService {
     });
   }
 
-  Future<void> createExpense({
+  Future<int?> createExpense({
     required double amount,
     required String dateTime,
     required String paymentMethod,
@@ -159,7 +159,7 @@ class TransactionService {
     });
   }
 
-  Future<void> createIncome({
+  Future<int?> createIncome({
     required double amount,
     required String dateTime,
     required String paymentMethod,

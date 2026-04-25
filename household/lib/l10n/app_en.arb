@@ -378,5 +378,17 @@
   "scheduleDayWed": "Wed",
   "scheduleDayThu": "Thu",
   "scheduleDayFri": "Fri",
-  "scheduleDaySat": "Sat"
+  "scheduleDaySat": "Sat",
+
+  "attachments": "Attachments",
+  "attachmentsAddCamera": "Camera",
+  "attachmentsAddFiles": "Files",
+  "attachmentsRemove": "Remove",
+  "attachmentsName": "File name",
+  "attachmentsCount": "{count, plural, =1{1 attachment} other{{count} attachments}}",
+  "@attachmentsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
 }

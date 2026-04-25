@@ -43,6 +43,7 @@ const ShoppingSessionItem = require('./shopping-session-item')(sequelize, Sequel
 const ApkRelease = require('./apkRelease')(sequelize, Sequelize.DataTypes);
 const RecurringExpense = require('./recurringExpense')(sequelize, Sequelize.DataTypes);
 const ExpenseSchedule = require('./expenseSchedule')(sequelize, Sequelize.DataTypes);
+const TransactionAttachment = require('./transactionAttachment')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 User.hasMany(Log, {
@@ -227,6 +228,22 @@ ExpenseSchedule.belongsTo(AppUser, { foreignKey: 'appUserId' });
 ExpenseCategory.hasMany(ExpenseSchedule, { foreignKey: 'expenseCategoryId' });
 ExpenseSchedule.belongsTo(ExpenseCategory, { foreignKey: 'expenseCategoryId' });
 
+// Expense <-> TransactionAttachment
+Expense.hasMany(TransactionAttachment, { foreignKey: 'expenseId', as: 'attachments', onDelete: 'CASCADE' });
+TransactionAttachment.belongsTo(Expense, { foreignKey: 'expenseId' });
+
+// Income <-> TransactionAttachment
+Income.hasMany(TransactionAttachment, { foreignKey: 'incomeId', as: 'attachments', onDelete: 'CASCADE' });
+TransactionAttachment.belongsTo(Income, { foreignKey: 'incomeId' });
+
+// Household <-> TransactionAttachment
+Household.hasMany(TransactionAttachment, { foreignKey: 'householdId', as: 'attachments', onDelete: 'CASCADE' });
+TransactionAttachment.belongsTo(Household, { foreignKey: 'householdId' });
+
+// AppUser <-> TransactionAttachment
+AppUser.hasMany(TransactionAttachment, { foreignKey: 'appUserId', as: 'attachments' });
+TransactionAttachment.belongsTo(AppUser, { foreignKey: 'appUserId' });
+
 // ExpenseCategory self-referential (sub-categories)
 ExpenseCategory.hasMany(ExpenseCategory, { as: 'subCategories', foreignKey: 'parentCategoryId' });
 ExpenseCategory.belongsTo(ExpenseCategory, { as: 'parentCategory', foreignKey: 'parentCategoryId' });
@@ -268,7 +285,8 @@ const db = {
   ShoppingSessionItem,
   ApkRelease,
   RecurringExpense,
-  ExpenseSchedule
+  ExpenseSchedule,
+  TransactionAttachment
 };
 
 module.exports = db;

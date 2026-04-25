@@ -1,5 +1,6 @@
-const { Expense, ExpenseCategory, AppUser, HouseholdMember, Card, RecurringExpense, sequelize } = require('../models');
+const { Expense, ExpenseCategory, AppUser, HouseholdMember, Card, RecurringExpense, TransactionAttachment, sequelize } = require('../models');
 const { Op } = require('sequelize');
+const { deleteAttachmentFilesForTransactions } = require('./attachments');
 const {
   getCurrentFinancialPeriod,
   getFinancialPeriod,
@@ -76,7 +77,13 @@ async function createExpenseRecord({
   return Expense.findByPk(firstExpense.id, {
     include: [
       { model: ExpenseCategory, attributes: ['id', 'name', 'nameHe', 'icon', 'color'] },
-      { model: AppUser,         attributes: ['id', 'username'] }
+      { model: AppUser,         attributes: ['id', 'username'] },
+      {
+        model:    TransactionAttachment,
+        as:       'attachments',
+        attributes: ['id', 'filename', 'originalFilename', 'mimeType', 'size', 'isImage', 'createdAt'],
+        required: false
+      }
     ]
   });
 }
@@ -219,6 +226,12 @@ class ExpensesController {
             as:         'card',
             attributes: ['id', 'lastFourDigits', 'nickname', 'bankName', 'cardType'],
             required:   false
+          },
+          {
+            model:      TransactionAttachment,
+            as:         'attachments',
+            attributes: ['id', 'filename', 'originalFilename', 'mimeType', 'size', 'isImage', 'createdAt'],
+            required:   false
           }
         ],
         order: [['dateTime', 'DESC']]
@@ -263,9 +276,24 @@ class ExpensesController {
         });
       }
 
+      const baseUrl = `${ctx.protocol}://${ctx.host}`;
+
+      function enrichAttachments(expenseObj) {
+        if (!Array.isArray(expenseObj.attachments)) {
+          expenseObj.attachments = [];
+        }
+        expenseObj.attachments = expenseObj.attachments.map(a => ({
+          ...a,
+          fileUrl:  `${baseUrl}/api/app/attachments/${a.id}/file`,
+          thumbUrl: a.isImage ? `${baseUrl}/api/app/attachments/${a.id}/thumb` : null
+        }));
+        expenseObj.attachmentCount = expenseObj.attachments.length;
+        return expenseObj;
+      }
+
       const allExpenses = [
-        ...expenses.map(e => e.toJSON()),
-        ...recurringEntries
+        ...expenses.map(e => enrichAttachments(e.toJSON())),
+        ...recurringEntries.map(r => ({ ...r, attachments: [], attachmentCount: 0 }))
       ].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
 
       // --- Compute total ---
@@ -361,8 +389,18 @@ class ExpensesController {
         installmentCurrent
       });
 
+      const baseUrl = `${ctx.protocol}://${ctx.host}`;
+      const expenseJson = created.toJSON();
+      if (!Array.isArray(expenseJson.attachments)) expenseJson.attachments = [];
+      expenseJson.attachments = expenseJson.attachments.map(a => ({
+        ...a,
+        fileUrl:  `${baseUrl}/api/app/attachments/${a.id}/file`,
+        thumbUrl: a.isImage ? `${baseUrl}/api/app/attachments/${a.id}/thumb` : null
+      }));
+      expenseJson.attachmentCount = expenseJson.attachments.length;
+
       ctx.status = 201;
-      ctx.body   = { success: true, expense: created.toJSON() };
+      ctx.body   = { success: true, expense: expenseJson };
 
     } catch (error) {
       console.error('Expenses create error:', error);
@@ -540,6 +578,17 @@ class ExpensesController {
         ctx.body   = { error: 'You can only delete your own expenses' };
         return;
       }
+
+      // Collect all expense IDs in this chain (this + children)
+      const childExpenses = await Expense.findAll({
+        where:      { parentExpenseId: expense.id },
+        attributes: ['id']
+      });
+      const allExpenseIds = [expense.id, ...childExpenses.map(c => c.id)];
+
+      // Remove attachment files from disk for all expenses in this chain
+      // (DB rows will be removed by ON DELETE CASCADE after expense rows are destroyed)
+      await deleteAttachmentFilesForTransactions({ expenseIds: allExpenseIds });
 
       // Cascade-delete all future installments linked to this expense
       await Expense.destroy({ where: { parentExpenseId: expense.id } });

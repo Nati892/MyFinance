@@ -1085,4 +1085,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scheduleDaySat => 'Sat';
+
+  @override
+  String get attachments => 'Attachments';
+
+  @override
+  String get attachmentsAddCamera => 'Camera';
+
+  @override
+  String get attachmentsAddFiles => 'Files';
+
+  @override
+  String get attachmentsRemove => 'Remove';
+
+  @override
+  String get attachmentsName => 'File name';
+
+  @override
+  String attachmentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count attachments',
+      one: '1 attachment',
+    );
+    return '$_temp0';
+  }
 }

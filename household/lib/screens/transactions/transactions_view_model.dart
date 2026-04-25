@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/category.dart';
 import 'package:household/models/credit_card.dart';
@@ -6,6 +8,7 @@ import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
 import 'package:household/models/recurring_expense.dart';
 import 'package:household/models/expense_schedule.dart';
+import 'package:household/repositories/attachment_repository.dart';
 import 'package:household/repositories/category_repository.dart';
 import 'package:household/services/credit_card_service.dart';
 import 'package:household/services/household_service.dart';
@@ -19,19 +22,35 @@ final transactionsViewModelProvider =
     ref.read(categoryRepositoryProvider),
     ref.read(householdServiceProvider),
     ref.read(creditCardServiceProvider),
+    ref.read(attachmentRepositoryProvider),
   );
 });
 
 enum TransactionsLoadState { idle, loading, error }
+
+/// A single attachment that has been picked locally but not yet uploaded.
+class PendingAttachment {
+  final File file;
+  String displayName;
+  final bool isImage;
+
+  PendingAttachment({
+    required this.file,
+    required this.displayName,
+    required this.isImage,
+  });
+}
 
 class TransactionsViewModel extends ChangeNotifier {
   final TransactionService _txService;
   final CategoryRepository _categoryRepo;
   final HouseholdService _householdService;
   final CreditCardService _cardService;
+  final AttachmentRepository _attachmentRepo;
 
   TransactionsViewModel(
-      this._txService, this._categoryRepo, this._householdService, this._cardService) {
+      this._txService, this._categoryRepo, this._householdService,
+      this._cardService, this._attachmentRepo) {
     load();
     loadCards();
   }
@@ -335,6 +354,7 @@ class TransactionsViewModel extends ChangeNotifier {
     formDayOfMonth = 10;
     formDayOfMonthStartYear = DateTime.now().year;
     formDayOfMonthStartMonth = DateTime.now().month;
+    _clearPendingAttachments();
     modalOpen = true;
     notifyListeners();
   }
@@ -351,6 +371,7 @@ class TransactionsViewModel extends ChangeNotifier {
     formCardId = null;
     formDescription = '';
     formNote = '';
+    _clearPendingAttachments();
     modalOpen = true;
     notifyListeners();
   }
@@ -360,6 +381,7 @@ class TransactionsViewModel extends ChangeNotifier {
     isEditMode = true;
     editingId = expense.id;
     modalError = null;
+    _clearPendingAttachments();
     formAmount = expense.amount;
     _originalAmount = expense.amount;
     formCategoryId = expense.category?.id;
@@ -415,6 +437,7 @@ class TransactionsViewModel extends ChangeNotifier {
   void closeModal() {
     modalOpen = false;
     modalError = null;
+    _clearPendingAttachments();
     notifyListeners();
   }
 
@@ -458,6 +481,52 @@ class TransactionsViewModel extends ChangeNotifier {
   void setRecurringFormStartMonth(int v) { recurringFormStartMonth = v.clamp(1, 12); notifyListeners(); }
   void setRecurringFormStartYear(int v) { recurringFormStartYear = v; notifyListeners(); }
   void setRecurringFormPayment(String v) { recurringFormPaymentMethod = v; notifyListeners(); }
+
+  // ── Pending attachments (local picks before POST) ────────────────────────
+  List<PendingAttachment> pendingAttachments = [];
+
+  void addPendingAttachment(PendingAttachment a) {
+    pendingAttachments = [...pendingAttachments, a];
+    notifyListeners();
+  }
+
+  void removePendingAttachment(int index) {
+    final list = [...pendingAttachments];
+    list.removeAt(index);
+    pendingAttachments = list;
+    notifyListeners();
+  }
+
+  void renamePendingAttachment(int index, String name) {
+    pendingAttachments[index].displayName = name;
+    notifyListeners();
+  }
+
+  void _clearPendingAttachments() {
+    pendingAttachments = [];
+  }
+
+  Future<void> _uploadPendingAttachments({int? expenseId, int? incomeId}) async {
+    if (pendingAttachments.isEmpty) return;
+    final hid = _householdService.currentHouseholdId;
+    if (hid == null) { _clearPendingAttachments(); return; }
+    debugPrint('[VM] uploading ${pendingAttachments.length} attachment(s)'
+        ' expenseId=$expenseId incomeId=$incomeId householdId=$hid');
+    await Future.wait(pendingAttachments.map((pa) =>
+        _attachmentRepo.uploadAttachment(
+          file: pa.file,
+          expenseId: expenseId,
+          incomeId: incomeId,
+          displayName: pa.displayName,
+          householdId: hid,
+        ).then<void>((_) {
+          debugPrint('[VM] attachment uploaded OK: ${pa.displayName}');
+        }).catchError((e) {
+          debugPrint('[VM] attachment upload FAILED: ${pa.displayName} — $e');
+        }),
+    ));
+    _clearPendingAttachments();
+  }
 
   void openAddRecurringModal() {
     recurringIsEditMode = false;
@@ -632,7 +701,7 @@ class TransactionsViewModel extends ChangeNotifier {
           final splitAmount = formInstallmentTotal > 1
               ? formAmount! / formInstallmentTotal
               : formAmount!;
-          await _txService.createExpense(
+          final createdId = await _txService.createExpense(
             amount: splitAmount,
             dateTime: isoDateTime,
             paymentMethod: formPaymentMethod,
@@ -643,6 +712,11 @@ class TransactionsViewModel extends ChangeNotifier {
             installmentTotal: formInstallmentTotal > 1 ? formInstallmentTotal : null,
             installmentCurrent: formInstallmentTotal > 1 ? formInstallmentCurrent : null,
           );
+          if (createdId != null) {
+            await _uploadPendingAttachments(expenseId: createdId);
+          } else {
+            _clearPendingAttachments();
+          }
         } else {
           await _txService.updateExpense(editingId!, {
             'amount': formAmount,
@@ -657,6 +731,7 @@ class TransactionsViewModel extends ChangeNotifier {
             if (formInstallmentTotal == 1) 'installmentTotal': null,
             if (formInstallmentTotal == 1) 'installmentCurrent': null,
           });
+          await _uploadPendingAttachments(expenseId: editingId!);
         }
       }
 
@@ -701,7 +776,7 @@ class TransactionsViewModel extends ChangeNotifier {
       final isoDateTime = formDateTime.toUtc().toIso8601String();
 
       if (!isEditMode) {
-        await _txService.createIncome(
+        final createdId = await _txService.createIncome(
           amount: formAmount!,
           dateTime: isoDateTime,
           paymentMethod: formPaymentMethod,
@@ -710,6 +785,11 @@ class TransactionsViewModel extends ChangeNotifier {
           note: formNote.isNotEmpty ? formNote : null,
           cardId: formPaymentMethod == 'card' ? formCardId : null,
         );
+        if (createdId != null) {
+          await _uploadPendingAttachments(incomeId: createdId);
+        } else {
+          _clearPendingAttachments();
+        }
       } else {
         await _txService.updateIncome(editingId!, {
           'amount': formAmount,
@@ -720,6 +800,7 @@ class TransactionsViewModel extends ChangeNotifier {
           'description': formDescription,
           'note': formNote,
         });
+        await _uploadPendingAttachments(incomeId: editingId!);
       }
 
       modalSaving = false;

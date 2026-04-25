@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'dart:math';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
@@ -12,6 +14,7 @@ import 'package:household/screens/transactions/transactions_view_model.dart';
 import 'package:household/widgets/create_category_sheet.dart';
 import 'package:household/widgets/expense_form_sheet.dart';
 import 'package:household/widgets/transaction_timeline.dart';
+import 'package:image_picker/image_picker.dart';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 const _kIncomeGreen = Color(0xFF4CAF50);
@@ -2039,6 +2042,8 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
               maxLength: 500,
               buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
             ),
+            const SizedBox(height: 16),
+            _buildAttachmentsSection(vm, l10n),
             const SizedBox(height: 20),
             _buildSaveButton(
               vm: vm,
@@ -2051,6 +2056,142 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
         ),
       ),
     );
+  }
+
+  // ── Attachments ───────────────────────────────────────────────────────────
+
+  Widget _buildAttachmentsSection(TransactionsViewModel vm, AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(l10n.attachments, optional: true),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _buildAttachButton(
+              icon: Icons.camera_alt_outlined,
+              label: l10n.attachmentsAddCamera,
+              color: _kIncomeGreen,
+              onTap: () => _pickCamera(vm),
+            ),
+            const SizedBox(width: 8),
+            _buildAttachButton(
+              icon: Icons.attach_file,
+              label: l10n.attachmentsAddFiles,
+              color: _kIncomeGreen,
+              onTap: () => _pickFiles(vm),
+            ),
+          ],
+        ),
+        if (vm.pendingAttachments.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          ...vm.pendingAttachments.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final pa = entry.value;
+            final nameCtrl = TextEditingController(text: pa.displayName);
+            nameCtrl.selection = TextSelection.fromPosition(
+                TextPosition(offset: nameCtrl.text.length));
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  pa.isImage
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.file(
+                            File(pa.file.path),
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: _kIncomeGreen.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Icon(Icons.insert_drive_file, size: 22, color: _kIncomeGreen),
+                        ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: nameCtrl,
+                      onChanged: (v) => vm.renamePendingAttachment(idx, v),
+                      decoration: _inputDeco(l10n.attachmentsName, _kIncomeGreen),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: Color(0xFF888888)),
+                    onPressed: () => vm.removePendingAttachment(idx),
+                    tooltip: l10n.attachmentsRemove,
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAttachButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickCamera(TransactionsViewModel vm) async {
+    final picker = ImagePicker();
+    final xFile = await picker.pickImage(source: ImageSource.camera);
+    if (xFile == null) return;
+    final name = xFile.name.contains('.') ? xFile.name.split('.').first : xFile.name;
+    vm.addPendingAttachment(PendingAttachment(
+      file: File(xFile.path),
+      displayName: name,
+      isImage: true,
+    ));
+  }
+
+  Future<void> _pickFiles(TransactionsViewModel vm) async {
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result == null || result.files.isEmpty) return;
+    for (final pf in result.files) {
+      if (pf.path == null) continue;
+      final ext = pf.extension?.toLowerCase() ?? '';
+      final isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext);
+      final nameWithoutExt = pf.name.contains('.')
+          ? pf.name.substring(0, pf.name.lastIndexOf('.'))
+          : pf.name;
+      vm.addPendingAttachment(PendingAttachment(
+        file: File(pf.path!),
+        displayName: nameWithoutExt,
+        isImage: isImg,
+      ));
+    }
   }
 
   Widget _buildHandle() => Center(
@@ -2202,6 +2343,12 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
         ? cats.where((c) => c.id == _selectedParentId).firstOrNull
         : null;
 
+    // When a parent is selected, only show that parent chip + new-category chip.
+    // Tapping the selected parent chip again collapses back to all parents.
+    final visibleParents = _selectedParentId != null
+        ? cats.where((c) => c.id == _selectedParentId).toList()
+        : cats;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2209,7 +2356,7 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            ...cats.map((cat) {
+            ...visibleParents.map((cat) {
               final isActiveParent = _selectedParentId == cat.id;
               final base = _hexColor(cat.color);
               final catName = (locale.languageCode == 'he' && cat.nameHe?.isNotEmpty == true)
@@ -2217,8 +2364,13 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
                   : cat.name;
               return GestureDetector(
                 onTap: () {
-                  setState(() => _selectedParentId = cat.id);
-                  vm.setFormCategory(cat.id);
+                  if (isActiveParent) {
+                    setState(() => _selectedParentId = null);
+                    vm.setFormCategory(null);
+                  } else {
+                    setState(() => _selectedParentId = cat.id);
+                    vm.setFormCategory(cat.id);
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -2242,8 +2394,11 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
                       ),
                       if (cat.subCategories.isNotEmpty) ...[
                         const SizedBox(width: 2),
-                        Icon(Icons.chevron_right, size: 14,
-                            color: isActiveParent ? Colors.white : base),
+                        Icon(
+                          isActiveParent ? Icons.expand_less : Icons.chevron_right,
+                          size: 14,
+                          color: isActiveParent ? Colors.white : base,
+                        ),
                       ],
                     ],
                   ),
@@ -2257,49 +2412,66 @@ class _IncomeFormSheetState extends ConsumerState<_IncomeFormSheet> {
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.only(left: 4),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: selectedParent.subCategories.map((sub) {
-                final selected = vm.formCategoryId == sub.id;
-                final base = _hexColor(sub.color.isNotEmpty ? sub.color : selectedParent.color);
-                final subName = (locale.languageCode == 'he' && sub.nameHe?.isNotEmpty == true)
-                    ? sub.nameHe!
-                    : sub.name;
-                return GestureDetector(
-                  onTap: () => vm.setFormCategory(sub.id),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: selected ? base : base.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: selected ? base : base.withValues(alpha: 0.4),
-                        width: 1,
+            child: Builder(builder: (ctx) {
+              // When a sub is selected, only show that sub. Tapping it → revert to parent.
+              final selectedSubId = vm.formCategoryId != null &&
+                      selectedParent.subCategories.any((s) => s.id == vm.formCategoryId)
+                  ? vm.formCategoryId
+                  : null;
+              final visibleSubs = selectedSubId != null
+                  ? selectedParent.subCategories.where((s) => s.id == selectedSubId).toList()
+                  : selectedParent.subCategories;
+
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: visibleSubs.map((sub) {
+                  final selected = vm.formCategoryId == sub.id;
+                  final base = _hexColor(sub.color.isNotEmpty ? sub.color : selectedParent.color);
+                  final subName = (locale.languageCode == 'he' && sub.nameHe?.isNotEmpty == true)
+                      ? sub.nameHe!
+                      : sub.name;
+                  return GestureDetector(
+                    onTap: () {
+                      if (selected) {
+                        vm.setFormCategory(_selectedParentId);
+                      } else {
+                        vm.setFormCategory(sub.id);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: selected ? base : base.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: selected ? base : base.withValues(alpha: 0.4),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (sub.icon != null && sub.icon!.isNotEmpty) ...[
+                            Icon(iconDataFromName(sub.icon), size: 13,
+                                color: selected ? Colors.white : base),
+                            const SizedBox(width: 3),
+                          ],
+                          Text(
+                            subName,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: selected ? Colors.white : const Color(0xFF444444),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (sub.icon != null && sub.icon!.isNotEmpty) ...[
-                          Icon(iconDataFromName(sub.icon), size: 13,
-                              color: selected ? Colors.white : base),
-                          const SizedBox(width: 3),
-                        ],
-                        Text(
-                          subName,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: selected ? Colors.white : const Color(0xFF444444),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+                  );
+                }).toList(),
+              );
+            }),
           ),
         ],
       ],

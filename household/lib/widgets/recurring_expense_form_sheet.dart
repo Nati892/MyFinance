@@ -167,8 +167,14 @@ class _RecurringExpenseFormSheetState
                     selectedId: vm.recurringFormCategoryId,
                     selectedParentId: _selectedParentId,
                     onSelected: (parentId, subId) {
-                      setState(() => _selectedParentId = parentId);
-                      vm.setRecurringFormCategory(subId ?? parentId);
+                      if (parentId == 0) {
+                        // Sentinel: user tapped the active parent to deselect
+                        setState(() => _selectedParentId = null);
+                        vm.setRecurringFormCategory(null);
+                      } else {
+                        setState(() => _selectedParentId = parentId);
+                        vm.setRecurringFormCategory(subId ?? parentId);
+                      }
                     },
                   ),
 
@@ -429,6 +435,12 @@ class _CategoryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // When a parent is selected, only show that parent chip.
+    // Tapping the selected parent deselects it (collapse).
+    final visibleParents = selectedParentId != null
+        ? categories.where((c) => c.id == selectedParentId).toList()
+        : categories;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -436,12 +448,19 @@ class _CategoryPicker extends StatelessWidget {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: categories.map((cat) {
+            children: visibleParents.map((cat) {
               final isSelected = cat.id == selectedParentId;
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: GestureDetector(
-                  onTap: () => onSelected(cat.id, cat.subCategories.isEmpty ? null : null),
+                  onTap: () {
+                    if (isSelected) {
+                      // Collapse: pass parentId=0 as sentinel for "deselect"
+                      onSelected(0, null);
+                    } else {
+                      onSelected(cat.id, cat.subCategories.isEmpty ? null : null);
+                    }
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
@@ -465,6 +484,14 @@ class _CategoryPicker extends StatelessWidget {
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                           ),
                         ),
+                        if (cat.subCategories.isNotEmpty) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            isSelected ? Icons.expand_less : Icons.chevron_right,
+                            size: 14,
+                            color: Colors.white54,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -484,15 +511,32 @@ class _CategoryPicker extends StatelessWidget {
             if (parent.subCategories.isEmpty) {
               return const SizedBox.shrink();
             }
+            // When a sub is selected, only show that sub.
+            // Tapping it again → revert to parent level.
+            final selectedSubId = selectedId != null &&
+                    parent.subCategories.any((s) => s.id == selectedId)
+                ? selectedId
+                : null;
+            final visibleSubs = selectedSubId != null
+                ? parent.subCategories.where((s) => s.id == selectedSubId).toList()
+                : parent.subCategories;
+
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: parent.subCategories.map((sub) {
+                children: visibleSubs.map((sub) {
                   final isSelected = sub.id == selectedId;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: GestureDetector(
-                      onTap: () => onSelected(parent.id, sub.id),
+                      onTap: () {
+                        if (isSelected) {
+                          // Revert to parent level
+                          onSelected(parent.id, null);
+                        } else {
+                          onSelected(parent.id, sub.id);
+                        }
+                      },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(

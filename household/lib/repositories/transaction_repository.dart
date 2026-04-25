@@ -23,8 +23,14 @@ class TransactionRepository {
         .toList();
   }
 
-  Future<void> createExpense(Map<String, dynamic> body) =>
-      _dio.post('/app/expenses', data: body);
+  Future<int?> createExpense(Map<String, dynamic> body) async {
+    final res = await _dio.post('/app/expenses', data: body);
+    final json = res.data;
+    if (json is Map) {
+      return (json['expense']?['id'] ?? json['id']) as int?;
+    }
+    return null;
+  }
 
   Future<void> updateExpense(int id, Map<String, dynamic> body) =>
       _dio.put('/app/expenses/$id', data: body);
@@ -95,8 +101,14 @@ class TransactionRepository {
         .toList();
   }
 
-  Future<void> createIncome(Map<String, dynamic> body) =>
-      _dio.post('/app/incomes', data: body);
+  Future<int?> createIncome(Map<String, dynamic> body) async {
+    final res = await _dio.post('/app/incomes', data: body);
+    final json = res.data;
+    if (json is Map) {
+      return (json['income']?['id'] ?? json['id']) as int?;
+    }
+    return null;
+  }
 
   Future<void> updateIncome(int id, Map<String, dynamic> body) =>
       _dio.put('/app/incomes/$id', data: body);

@@ -1,4 +1,17 @@
 /node_modules
+/=
+/CACHED
+/\[app
+/\[app\]
+/\[internal\]
+/abc123
+/abc123.pub
+/exporting
+/naming
+/public/
+/transferring
+/writing
+/public/attachments
 /public/front
 /flutter_app/build
 /flutter_app/.dart_tool

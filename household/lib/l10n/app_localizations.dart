@@ -2239,6 +2239,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sat'**
   String get scheduleDaySat;
+
+  /// No description provided for @attachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments'**
+  String get attachments;
+
+  /// No description provided for @attachmentsAddCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get attachmentsAddCamera;
+
+  /// No description provided for @attachmentsAddFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get attachmentsAddFiles;
+
+  /// No description provided for @attachmentsRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get attachmentsRemove;
+
+  /// No description provided for @attachmentsName.
+  ///
+  /// In en, this message translates to:
+  /// **'File name'**
+  String get attachmentsName;
+
+  /// No description provided for @attachmentsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 attachment} other{{count} attachments}}'**
+  String attachmentsCount(int count);
 }
 
 class _AppLocalizationsDelegate

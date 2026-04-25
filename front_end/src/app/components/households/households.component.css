@@ -915,6 +915,333 @@
   font-size: 11px;
 }
 
+/* ── Files Tab ───────────────────────────────────────────────────────────────── */
+.files-filters-card {
+  padding: 16px 20px 12px;
+  margin-bottom: 16px;
+}
+
+.files-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-label {
+  font-size: 12px;
+  color: #7f8c8d;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.filter-select {
+  min-width: 140px;
+}
+
+.filter-date {
+  min-width: 140px;
+}
+
+.filter-reset-btn,
+.filter-reload-btn {
+  padding: 7px 12px;
+  font-size: 13px;
+  align-self: flex-end;
+}
+
+.files-count-text {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #7f8c8d;
+}
+
+.loading-text {
+  color: #7f8c8d;
+  font-size: 14px;
+  margin: 4px 0 0;
+}
+
+.files-empty {
+  margin-top: 8px;
+}
+
+/* ── Files Grid ──────────────────────────────────────────────────────────────── */
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.file-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.25s, transform 0.2s;
+  border: 1px solid #ecf0f1;
+}
+
+.file-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Thumbnail */
+.file-thumb-wrapper {
+  width: 100%;
+  height: 140px;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-bottom: 1px solid #ecf0f1;
+  flex-shrink: 0;
+}
+
+.file-thumb-clickable {
+  cursor: zoom-in;
+}
+
+.file-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-thumb-placeholder {
+  background: #ecf0f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-thumb-generic {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ecf0f1;
+}
+
+.file-icon-large {
+  font-size: 48px;
+  color: #bdc3c7;
+}
+
+/* Card body */
+.file-card-body {
+  padding: 12px 14px 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.file-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  margin: 0;
+  font-size: 12px;
+  color: #95a5a6;
+}
+
+/* Transaction badge */
+.file-tx-badge {
+  border-left: 3px solid #bdc3c7;
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 2px 0;
+}
+
+.file-tx-type {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.file-tx-expense {
+  color: #e74c3c;
+}
+
+.file-tx-income {
+  color: #27ae60;
+}
+
+.file-tx-unlinked {
+  color: #95a5a6;
+}
+
+.file-tx-detail {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.file-tx-cat {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 20px;
+}
+
+.file-tx-amount {
+  font-size: 12px;
+  color: #34495e;
+  font-weight: 500;
+}
+
+.file-tx-date {
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+/* Meta row */
+.file-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 4px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.file-uploader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #555;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.file-upload-date {
+  font-size: 11px;
+  color: #95a5a6;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Card actions */
+.file-card-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 14px;
+  background: #f8f9fa;
+  border-top: 1px solid #ecf0f1;
+}
+
+.btn-file-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.btn-file-open:hover {
+  background-color: #2980b9;
+}
+
+.file-card-actions .btn-icon-sm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  padding: 5px 10px;
+  margin-left: auto;
+}
+
+/* ── Lightbox ─────────────────────────────────────────────────────────────────── */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 88vh;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  object-fit: contain;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 32px;
+  height: 32px;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2c3e50;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.2s;
+  z-index: 1001;
+}
+
+.lightbox-close:hover {
+  background-color: #e74c3c;
+  color: white;
+}
+
 /* ── Misc ────────────────────────────────────────────────────────────────────── */
 .empty-inline {
   text-align: center;
@@ -955,5 +1282,19 @@
 
   .detail-title-row {
     flex-direction: column;
+  }
+
+  .files-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .files-filters-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-select,
+  .filter-date {
+    width: 100%;
   }
 }

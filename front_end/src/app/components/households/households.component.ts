@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { HouseholdsService } from '../../services/households.service';
 import { LoggerService } from '../../services/logger.service';
+import { AttachmentsService, Attachment } from '../../services/attachments.service';
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -130,7 +131,7 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
 
   // ── View state ─────────────────────────────────────────────────────────────
   mode: 'list' | 'detail' = 'list';
-  currentTab: 'members' | 'expense-cats' | 'income-cats' | 'cards' = 'members';
+  currentTab: 'members' | 'expense-cats' | 'income-cats' | 'cards' | 'files' = 'members';
 
   // ── List state ─────────────────────────────────────────────────────────────
   households: Household[] = [];
@@ -189,6 +190,15 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
   newCard = { lastFourDigits: '', nickname: '', bankName: '', cardType: '' };
   editingCard = { lastFourDigits: '', nickname: '', bankName: '', cardType: '' };
 
+  // ── Files tab ──────────────────────────────────────────────────────────────
+  attachments: Attachment[] = [];
+  attachmentsLoading = false;
+  attachmentsError = '';
+  filterUserId: number | '' = '';
+  filterFromDate = '';
+  filterToDate = '';
+  lightboxUrl: string | null = null;
+
   // ── Shared constants exposed to template ──────────────────────────────────
   readonly iconList = ICON_LIST;
   readonly presetColors = PRESET_COLORS;
@@ -204,7 +214,8 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
 
   constructor(
     private householdsService: HouseholdsService,
-    private logger: LoggerService
+    private logger: LoggerService,
+    private attachmentsService: AttachmentsService
   ) { }
 
   ngOnInit(): void {
@@ -317,6 +328,8 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     this.selectedHousehold = null;
     this.expenseCategories = [];
     this.incomeCategories = [];
+    this.attachments = [];
+    this.lightboxUrl = null;
     this.closeAllForms();
   }
 
@@ -345,7 +358,7 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     });
   }
 
-  switchTab(tab: 'members' | 'expense-cats' | 'income-cats' | 'cards'): void {
+  switchTab(tab: 'members' | 'expense-cats' | 'income-cats' | 'cards' | 'files'): void {
     this.currentTab = tab;
     this.closeAllForms();
     if (!this.selectedHousehold) return;
@@ -357,6 +370,9 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
     }
     if (tab === 'cards') {
       this.loadCards();
+    }
+    if (tab === 'files') {
+      this.loadAttachments();
     }
   }
 
@@ -881,6 +897,107 @@ export class HouseholdsComponent implements OnInit, OnDestroy {
 
   getCardDisplayLabel(card: Card): string {
     return card.nickname ?? `••••${card.lastFourDigits}`;
+  }
+
+  // ── Files (Attachments) ────────────────────────────────────────────────────
+
+  loadAttachments(): void {
+    if (!this.selectedHousehold) return;
+    this.attachmentsLoading = true;
+    this.attachmentsError = '';
+    this.attachmentsService.listForHousehold(this.selectedHousehold.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.attachments = res.attachments ?? [];
+          this.attachmentsLoading = false;
+          this.logger.info('ATTACHMENTS_LOADED', `Loaded ${this.attachments.length} attachments for household ${this.selectedHousehold!.id}`);
+        },
+        error: (err) => {
+          this.attachmentsError = 'Failed to load files.';
+          this.attachmentsLoading = false;
+          this.logger.err('ATTACHMENTS_LOAD_ERROR', 'Failed to load attachments', err);
+        }
+      });
+  }
+
+  deleteAttachment(id: number): void {
+    if (!confirm('Delete this file attachment? This cannot be undone.')) return;
+    this.attachmentsService.delete(id).subscribe({
+      next: () => {
+        this.logger.warn('ATTACHMENT_DELETED', `Deleted attachment id=${id}`);
+        this.loadAttachments();
+      },
+      error: (err) => {
+        this.logger.err('ATTACHMENT_DELETE_ERROR', 'Failed to delete attachment', err);
+        alert(err.error?.error || 'Failed to delete file.');
+      }
+    });
+  }
+
+  get filteredAttachments(): Attachment[] {
+    let list = this.attachments;
+    if (this.filterUserId !== '') {
+      list = list.filter(a => a.appUser.id === this.filterUserId);
+    }
+    if (this.filterFromDate) {
+      const from = new Date(this.filterFromDate).getTime();
+      list = list.filter(a => new Date(a.createdAt).getTime() >= from);
+    }
+    if (this.filterToDate) {
+      const to = new Date(this.filterToDate).getTime() + 86400000 - 1; // inclusive end of day
+      list = list.filter(a => new Date(a.createdAt).getTime() <= to);
+    }
+    return list;
+  }
+
+  getAttachmentTransactionLabel(a: Attachment): string {
+    if (a.expense) {
+      const cat = a.expense.category?.name ?? 'Uncategorized';
+      const amt = '₪' + Number(a.expense.amount).toLocaleString();
+      const date = new Date(a.expense.dateTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const desc = a.expense.description ? ` · ${a.expense.description}` : '';
+      return `Expense · ${cat} · ${amt} · ${date}${desc}`;
+    }
+    if (a.income) {
+      const cat = a.income.category?.name ?? 'Uncategorized';
+      const amt = '₪' + Number(a.income.amount).toLocaleString();
+      const date = new Date(a.income.dateTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const desc = a.income.description ? ` · ${a.income.description}` : '';
+      return `Income · ${cat} · ${amt} · ${date}${desc}`;
+    }
+    return 'Unlinked file';
+  }
+
+  getAttachmentTransactionColor(a: Attachment): string {
+    if (a.expense) return a.expense.category?.color ?? '#e74c3c';
+    if (a.income) return a.income.category?.color ?? '#27ae60';
+    return '#95a5a6';
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  openLightbox(url: string): void {
+    this.lightboxUrl = url;
+  }
+
+  closeLightbox(): void {
+    this.lightboxUrl = null;
+  }
+
+  getUniqueUploadersFromAttachments(): { id: number; username: string }[] {
+    const seen = new Set<number>();
+    return this.attachments
+      .map(a => a.appUser)
+      .filter(u => {
+        if (seen.has(u.id)) return false;
+        seen.add(u.id);
+        return true;
+      });
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
-const { Income, IncomeCategory, AppUser, HouseholdMember, Card, sequelize } = require('../models');
+const { Income, IncomeCategory, AppUser, HouseholdMember, Card, TransactionAttachment, sequelize } = require('../models');
 const { Op } = require('sequelize');
+const { deleteAttachmentFilesForTransactions } = require('./attachments');
 const {
   getCurrentFinancialPeriod,
   getFinancialPeriod,
@@ -125,10 +126,31 @@ class IncomesController {
             model: Card,
             as:    'card',
             required: false
+          },
+          {
+            model:      TransactionAttachment,
+            as:         'attachments',
+            attributes: ['id', 'filename', 'originalFilename', 'mimeType', 'size', 'isImage', 'createdAt'],
+            required:   false
           }
         ],
         order: [['dateTime', 'DESC']]
       });
+
+      const baseUrl = `${ctx.protocol}://${ctx.host}`;
+
+      function enrichAttachments(incomeObj) {
+        if (!Array.isArray(incomeObj.attachments)) {
+          incomeObj.attachments = [];
+        }
+        incomeObj.attachments = incomeObj.attachments.map(a => ({
+          ...a,
+          fileUrl:  `${baseUrl}/api/app/attachments/${a.id}/file`,
+          thumbUrl: a.isImage ? `${baseUrl}/api/app/attachments/${a.id}/thumb` : null
+        }));
+        incomeObj.attachmentCount = incomeObj.attachments.length;
+        return incomeObj;
+      }
 
       // --- Compute total ---
       const totalAmount = incomes.reduce((sum, i) => sum + parseFloat(i.amount), 0);
@@ -136,7 +158,7 @@ class IncomesController {
       // --- Build response ---
       const response = {
         success:     true,
-        incomes:     incomes.map(i => i.toJSON()),
+        incomes:     incomes.map(i => enrichAttachments(i.toJSON())),
         period:      { start: period.start, end: period.end, label: period.label },
         totalAmount: Math.round(totalAmount * 100) / 100
       };
@@ -235,12 +257,28 @@ class IncomesController {
             model: Card,
             as:    'card',
             required: false
+          },
+          {
+            model:      TransactionAttachment,
+            as:         'attachments',
+            attributes: ['id', 'filename', 'originalFilename', 'mimeType', 'size', 'isImage', 'createdAt'],
+            required:   false
           }
         ]
       });
 
+      const baseUrl = `${ctx.protocol}://${ctx.host}`;
+      const incomeJson = created.toJSON();
+      if (!Array.isArray(incomeJson.attachments)) incomeJson.attachments = [];
+      incomeJson.attachments = incomeJson.attachments.map(a => ({
+        ...a,
+        fileUrl:  `${baseUrl}/api/app/attachments/${a.id}/file`,
+        thumbUrl: a.isImage ? `${baseUrl}/api/app/attachments/${a.id}/thumb` : null
+      }));
+      incomeJson.attachmentCount = incomeJson.attachments.length;
+
       ctx.status = 201;
-      ctx.body   = { success: true, income: created.toJSON() };
+      ctx.body   = { success: true, income: incomeJson };
 
     } catch (error) {
       console.error('Incomes create error:', error);
@@ -358,6 +396,10 @@ class IncomesController {
         ctx.body   = { error: 'You can only delete your own incomes' };
         return;
       }
+
+      // Remove attachment files from disk before destroying the income row
+      // (DB rows will be removed by ON DELETE CASCADE)
+      await deleteAttachmentFilesForTransactions({ incomeIds: [income.id] });
 
       await income.destroy();
 

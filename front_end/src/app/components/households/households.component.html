@@ -142,6 +142,9 @@
       <button class="tab-btn" [class.active]="currentTab === 'cards'" (click)="switchTab('cards')">
         <i class="fa-solid fa-credit-card"></i> Cards
       </button>
+      <button class="tab-btn" [class.active]="currentTab === 'files'" (click)="switchTab('files')">
+        <i class="fa-solid fa-paperclip"></i> Files
+      </button>
     </div>
 
     <!-- ── MEMBERS TAB ────────────────────────────────────────────────────── -->
@@ -591,6 +594,150 @@
       </div>
     </div>
 
+    <!-- ── FILES TAB ──────────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="currentTab === 'files' && !detailLoading">
+
+      <!-- Filters -->
+      <div class="section-card files-filters-card">
+        <div class="files-filters-row">
+          <div class="filter-group">
+            <label class="filter-label">Uploader</label>
+            <select class="form-input filter-select" [(ngModel)]="filterUserId">
+              <option value="">All users</option>
+              <option *ngFor="let u of getUniqueUploadersFromAttachments(); trackBy: trackById" [value]="u.id">
+                {{ u.username }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">From</label>
+            <input type="date" class="form-input filter-date" [(ngModel)]="filterFromDate" />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">To</label>
+            <input type="date" class="form-input filter-date" [(ngModel)]="filterToDate" />
+          </div>
+          <button class="btn-secondary filter-reset-btn"
+                  *ngIf="filterUserId !== '' || filterFromDate || filterToDate"
+                  (click)="filterUserId = ''; filterFromDate = ''; filterToDate = ''">
+            <i class="fa-solid fa-xmark"></i> Clear
+          </button>
+          <button class="btn-secondary filter-reload-btn" (click)="loadAttachments()" title="Reload">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+        <p class="files-count-text" *ngIf="!attachmentsLoading">
+          {{ filteredAttachments.length }} file{{ filteredAttachments.length !== 1 ? 's' : '' }}
+          <span *ngIf="filterUserId !== '' || filterFromDate || filterToDate">
+            (filtered from {{ attachments.length }} total)
+          </span>
+        </p>
+      </div>
+
+      <!-- Loading / Error -->
+      <div class="loading-inline" *ngIf="attachmentsLoading">
+        <div class="spinner-sm"></div>
+        <p class="loading-text">Loading files...</p>
+      </div>
+      <div class="error-message" *ngIf="attachmentsError && !attachmentsLoading">{{ attachmentsError }}</div>
+
+      <!-- Empty state -->
+      <div class="empty-state files-empty" *ngIf="!attachmentsLoading && !attachmentsError && filteredAttachments.length === 0">
+        <i class="fa-solid fa-file-circle-xmark"></i>
+        <p>No file attachments found.</p>
+      </div>
+
+      <!-- Files Grid -->
+      <div class="files-grid" *ngIf="!attachmentsLoading && filteredAttachments.length > 0">
+        <div class="file-card" *ngFor="let att of filteredAttachments; trackBy: trackById">
+
+          <!-- Thumbnail / Icon -->
+          <div class="file-thumb-wrapper"
+               [class.file-thumb-clickable]="att.isImage"
+               (click)="att.isImage ? openLightbox(att.fileUrl) : null"
+               [title]="att.isImage ? 'Click to enlarge' : att.originalFilename">
+            <img *ngIf="att.isImage && att.thumbUrl"
+                 [src]="att.thumbUrl"
+                 [alt]="att.originalFilename"
+                 class="file-thumb-img" />
+            <div *ngIf="att.isImage && !att.thumbUrl" class="file-thumb-img file-thumb-placeholder">
+              <i class="fa-solid fa-image file-icon-large"></i>
+            </div>
+            <div *ngIf="!att.isImage" class="file-thumb-generic">
+              <i class="fa-solid fa-file file-icon-large"></i>
+            </div>
+          </div>
+
+          <!-- File info -->
+          <div class="file-card-body">
+            <p class="file-name" [title]="att.originalFilename">{{ att.originalFilename }}</p>
+            <p class="file-size">{{ formatFileSize(att.size) }}</p>
+
+            <!-- Linked transaction badge -->
+            <div class="file-tx-badge"
+                 [style.border-left-color]="getAttachmentTransactionColor(att)"
+                 [title]="getAttachmentTransactionLabel(att)">
+              <span class="file-tx-type"
+                    [class.file-tx-expense]="!!att.expense"
+                    [class.file-tx-income]="!!att.income"
+                    [class.file-tx-unlinked]="!att.expense && !att.income">
+                <ng-container *ngIf="att.expense"><i class="fa-solid fa-arrow-trend-down"></i> Expense</ng-container>
+                <ng-container *ngIf="att.income"><i class="fa-solid fa-arrow-trend-up"></i> Income</ng-container>
+                <ng-container *ngIf="!att.expense && !att.income"><i class="fa-solid fa-link-slash"></i> Unlinked</ng-container>
+              </span>
+              <span class="file-tx-detail" *ngIf="att.expense || att.income">
+                <span class="file-tx-cat"
+                      *ngIf="(att.expense?.category || att.income?.category) as cat"
+                      [style.background-color]="cat.color + '22'"
+                      [style.color]="cat.color">
+                  {{ cat.name }}
+                </span>
+                <span class="file-tx-amount">
+                  ₪{{ (att.expense?.amount || att.income?.amount || 0) | number:'1.0-2' }}
+                </span>
+                <span class="file-tx-date">
+                  {{ (att.expense?.dateTime || att.income?.dateTime || '') | date:'dd MMM yyyy' }}
+                </span>
+              </span>
+            </div>
+
+            <!-- Uploader + upload date -->
+            <div class="file-meta-row">
+              <span class="file-uploader">
+                <div class="avatar-circle avatar-sm" [style.background-color]="'#607D8B'">
+                  {{ getInitials(att.appUser.username) }}
+                </div>
+                {{ att.appUser.username }}
+              </span>
+              <span class="file-upload-date">{{ att.createdAt | date:'dd MMM yyyy' }}</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="file-card-actions">
+            <a [href]="att.fileUrl" target="_blank" class="btn-file-open" title="Open file">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
+            </a>
+            <button class="btn-icon-sm btn-danger-sm" (click)="deleteAttachment(att.id)" title="Delete file">
+              <i class="fa-solid fa-trash"></i> Delete
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
   </ng-container>
+
+  <!-- ── LIGHTBOX ──────────────────────────────────────────────────────────────── -->
+  <div class="lightbox-overlay" *ngIf="lightboxUrl" (click)="closeLightbox()">
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <button class="lightbox-close" (click)="closeLightbox()" title="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <img [src]="lightboxUrl" class="lightbox-img" alt="Attachment preview" />
+    </div>
+  </div>
 
 </div>

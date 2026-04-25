@@ -1,10 +1,17 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:household/core/network/dio_provider.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/category.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
+import 'package:household/models/transaction_attachment.dart';
+import 'package:household/services/auth_service.dart';
 import 'package:household/utils/financial_calendar.dart';
 import 'package:household/utils/icon_helper.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -77,6 +84,8 @@ class TimelineTx {
   final int? installmentTotal;
   final bool isRecurring;
   final int? recurringExpenseId;
+  final int attachmentCount;
+  final List<TransactionAttachment> attachments;
 
   const TimelineTx({
     required this.id,
@@ -100,6 +109,8 @@ class TimelineTx {
     this.installmentTotal,
     this.isRecurring = false,
     this.recurringExpenseId,
+    this.attachmentCount = 0,
+    this.attachments = const [],
   });
 
   static TimelineTx fromExpense(Expense e, {Map<int, Category>? parentLookup}) {
@@ -127,6 +138,8 @@ class TimelineTx {
       installmentTotal: e.installmentTotal,
       isRecurring: e.isRecurring,
       recurringExpenseId: e.recurringExpenseId,
+      attachmentCount: e.attachmentCount,
+      attachments: e.attachments,
     );
   }
 
@@ -151,6 +164,8 @@ class TimelineTx {
       parentCategoryIcon: parent?.icon,
       username: i.appUser?.name,
       txType: 'income',
+      attachmentCount: i.attachmentCount,
+      attachments: i.attachments,
     );
   }
 }
@@ -995,6 +1010,21 @@ class _TxTile extends StatelessWidget {
                     color: amountColor.withValues(alpha: 0.7),
                   ),
                 ),
+              if (tx.attachmentCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.attach_file, size: 11, color: Color(0xFF888888)),
+                      const SizedBox(width: 1),
+                      Text(
+                        '${tx.attachmentCount}',
+                        style: const TextStyle(fontSize: 10, color: Color(0xFF888888)),
+                      ),
+                    ],
+                  ),
+                ),
               if (tx.isRecurring)
                 Container(
                   margin: const EdgeInsets.only(top: 2),
@@ -1026,6 +1056,155 @@ class _TxTile extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─── Auth-aware image widget ──────────────────────────────────────────────────
+
+class _AuthImage extends ConsumerWidget {
+  final String url;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final Color? loadingBg;
+  final Widget? errorWidget;
+
+  const _AuthImage({
+    required this.url,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.loadingBg,
+    this.errorWidget,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final token = ref.watch(authServiceProvider).accessToken;
+    final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+    return Image.network(
+      url,
+      headers: headers,
+      width: width,
+      height: height,
+      fit: fit,
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          width: width,
+          height: height,
+          color: loadingBg ?? const Color(0xFFEEEEEE),
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: progress.expectedTotalBytes != null
+                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                  : null,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) =>
+          errorWidget ??
+          Container(
+            width: width,
+            height: height,
+            color: const Color(0xFFEEEEEE),
+            child: const Icon(Icons.broken_image, size: 24, color: Color(0xFFAAAAAA)),
+          ),
+    );
+  }
+}
+
+// ─── Auth-aware file attachment tile ─────────────────────────────────────────
+
+class _FileAttachmentTile extends ConsumerStatefulWidget {
+  final TransactionAttachment att;
+  const _FileAttachmentTile({required this.att});
+
+  @override
+  ConsumerState<_FileAttachmentTile> createState() => _FileAttachmentTileState();
+}
+
+class _FileAttachmentTileState extends ConsumerState<_FileAttachmentTile> {
+  bool _downloading = false;
+
+  Future<void> _open() async {
+    if (_downloading) return;
+    setState(() => _downloading = true);
+    try {
+      final dir = await getTemporaryDirectory();
+      final filePath = '${dir.path}/${widget.att.filename}';
+      final dio = ref.read(dioProvider);
+      await dio.download(
+        '/app/attachments/${widget.att.id}/file',
+        filePath,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      await OpenFile.open(filePath);
+    } catch (_) {
+      // silent — broken icon serves as feedback
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _open,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFDDDDDD)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _downloading
+                ? const SizedBox(width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF667EEA)))
+                : const Icon(Icons.insert_drive_file, size: 16, color: Color(0xFF667EEA)),
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 160),
+              child: Text(
+                widget.att.filename,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF333333)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Full-screen image viewer ─────────────────────────────────────────────────
+
+void _openImageViewer(BuildContext context, TransactionAttachment att) {
+  Navigator.of(context).push(MaterialPageRoute(
+    builder: (_) => Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(att.filename, style: const TextStyle(fontSize: 14)),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: _AuthImage(
+            url: '$kBaseUrl/app/attachments/${att.id}/file',
+            fit: BoxFit.contain,
+            loadingBg: Colors.black,
+            errorWidget: const Icon(Icons.broken_image, color: Colors.white, size: 48),
+          ),
+        ),
+      ),
+    ),
+  ));
 }
 
 // ─── Transaction detail bottom sheet ─────────────────────────────────────────
@@ -1223,6 +1402,43 @@ class _TxDetailSheet extends StatelessWidget {
                     isHe: isHe,
                   ),
                 ],
+              ],
+
+              // ── Attachments section ───────────────────────────────────────
+              if (tx.attachments.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.attachments,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF555555),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: tx.attachments.map((att) {
+                    if (att.isImage) {
+                      return GestureDetector(
+                        onTap: () => _openImageViewer(context, att),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: _AuthImage(
+                            url: '$kBaseUrl/app/attachments/${att.id}/thumb',
+                            width: 60,
+                            height: 60,
+                          ),
+                        ),
+                      );
+                    } else {
+                      return _FileAttachmentTile(att: att);
+                    }
+                  }).toList(),
+                ),
               ],
 
               const SizedBox(height: 16),

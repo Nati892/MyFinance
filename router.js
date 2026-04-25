@@ -14,6 +14,7 @@ const cardsRoutes = require('./routers/cards');
 const budgetsRoutes = require('./routers/budgets');
 const shoppingRoutes = require('./routers/shopping');
 const apkRoutes = require('./routers/apk');
+const attachmentsRoutes = require('./routers/attachments');
 
 const router = new Router();
 
@@ -34,6 +35,7 @@ router.use('/api', cardsRoutes.routes());
 router.use('/api', budgetsRoutes.routes());
 router.use('/api', shoppingRoutes.routes());
 router.use('/api', apkRoutes.routes());
+router.use('/api', attachmentsRoutes.routes());
 
 // Public APK download — no authentication required, always serves the latest APK
 router.get('/apk/download', apkController.publicDownload);

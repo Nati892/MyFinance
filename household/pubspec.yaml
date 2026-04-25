@@ -1,7 +1,7 @@
 name: household
 description: Household finance app — Flutter client for /app routes.
 publish_to: 'none'
-version: 1.0.12+12
+version: 1.0.18+18
 
 environment:
   sdk: ^3.9.2
@@ -31,8 +31,11 @@ dependencies:
   # Material Symbols icons — bundled font, zero network requests
   material_symbols_icons: ^4.2906.0
 
-  # Image picker (for board image notes)
+  # Image picker (for board image notes and attachment camera)
   image_picker: ^1.1.2
+
+  # File picker (for attachment file selection)
+  file_picker: ^8.1.2
 
   # Color picker (full HSV palette for board notes)
   flutter_colorpicker: ^1.1.0

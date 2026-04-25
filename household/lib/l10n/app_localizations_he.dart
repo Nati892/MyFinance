@@ -1080,4 +1080,24 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get scheduleDaySat => 'ש\'';
+
+  @override
+  String get attachments => 'קבצים מצורפים';
+
+  @override
+  String get attachmentsAddCamera => 'מצלמה';
+
+  @override
+  String get attachmentsAddFiles => 'קבצים';
+
+  @override
+  String get attachmentsRemove => 'הסר';
+
+  @override
+  String get attachmentsName => 'שם קובץ';
+
+  @override
+  String attachmentsCount(int count) {
+    return '$count קבצים';
+  }
 }

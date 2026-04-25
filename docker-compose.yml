@@ -44,6 +44,7 @@ services:
       - "127.0.0.1:1235:1234"
     volumes:
       - /my_volumes/hously/apk:/app/public/apk
+      - /my_volumes/hously/attachments:/app/public/attachments
     depends_on:
       db:
         condition: service_healthy
