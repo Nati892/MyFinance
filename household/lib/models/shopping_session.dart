@@ -1,4 +1,5 @@
 import 'shopping_session_item.dart';
+import 'shopping_store.dart';
 
 enum ShoppingSessionMode {
   active,
@@ -36,6 +37,8 @@ class ShoppingSession {
   final String? completedAt;
   final int? linkedExpenseId;
   final int? linkedBudgetPlanItemId;
+  final int? storeId;
+  final ShoppingStore? store;
 
   ShoppingSession({
     required this.id,
@@ -61,6 +64,8 @@ class ShoppingSession {
     this.completedAt,
     this.linkedExpenseId,
     this.linkedBudgetPlanItemId,
+    this.storeId,
+    this.store,
   });
 
   bool get isPlanned => mode == ShoppingSessionMode.planned;
@@ -109,6 +114,10 @@ class ShoppingSession {
       completedAt: json['completedAt'] as String?,
       linkedExpenseId: json['linkedExpenseId'] as int?,
       linkedBudgetPlanItemId: json['linkedBudgetPlanItemId'] as int?,
+      storeId: json['storeId'] as int?,
+      store: json['store'] != null
+          ? ShoppingStore.fromJson(json['store'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -132,6 +141,8 @@ class ShoppingSession {
     String? completedAt,
     int? linkedExpenseId,
     int? linkedBudgetPlanItemId,
+    int? storeId,
+    ShoppingStore? store,
   }) {
     return ShoppingSession(
       id: id,
@@ -157,6 +168,8 @@ class ShoppingSession {
       completedAt: completedAt ?? this.completedAt,
       linkedExpenseId: linkedExpenseId ?? this.linkedExpenseId,
       linkedBudgetPlanItemId: linkedBudgetPlanItemId ?? this.linkedBudgetPlanItemId,
+      storeId: storeId ?? this.storeId,
+      store: store ?? this.store,
     );
   }
 }

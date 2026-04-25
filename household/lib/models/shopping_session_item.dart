@@ -47,6 +47,7 @@ class ShoppingSessionItem {
   final int? storeId;
   final ShoppingStore? store;
   final String? note;
+  final double? actualAmount;
   final int sortOrder;
 
   ShoppingSessionItem({
@@ -62,6 +63,7 @@ class ShoppingSessionItem {
     this.storeId,
     this.store,
     this.note,
+    this.actualAmount,
     required this.sortOrder,
   });
 
@@ -83,6 +85,7 @@ class ShoppingSessionItem {
           ? ShoppingStore.fromJson(json['store'] as Map<String, dynamic>)
           : null,
       note: json['note'] as String?,
+      actualAmount: (json['actualAmount'] as num?)?.toDouble(),
       sortOrder: json['sortOrder'] as int? ?? 0,
     );
   }
@@ -95,6 +98,7 @@ class ShoppingSessionItem {
     String? note,
     double? amount,
     String? unit,
+    double? actualAmount,
   }) {
     return ShoppingSessionItem(
       id: id,
@@ -109,6 +113,7 @@ class ShoppingSessionItem {
       storeId: storeId ?? this.storeId,
       store: store ?? this.store,
       note: note ?? this.note,
+      actualAmount: actualAmount ?? this.actualAmount,
       sortOrder: sortOrder,
     );
   }

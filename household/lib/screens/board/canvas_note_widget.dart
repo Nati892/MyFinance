@@ -220,6 +220,9 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
     Color headerColor,
     Color textColor,
   ) {
+    final headerLuminance = headerColor.computeLuminance();
+    final iconColor = headerLuminance > 0.35 ? const Color(0xFF3E2723) : Colors.white;
+
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
@@ -252,18 +255,18 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
               children: [
                 Text(
                   widget.note.authorUsername,
-                  style: const TextStyle(fontSize: 10, color: Colors.white70),
+                  style: TextStyle(fontSize: 10, color: iconColor.withValues(alpha: 0.75)),
                 ),
                 const Spacer(),
                 if (_isEditing)
                   GestureDetector(
                     onTap: _commitEdit,
-                    child: const Icon(Icons.check, size: 14, color: Colors.white70),
+                    child: Icon(Icons.check, size: 16, color: iconColor),
                   )
                 else if (widget.isOwner && widget.isSelected)
                   GestureDetector(
                     onTap: widget.onDelete,
-                    child: const Icon(Icons.close, size: 14, color: Colors.white70),
+                    child: Icon(Icons.close, size: 16, color: iconColor),
                   ),
               ],
             ),
@@ -344,6 +347,57 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
     }
   }
 
+  void _showColorDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black38,
+      builder: (dctx) => AlertDialog(
+        title: const Text('Note color', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        content: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: _kNoteColors.map((hex) {
+            final isCurrent = hex == widget.note.noteColor;
+            return GestureDetector(
+              onTap: () {
+                widget.onColorChange(hex);
+                Navigator.of(dctx).pop();
+              },
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: hexColor(hex),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isCurrent ? const Color(0xFFE53935) : Colors.black12,
+                    width: isCurrent ? 2.5 : 1,
+                  ),
+                ),
+                child: isCurrent
+                    ? Icon(
+                        Icons.check,
+                        size: 16,
+                        color: hexColor(hex).computeLuminance() > 0.4
+                            ? const Color(0xFF3E2723)
+                            : Colors.white,
+                      )
+                    : null,
+              ),
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dctx).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildToolbar(double noteWidth, double noteHeight) {
     return Positioned(
       top: noteHeight + 6,
@@ -360,32 +414,20 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Color picker
-              PopupMenuButton<String>(
-                icon: Container(
-                  width: 20,
-                  height: 20,
+              // Color picker — opens a dialog (PopupMenuButton broken inside InteractiveViewer)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _showColorDialog(context),
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
                     color: hexColor(widget.note.noteColor),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.black26),
                   ),
                 ),
-                itemBuilder: (_) => _kNoteColors
-                    .map((hex) => PopupMenuItem<String>(
-                          value: hex,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: hexColor(hex),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ))
-                    .toList(),
-                onSelected: widget.onColorChange,
-                tooltip: 'Color',
               ),
               if (widget.note.type == 'text') ...[
                 _ToolbarBtn(

@@ -1,7 +1,7 @@
 name: household
 description: Household finance app — Flutter client for /app routes.
 publish_to: 'none'
-version: 1.0.9+9
+version: 1.0.12+12
 
 environment:
   sdk: ^3.9.2

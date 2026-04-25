@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/models/board_note.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/shopping_session.dart';
+import 'package:household/models/shopping_session_item.dart';
 import 'package:household/repositories/board_repository.dart';
 import 'package:household/repositories/shopping_repository.dart';
 import 'package:household/services/household_service.dart';
@@ -419,6 +420,43 @@ class BoardViewModel extends ChangeNotifier {
               : s)
           .toList();
       notifyListeners();
+    } catch (_) {}
+  }
+
+  /// Assign a template list to a session: sets listId, switches mode to active,
+  /// and adds all template items as session items.
+  Future<void> assignListToSession(
+      int sessionId, int listId, List<Map<String, dynamic>> itemBodies) async {
+    try {
+      await _shoppingRepo.updateSession(
+          sessionId, {'listId': listId, 'mode': 'active'});
+      final added = <ShoppingSessionItem>[];
+      for (final body in itemBodies) {
+        final item = await _shoppingRepo.addSessionItem(sessionId, body);
+        added.add(item);
+      }
+      sessions = _sessions.map((s) {
+        if (s.id != sessionId) return s;
+        return s.copyWith(
+          mode: ShoppingSessionMode.active,
+          sessionItems: [...s.sessionItems, ...added],
+        );
+      }).toList();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// Update the session-level store ("where did I shop?").
+  Future<void> updateSessionStore(int sessionId, int? storeId) async {
+    try {
+      await _shoppingRepo.updateSession(sessionId, {'storeId': storeId});
+      if (storeId != null) {
+        sessions = _sessions.map((s) {
+          if (s.id != sessionId) return s;
+          return s.copyWith(storeId: storeId);
+        }).toList();
+        notifyListeners();
+      }
     } catch (_) {}
   }
 }

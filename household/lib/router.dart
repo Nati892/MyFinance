@@ -20,19 +20,19 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
 
   return GoRouter(
-    initialLocation: '/transactions',
+    initialLocation: '/app/transactions',
     refreshListenable: authService,
     redirect: (BuildContext context, GoRouterState state) {
       final isLoggedIn = authService.isLoggedIn;
-      final isOnLogin = state.matchedLocation == '/login';
+      final isOnLogin = state.matchedLocation == '/app/login';
 
-      if (!isLoggedIn && !isOnLogin) return '/login';
-      if (isLoggedIn && isOnLogin) return '/transactions';
+      if (!isLoggedIn && !isOnLogin) return '/app/login';
+      if (isLoggedIn && isOnLogin) return '/app/transactions';
       return null;
     },
     routes: [
       GoRoute(
-        path: '/login',
+        path: '/app/login',
         builder: (context, state) => const LoginScreen(),
       ),
       // All authenticated routes share the AppShell (header + bottom nav)
@@ -43,47 +43,47 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
         routes: [
           GoRoute(
-            path: '/transactions',
+            path: '/app/transactions',
             builder: (context, state) => const TransactionsScreen(),
           ),
           GoRoute(
-            path: '/expenses',
+            path: '/app/expenses',
             builder: (context, state) => const ExpensesScreen(),
           ),
           GoRoute(
-            path: '/incomes',
+            path: '/app/incomes',
             builder: (context, state) => const IncomesScreen(),
           ),
           GoRoute(
-            path: '/budget',
+            path: '/app/budget',
             builder: (context, state) => const BudgetScreen(),
           ),
           GoRoute(
-            path: '/assets',
+            path: '/app/assets',
             builder: (context, state) => const AssetsScreen(),
           ),
           GoRoute(
-            path: '/home',
+            path: '/app/home',
             builder: (context, state) => const HomeScreen(),
           ),
           GoRoute(
-            path: '/statistics',
+            path: '/app/statistics',
             builder: (context, state) => const StatisticsScreen(),
           ),
           GoRoute(
-            path: '/board',
+            path: '/app/board',
             builder: (context, state) => const BoardScreen(),
           ),
           GoRoute(
-            path: '/credit-cards',
+            path: '/app/credit-cards',
             builder: (context, state) => const CreditCardsScreen(),
           ),
           GoRoute(
-            path: '/settings',
+            path: '/app/settings',
             builder: (context, state) => const SettingsScreen(),
           ),
           GoRoute(
-            path: '/schedules',
+            path: '/app/schedules',
             builder: (context, state) => const SchedulesScreen(),
           ),
         ],

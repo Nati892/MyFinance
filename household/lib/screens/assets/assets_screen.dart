@@ -70,7 +70,7 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
           right: 84,
           child: FloatingActionButton(
             heroTag: 'viewCards',
-            onPressed: () => context.push('/credit-cards'),
+            onPressed: () => context.push('/app/credit-cards'),
             backgroundColor: _purple,
             child: const Icon(Icons.credit_card, color: Colors.white),
           ),

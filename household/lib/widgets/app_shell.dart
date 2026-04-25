@@ -51,11 +51,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     final hasMultiple = householdSvc.households.length > 1;
     final l10n = AppLocalizations.of(context)!;
     final tabs = [
-      _TabItem(path: '/assets',       icon: Icons.account_balance, label: l10n.navAssets),
-      _TabItem(path: '/budget',       icon: Icons.pie_chart,        label: l10n.navBudget),
-      _TabItem(path: '/transactions', icon: Icons.swap_horiz,       label: l10n.navTransactions),
-      _TabItem(path: '/statistics',   icon: Icons.bar_chart,        label: l10n.navStatistics),
-      _TabItem(path: '/board',        icon: Icons.dashboard,        label: l10n.navBoard),
+      _TabItem(path: '/app/assets',       icon: Icons.account_balance, label: l10n.navAssets),
+      _TabItem(path: '/app/budget',       icon: Icons.pie_chart,        label: l10n.navBudget),
+      _TabItem(path: '/app/transactions', icon: Icons.swap_horiz,       label: l10n.navTransactions),
+      _TabItem(path: '/app/statistics',   icon: Icons.bar_chart,        label: l10n.navStatistics),
+      _TabItem(path: '/app/board',        icon: Icons.dashboard,        label: l10n.navBoard),
     ];
 
     return Scaffold(
@@ -489,7 +489,7 @@ class _AppSidePanel extends ConsumerWidget {
                   title: Text(l10n.drawerSettings, style: const TextStyle(fontSize: 14)),
                   onTap: () {
                     Navigator.pop(context);
-                    context.push('/settings');
+                    context.push('/app/settings');
                   },
                 ),
 

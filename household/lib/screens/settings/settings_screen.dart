@@ -143,7 +143,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           GestureDetector(
-            onTap: () => context.push('/schedules'),
+            onTap: () => context.push('/app/schedules'),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(

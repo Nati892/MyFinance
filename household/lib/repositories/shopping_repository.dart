@@ -106,6 +106,15 @@ class ShoppingRepository {
     await _dio.delete('/app/shopping/lists/$listId/items/$listItemId');
   }
 
+  Future<ShoppingList> updateList(int id, Map<String, dynamic> body) async {
+    final res = await _dio.put('/app/shopping/lists/$id', data: body);
+    return ShoppingList.fromJson(res.data['list'] as Map<String, dynamic>);
+  }
+
+  Future<void> updateListItem(int listId, int listItemId, Map<String, dynamic> body) async {
+    await _dio.put('/app/shopping/lists/$listId/items/$listItemId', data: body);
+  }
+
   Future<void> deleteList(int id) => _dio.delete('/app/shopping/lists/$id');
 
   // ── Sessions ───────────────────────────────────────────────────────────────

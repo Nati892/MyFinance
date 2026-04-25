@@ -54,11 +54,29 @@ app.use(logger.requestLogger()); // Add request logging
 app.use(serve(path.join(__dirname, 'public/front')));
 app.use(serve(path.join(__dirname, 'public/apk'), { index: false }));
 
+// Flutter web is built with --base-href /app/, so asset requests arrive as /app/flutter.js etc.
+// Strip the /app prefix before delegating to koa-static.
+const flutterServe = serve(path.join(__dirname, 'public/flutter'));
+app.use(async (ctx, next) => {
+  if (ctx.path.startsWith('/app')) {
+    const original = ctx.path;
+    ctx.path = ctx.path.slice(4) || '/';
+    await flutterServe(ctx, async () => {});
+    ctx.path = original;
+    if (ctx.body) return;
+  }
+  await next();
+});
+
 app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/api') || ctx.path.startsWith('/apk/')) {
     await next();
   } else if (ctx.method === 'GET' && !ctx.body) {
-    await send(ctx, 'index.html', { root: path.join(__dirname, 'public/front') });
+    if (ctx.path.startsWith('/app')) {
+      await send(ctx, 'index.html', { root: path.join(__dirname, 'public/flutter') });
+    } else {
+      await send(ctx, 'index.html', { root: path.join(__dirname, 'public/front') });
+    }
   }
 });
 

@@ -12,7 +12,8 @@ import 'package:household/screens/board/board_view_model.dart';
 import 'package:household/screens/board/canvas_note_widget.dart';
 import 'package:household/screens/board/canvas_shopping_session_widget.dart';
 import 'package:household/screens/board/shopping_view_model.dart';
-import 'package:household/screens/shopping/active_shopping_screen.dart';
+import 'package:household/screens/shopping/shopping_management_screen.dart';
+import 'package:household/screens/shopping/shopping_session_panel.dart';
 import 'package:household/services/auth_service.dart';
 import 'package:household/utils/color_utils.dart';
 import 'package:image_picker/image_picker.dart';
@@ -145,7 +146,7 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
               // position state to avoid rebuilding the whole canvas on every frame.
               ...sortedNotes.map((note) {
                 final isSelected = vm.selectedNoteId == note.id;
-                final isOwner = currentUser?.username == note.authorUsername;
+                final isOwner = currentUser?.id == note.appUserId;
                 return _DraggableNoteItem(
                   key: ValueKey(note.id),
                   note: note,
@@ -182,14 +183,14 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
                   stores: shoppingVm.stores,
                   onPositionCommit: (x, y) =>
                       vm.commitSessionPosition(session.id, x, y),
-                  onTap: () => vm.bringSessionToFront(session.id),
+                  onTap: () => _openSessionPanel(context, session),
                   onScaleUpdate: (scale, baseW, baseH) =>
                       vm.resizeSession(session.id, scale, baseW, baseH),
                   onScaleEnd: () {},
                   onRotateUpdate: (rot) => vm.rotateSession(session.id, rot),
                   onRotateEnd: () {},
                   onDelete: () => vm.deleteSession(session.id),
-                  onPlay: () => _openShoppingMode(context, ref, vm, session),
+                  onPlay: () => _openSessionPanel(context, session),
                   onPatchItem: (itemId, patch) =>
                       vm.patchSessionItem(session.id, itemId, patch),
                   onCreateStore: shoppingVm.createStore,
@@ -245,24 +246,38 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
     );
   }
 
-  // ── Open full-screen shopping mode for a session ──────────────────────────
+  // ── Open 90% session panel ────────────────────────────────────────────────
 
-  Future<void> _openShoppingMode(
-    BuildContext context,
-    WidgetRef ref,
-    BoardViewModel vm,
-    ShoppingSession session,
-  ) async {
-    // If planned, flip it to active on the server before entering shopping mode.
-    if (session.isPlanned) {
-      await vm.startPlannedSession(session.id);
-    }
-    if (!context.mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ActiveShoppingScreen(sessionId: session.id),
+  void _openSessionPanel(BuildContext context, ShoppingSession session) {
+    final container = ProviderScope.containerOf(context);
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => UncontrolledProviderScope(
+        container: container,
+        child: ShoppingSessionPanel(
+          sessionId: session.id,
+          onManage: ({initialTab = 0}) =>
+              _openManagementScreen(context, container, initialTab: initialTab),
+        ),
       ),
     );
+  }
+
+  void _openManagementScreen(
+    BuildContext context,
+    ProviderContainer container, {
+    int initialTab = 0,
+  }) {
+    Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => UncontrolledProviderScope(
+        container: container,
+        child: ShoppingManagementScreen(initialTab: initialTab),
+      ),
+    ));
   }
 
   // ── Add-note bottom sheet ─────────────────────────────────────────────────

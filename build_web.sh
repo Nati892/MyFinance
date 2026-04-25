@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Angular frontend, rebuild Docker image, and restart containers.
+# Build Angular frontend + Flutter web app, rebuild Docker image, and restart containers.
 # If any step fails the running containers are left untouched.
 #
 # Usage:
@@ -13,6 +13,11 @@ echo "==> Building Angular frontend..."
 cd "$SCRIPT_DIR/front_end"
 npm install --silent
 npm run build -- --configuration production
+
+echo ""
+echo "==> Building Flutter web app..."
+cd "$SCRIPT_DIR"
+bash "$SCRIPT_DIR/flutter_web_build.sh"
 
 echo ""
 echo "==> Building Docker image..."
