@@ -919,7 +919,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingsAbout => 'אודות';
 
   @override
-  String get settingsVersion => 'גרסה 1.0';
+  String settingsVersion(Object version) {
+    return 'גרסה $version';
+  }
+
+  @override
+  String get settingsVersionLatest => 'מעודכן';
+
+  @override
+  String get settingsVersionUpdateAvailable => 'קיים עדכון';
 
   @override
   String get settingsAppName => 'מנהל כספי הבית';

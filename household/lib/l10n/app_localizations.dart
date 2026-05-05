@@ -1913,8 +1913,20 @@ abstract class AppLocalizations {
   /// No description provided for @settingsVersion.
   ///
   /// In en, this message translates to:
-  /// **'Version 1.0'**
-  String get settingsVersion;
+  /// **'Version {version}'**
+  String settingsVersion(Object version);
+
+  /// No description provided for @settingsVersionLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get settingsVersionLatest;
+
+  /// No description provided for @settingsVersionUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available'**
+  String get settingsVersionUpdateAvailable;
 
   /// No description provided for @settingsAppName.
   ///

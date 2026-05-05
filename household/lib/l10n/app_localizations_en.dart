@@ -925,7 +925,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAbout => 'About';
 
   @override
-  String get settingsVersion => 'Version 1.0';
+  String settingsVersion(Object version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get settingsVersionLatest => 'Latest';
+
+  @override
+  String get settingsVersionUpdateAvailable => 'Update available';
 
   @override
   String get settingsAppName => 'Household Finance Manager';
