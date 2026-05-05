@@ -6,6 +6,7 @@ import 'package:household/models/income.dart';
 import 'package:household/repositories/category_repository.dart';
 import 'package:household/services/transaction_service.dart';
 import 'package:household/services/household_service.dart';
+import 'package:household/utils/financial_calendar.dart';
 
 // ─── Data models ──────────────────────────────────────────────────────────────
 
@@ -156,17 +157,21 @@ class StatisticsViewModel extends ChangeNotifier {
               ))
           .toList();
 
-      // ── Monthly trend (last 4 months) ──────────────────────────────────────
-      final now = DateTime.now();
+      // ── Monthly trend (last 4 financial periods) ──────────────────────────
+      final startDay = _householdService.currentStartDay;
+      final curAnchor = currentFinancialAnchor(startDay: startDay);
       final expGroups = [expenses3, expenses2, expenses1, expenses0];
       final incGroups = [incomes3, incomes2, incomes1, incomes0];
       monthlyTrend = List.generate(4, (i) {
         // i=0 → offset=-3, i=3 → offset=0
         final offset = i - 3;
-        final dt = DateTime(now.year, now.month + offset, 1);
+        int m = curAnchor.month + offset;
+        int y = curAnchor.year;
+        while (m < 1) { m += 12; y -= 1; }
+        while (m > 12) { m -= 12; y += 1; }
         return MonthTrend(
-          month: dt.month,
-          year: dt.year,
+          month: m,
+          year: y,
           totalExpenses: expGroups[i].fold(0.0, (s, e) => s + e.amount),
           totalIncomes: incGroups[i].fold(0.0, (s, e) => s + e.amount),
         );

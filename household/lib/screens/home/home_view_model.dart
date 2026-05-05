@@ -5,6 +5,7 @@ import 'package:household/models/income.dart';
 import 'package:household/services/budget_service.dart';
 import 'package:household/services/household_service.dart';
 import 'package:household/services/transaction_service.dart';
+import 'package:household/utils/financial_calendar.dart';
 
 final homeViewModelProvider =
     ChangeNotifierProvider.autoDispose<HomeViewModel>((ref) {
@@ -46,6 +47,8 @@ class HomeViewModel extends ChangeNotifier {
 
   bool get noHousehold => _householdService.currentHouseholdId == null;
 
+  int get startDay => _householdService.currentStartDay;
+
   // ── Computed summaries ─────────────────────────────────────────────────────
 
   double get totalExpenses => expenses.fold(0.0, (s, e) => s + e.amount);
@@ -82,7 +85,7 @@ class HomeViewModel extends ChangeNotifier {
     state = HomeLoadState.loading;
     notifyListeners();
     try {
-      final now = DateTime.now();
+      final anchor = currentFinancialAnchor(startDay: _householdService.currentStartDay);
 
       final txFutures = await Future.wait([
         _txService.getExpenses(view: 'monthly', periodOffset: 0),
@@ -92,7 +95,7 @@ class HomeViewModel extends ChangeNotifier {
       incomes = txFutures[1] as List<Income>;
 
       final config = await _budgetService.getMonthConfig(
-          year: now.year, month: now.month);
+          year: anchor.year, month: anchor.month);
 
       if (config?.startAmount != null) {
         _confirmedStartAmount = config!.startAmount;
@@ -101,7 +104,7 @@ class HomeViewModel extends ChangeNotifier {
       } else {
         _confirmedStartAmount = null;
         _isStartConfirmed = false;
-        _predictedStartAmount = await _computePredictedStart(now);
+        _predictedStartAmount = await _computePredictedStart(anchor);
       }
 
       state = HomeLoadState.idle;
@@ -112,11 +115,11 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Computes the predicted start of [now] from previous month's confirmed end.
-  Future<double?> _computePredictedStart(DateTime now) async {
+  /// Computes the predicted start of [anchor] from previous financial month's confirmed end.
+  Future<double?> _computePredictedStart(({int year, int month}) anchor) async {
     try {
-      final prevYear = now.month == 1 ? now.year - 1 : now.year;
-      final prevMonth = now.month == 1 ? 12 : now.month - 1;
+      final prevYear = anchor.month == 1 ? anchor.year - 1 : anchor.year;
+      final prevMonth = anchor.month == 1 ? 12 : anchor.month - 1;
 
       final prevConfig = await _budgetService.getMonthConfig(
           year: prevYear, month: prevMonth);
@@ -143,9 +146,9 @@ class HomeViewModel extends ChangeNotifier {
     isSavingStart = true;
     notifyListeners();
     try {
-      final now = DateTime.now();
+      final anchor = currentFinancialAnchor(startDay: _householdService.currentStartDay);
       await _budgetService.upsertMonthConfig(
-          year: now.year, month: now.month, startAmount: amount);
+          year: anchor.year, month: anchor.month, startAmount: amount);
       _confirmedStartAmount = amount;
       _isStartConfirmed = true;
       _predictedStartAmount = null;

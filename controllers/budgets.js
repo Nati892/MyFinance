@@ -1,5 +1,11 @@
-const { ExpenseCategory, CategoryBudgetOverride, Expense, RecurringExpense, HouseholdMember, BudgetPlanItem, BudgetMonthConfig, sequelize } = require('../models');
+const { ExpenseCategory, CategoryBudgetOverride, Expense, RecurringExpense, Household, HouseholdMember, BudgetPlanItem, BudgetMonthConfig, sequelize } = require('../models');
 const { Op, fn, col, literal } = require('sequelize');
+const { getFinancialPeriodForAnchor } = require('../utils/financialCalendar');
+
+async function getHouseholdStartDay(householdId) {
+  const h = await Household.findByPk(householdId, { attributes: ['id', 'financialMonthStartDay'] });
+  return h?.financialMonthStartDay ?? 10;
+}
 
 class BudgetsController {
   /**
@@ -29,8 +35,10 @@ class BudgetsController {
       const yearInt = parseInt(year, 10);
       const monthInt = parseInt(month, 10);
 
-      const monthStart = new Date(yearInt, monthInt - 1, 1, 0, 0, 0, 0);
-      const monthEnd = new Date(yearInt, monthInt, 0, 23, 59, 59, 999);
+      const startDay = await getHouseholdStartDay(householdId);
+      const period = getFinancialPeriodForAnchor(yearInt, monthInt, startDay);
+      const monthStart = period.start;
+      const monthEnd = period.end;
 
       const categories = await ExpenseCategory.findAll({
         where: { householdId },
@@ -213,8 +221,10 @@ class BudgetsController {
       const yearInt = parseInt(year, 10);
       const monthInt = parseInt(month, 10);
 
-      const monthStart = new Date(yearInt, monthInt - 1, 1, 0, 0, 0, 0);
-      const monthEnd = new Date(yearInt, monthInt, 0, 23, 59, 59, 999);
+      const startDay = await getHouseholdStartDay(householdId);
+      const period = getFinancialPeriodForAnchor(yearInt, monthInt, startDay);
+      const monthStart = period.start;
+      const monthEnd = period.end;
 
       const where = {
         householdId,
@@ -278,38 +288,42 @@ class BudgetsController {
       const startMonthInt = parseInt(startMonth, 10);
       const endMonthInt = parseInt(endMonth, 10);
 
-      const rangeStart = new Date(yearInt, startMonthInt - 1, 1, 0, 0, 0, 0);
-      const rangeEnd = new Date(yearInt, endMonthInt, 0, 23, 59, 59, 999);
+      const startDay = await getHouseholdStartDay(householdId);
 
-      const where = {
-        householdId,
-        dateTime: { [Op.between]: [rangeStart, rangeEnd] }
-      };
-      if (expenseCategoryId) {
-        where.expenseCategoryId = expenseCategoryId;
+      // Build the list of financial period anchors covering startMonth..endMonth.
+      // Anchors may straddle a year boundary when startMonth > endMonth.
+      const anchors = [];
+      let curYear = yearInt;
+      let curMonth = startMonthInt;
+      while (true) {
+        anchors.push({ year: curYear, month: curMonth });
+        if (curYear === yearInt && curMonth === endMonthInt) break;
+        curMonth += 1;
+        if (curMonth > 12) { curMonth = 1; curYear += 1; }
+        if (anchors.length > 36) break; // safety
       }
-
-      const rows = await Expense.findAll({
-        attributes: [
-          [fn('YEAR', col('dateTime')), 'yr'],
-          [fn('MONTH', col('dateTime')), 'mo'],
-          [fn('SUM', col('amount')), 'total']
-        ],
-        where,
-        group: [fn('YEAR', col('dateTime')), fn('MONTH', col('dateTime'))],
-        order: [
-          [fn('YEAR', col('dateTime')), 'ASC'],
-          [fn('MONTH', col('dateTime')), 'ASC']
-        ],
-        raw: true
-      });
 
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-      const months = rows.map((row) => ({
-        label: `${monthNames[parseInt(row.mo, 10) - 1]} ${row.yr}`,
-        total: parseFloat(row.total) || 0
+      const months = await Promise.all(anchors.map(async ({ year: yr, month: mo }) => {
+        const period = getFinancialPeriodForAnchor(yr, mo, startDay);
+        const where = {
+          householdId,
+          dateTime: { [Op.between]: [period.start, period.end] }
+        };
+        if (expenseCategoryId) {
+          where.expenseCategoryId = expenseCategoryId;
+        }
+        const row = await Expense.findOne({
+          attributes: [[fn('SUM', col('amount')), 'total']],
+          where,
+          raw: true
+        });
+        return {
+          label: `${monthNames[mo - 1]} ${yr}`,
+          total: parseFloat(row?.total) || 0
+        };
       }));
 
       ctx.body = { success: true, months };

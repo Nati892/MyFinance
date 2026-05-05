@@ -5,6 +5,7 @@ import 'package:household/models/category.dart';
 import 'package:household/repositories/category_repository.dart';
 import 'package:household/services/budget_service.dart';
 import 'package:household/services/household_service.dart';
+import 'package:household/utils/financial_calendar.dart';
 
 final budgetViewModelProvider =
     ChangeNotifierProvider.autoDispose<BudgetViewModel>((ref) {
@@ -37,33 +38,32 @@ class BudgetViewModel extends ChangeNotifier {
     loadExpenseCategories();
   }
 
-  // ── Period ──────────────────────────────────────────────────────────────────
+  // ── Period (financial anchor month) ────────────────────────────────────────
+  // currentYear/currentMonth identify the financial period whose ANCHOR is
+  // that calendar month. With startDay=10, anchor 2026-04 = Apr 10 → May 9.
   late int currentYear;
   late int currentMonth; // 1-12
 
+  int get _startDay => _householdService.currentStartDay;
+
   void _initPeriod() {
-    final now = DateTime.now();
-    currentYear = now.year;
-    currentMonth = now.month;
+    final anchor = currentFinancialAnchor(startDay: _startDay);
+    currentYear = anchor.year;
+    currentMonth = anchor.month;
   }
 
   bool get isCurrentMonth {
-    final now = DateTime.now();
-    return currentYear == now.year && currentMonth == now.month;
+    final anchor = currentFinancialAnchor(startDay: _startDay);
+    return currentYear == anchor.year && currentMonth == anchor.month;
   }
 
-  static const _monthNamesEn = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
-  static const _monthNamesHe = [
-    'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-    'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
-  ];
-
   String monthLabel(String locale) {
-    final names = locale == 'he' ? _monthNamesHe : _monthNamesEn;
-    return '${names[currentMonth - 1]} $currentYear';
+    return getFinancialPeriodForAnchor(
+      currentYear,
+      currentMonth,
+      locale: locale,
+      startDay: _startDay,
+    ).label;
   }
 
   void prevMonth() {

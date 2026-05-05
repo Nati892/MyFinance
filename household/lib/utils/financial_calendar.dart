@@ -29,31 +29,38 @@ const _heDays = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי',
 
 // ─── Period / weeks ───────────────────────────────────────────────────────────
 
-/// Returns the financial period for [offset] months from today.
-/// The period runs from [startDay] of one month to ([startDay] - 1) of the next.
-/// When [startDay] is 1, the period equals the calendar month.
-FinancialPeriod getFinancialPeriod(
-  int offset, {
+/// Returns the (year, month) anchor of the financial period that contains [now]
+/// for a given [startDay]. The anchor month is the calendar month in which the
+/// period begins. When `now.day < startDay`, the anchor is the previous month.
+({int year, int month}) currentFinancialAnchor({DateTime? now, int startDay = 10}) {
+  final n = now ?? DateTime.now();
+  int year = n.year;
+  int month = n.month;
+  if (n.day < startDay) {
+    month -= 1;
+    if (month < 1) {
+      month = 12;
+      year -= 1;
+    }
+  }
+  return (year: year, month: month);
+}
+
+/// Returns the offset (in months) from the current financial anchor to the
+/// given (year, month) anchor.
+int financialOffsetFromCurrent(int year, int month, {int startDay = 10, DateTime? now}) {
+  final cur = currentFinancialAnchor(now: now, startDay: startDay);
+  return (year - cur.year) * 12 + (month - cur.month);
+}
+
+/// Builds a [FinancialPeriod] for an explicit anchor (year, month) — i.e. the
+/// period running from [startDay] of that month to ([startDay] - 1) of the next.
+FinancialPeriod getFinancialPeriodForAnchor(
+  int anchorYear,
+  int anchorMonth, {
   String locale = 'en',
   int startDay = 10,
 }) {
-  final now = DateTime.now();
-
-  // Anchor month = month in which the period starts (on `startDay`).
-  int anchorYear  = now.year;
-  int anchorMonth = now.month; // 1-based
-  if (now.day < startDay) {
-    anchorMonth -= 1;
-    if (anchorMonth < 1) {
-      anchorMonth = 12;
-      anchorYear -= 1;
-    }
-  }
-  // Apply offset.
-  anchorMonth += offset;
-  while (anchorMonth > 12) { anchorMonth -= 12; anchorYear += 1; }
-  while (anchorMonth < 1)  { anchorMonth += 12; anchorYear -= 1; }
-
   final start = DateTime(anchorYear, anchorMonth, startDay);
   final DateTime end;
   final String label;
@@ -65,23 +72,42 @@ FinancialPeriod getFinancialPeriod(
         ? '${_heMonths[anchorMonth - 1]} $anchorYear'
         : DateFormat('MMMM yyyy').format(start);
   } else {
-    // End: (startDay - 1) of the next month at 23:59:59.
     end = DateTime(anchorYear, anchorMonth + 1, startDay)
         .subtract(const Duration(seconds: 1));
-    final endDate = end;
     if (locale == 'he') {
       final s = '$startDay ${_heMonths[anchorMonth - 1]}';
-      final e = '${endDate.day} ${_heMonths[endDate.month - 1]} ${endDate.year}';
+      final e = '${end.day} ${_heMonths[end.month - 1]} ${end.year}';
       label = '$s – $e';
     } else {
       final monthShort = DateFormat('MMM');
       final s = '$startDay ${monthShort.format(start)}';
-      final e = '${endDate.day} ${monthShort.format(endDate)} ${endDate.year}';
+      final e = '${end.day} ${monthShort.format(end)} ${end.year}';
       label = '$s – $e';
     }
   }
 
   return FinancialPeriod(start: start, end: end, label: label);
+}
+
+/// Returns the financial period for [offset] months from today.
+/// The period runs from [startDay] of one month to ([startDay] - 1) of the next.
+/// When [startDay] is 1, the period equals the calendar month.
+FinancialPeriod getFinancialPeriod(
+  int offset, {
+  String locale = 'en',
+  int startDay = 10,
+}) {
+  final cur = currentFinancialAnchor(startDay: startDay);
+  int anchorMonth = cur.month + offset;
+  int anchorYear = cur.year;
+  while (anchorMonth > 12) { anchorMonth -= 12; anchorYear += 1; }
+  while (anchorMonth < 1)  { anchorMonth += 12; anchorYear -= 1; }
+  return getFinancialPeriodForAnchor(
+    anchorYear,
+    anchorMonth,
+    locale: locale,
+    startDay: startDay,
+  );
 }
 
 /// Splits [period] into ISO weeks (Mon–Sun), trimmed to the period boundaries.

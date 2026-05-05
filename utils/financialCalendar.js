@@ -105,6 +105,34 @@ function getCalendarMonthPeriod(offset = 0) {
 }
 
 /**
+ * Get the financial period for an explicit (year, month) anchor.
+ * The anchor is the calendar month in which the period starts on `startDay`.
+ * @param {number} anchorYear
+ * @param {number} anchorMonth - 1..12
+ * @param {number} startDay - day of month the period begins on (1..28, default 10)
+ * @returns {{ start: Date, end: Date, label: string }}
+ */
+function getFinancialPeriodForAnchor(anchorYear, anchorMonth, startDay = 10) {
+  const m = anchorMonth - 1; // 0-based
+  const start = new Date(anchorYear, m, startDay, 0, 0, 0, 0);
+
+  let end;
+  if (startDay === 1) {
+    let nextMonth = m + 1;
+    let nextYear  = anchorYear;
+    if (nextMonth > 11) { nextMonth = 0; nextYear += 1; }
+    end = new Date(new Date(nextYear, nextMonth, 1, 0, 0, 0, 0).getTime() - 1);
+  } else {
+    let endMonth = m + 1;
+    let endYear  = anchorYear;
+    if (endMonth > 11) { endMonth = 0; endYear += 1; }
+    end = new Date(endYear, endMonth, startDay - 1, 23, 59, 59, 999);
+  }
+
+  return { start, end, label: buildPeriodLabel(start, end) };
+}
+
+/**
  * Get the 5 financial weeks within a financial period.
  * Week 1 : period.start → coming Saturday at 23:59:59
  *           (if period.start is already Saturday, week 1 = that day only)
@@ -255,6 +283,7 @@ module.exports = {
   getCurrentFinancialPeriod,
   getFinancialPeriod,
   getCalendarMonthPeriod,
+  getFinancialPeriodForAnchor,
   getFinancialWeeks,
   getFinancialWeekForDate,
   getHourlySlots,

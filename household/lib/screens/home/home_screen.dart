@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/screens/home/home_view_model.dart';
+import 'package:household/utils/financial_calendar.dart';
 import 'package:household/utils/icon_helper.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -66,14 +67,14 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildSummaryHeader(BuildContext context, HomeViewModel vm, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final now = DateTime.now();
-    final monthName = _monthName(now.month, context);
+    final locale = Localizations.localeOf(context).languageCode;
+    final period = getFinancialPeriod(0, locale: locale, startDay: vm.startDay);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '$monthName ${now.year}',
+          period.label,
           style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
@@ -228,18 +229,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  String _monthName(int month, BuildContext context) {
-    final isHe = Localizations.localeOf(context).languageCode == 'he';
-    const namesEn = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    const namesHe = [
-      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
-    ];
-    return (isHe ? namesHe : namesEn)[month - 1];
-  }
 }
 
 // ── Start Balance Card ───────────────────────────────────────────────────────
