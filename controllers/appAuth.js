@@ -110,13 +110,14 @@ class AppAuthController {
 
       const memberships = await HouseholdMember.findAll({
         where: { appUserId: appUser.id },
-        include: [{ model: Household, attributes: ['id', 'name'] }]
+        include: [{ model: Household, attributes: ['id', 'name', 'financialMonthStartDay'] }]
       });
 
       const households = memberships.map(m => ({
         householdId: m.householdId,
         householdName: m.Household?.name ?? '',
-        role: m.role
+        role: m.role,
+        financialMonthStartDay: m.Household?.financialMonthStartDay ?? 10
       }));
 
       ctx.body = {
@@ -241,7 +242,7 @@ class AppAuthController {
         include: [
           {
             model: Household,
-            attributes: ['id', 'name']
+            attributes: ['id', 'name', 'financialMonthStartDay']
           }
         ]
       });
@@ -249,7 +250,8 @@ class AppAuthController {
       const households = memberships.map(m => ({
         householdId: m.Household.id,
         householdName: m.Household.name,
-        role: m.role
+        role: m.role,
+        financialMonthStartDay: m.Household.financialMonthStartDay ?? 10
       }));
 
       ctx.body = {

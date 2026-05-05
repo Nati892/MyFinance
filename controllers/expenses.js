@@ -1,9 +1,10 @@
-const { Expense, ExpenseCategory, AppUser, HouseholdMember, Card, RecurringExpense, TransactionAttachment, sequelize } = require('../models');
+const { Expense, ExpenseCategory, AppUser, Household, HouseholdMember, Card, RecurringExpense, TransactionAttachment, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const { deleteAttachmentFilesForTransactions } = require('./attachments');
 const {
   getCurrentFinancialPeriod,
   getFinancialPeriod,
+  getCalendarMonthPeriod,
   getFinancialWeeks,
   getHourlySlots,
   getDailySlots
@@ -127,6 +128,7 @@ class ExpensesController {
         householdId,
         view          = 'monthly',
         periodOffset  = 0,
+        periodType    = 'financial',
         weekNumber,
         date,
         categoryId
@@ -153,7 +155,13 @@ class ExpensesController {
 
       // --- Resolve the financial period ---
       const offset = parseInt(periodOffset, 10) || 0;
-      const period = getFinancialPeriod(offset);
+      const household = await Household.findByPk(Number(householdId), {
+        attributes: ['id', 'financialMonthStartDay']
+      });
+      const startDay = household?.financialMonthStartDay ?? 10;
+      const period = periodType === 'calendar'
+        ? getCalendarMonthPeriod(offset)
+        : getFinancialPeriod(offset, startDay);
       const weeks  = getFinancialWeeks(period);
 
       // --- Build date range based on view ---

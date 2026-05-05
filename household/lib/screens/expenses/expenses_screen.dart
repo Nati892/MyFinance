@@ -82,6 +82,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                           .map(TimelineTx.fromExpense)
                           .toList(),
                       loading: vm.state == ExpensesLoadState.loading,
+                      financialMonthStartDay:
+                          ref.watch(householdServiceProvider).currentStartDay,
                       onViewChanged: ({required view, required offset, week, dayDate}) {
                         vm.onViewChanged(
                             view: view, offset: offset, week: week, dayDate: dayDate);

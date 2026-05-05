@@ -891,6 +891,31 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingsLanguageHint => 'החלף בין אנגלית לעברית';
 
   @override
+  String get settingsFinancialMonth => 'חודש פיננסי';
+
+  @override
+  String get settingsFinancialMonthHint =>
+      'בחר את היום שבו מתחיל החודש הפיננסי. החודש יסתיים יום לפני, בחודש הבא.';
+
+  @override
+  String get settingsFinancialMonthDayLabel => 'מתחיל ביום';
+
+  @override
+  String settingsFinancialMonthRange(Object end, Object start) {
+    return 'יום $start בחודש – יום $end בחודש הבא';
+  }
+
+  @override
+  String get settingsFinancialMonthCalendarRange =>
+      'מהיום הראשון עד האחרון של כל חודש';
+
+  @override
+  String get settingsFinancialMonthPickerTitle => 'התחל את החודש הפיננסי ביום…';
+
+  @override
+  String get settingsFinancialMonthSaveError => 'השמירה נכשלה. נסה שוב.';
+
+  @override
   String get settingsAbout => 'אודות';
 
   @override

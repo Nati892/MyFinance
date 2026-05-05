@@ -127,7 +127,7 @@ class HouseholdsController {
   async update(ctx) {
     try {
       const { id } = ctx.params;
-      const { name, description } = ctx.request.body;
+      const { name, description, financialMonthStartDay } = ctx.request.body;
 
       const household = await Household.findByPk(id);
 
@@ -137,10 +137,22 @@ class HouseholdsController {
         return;
       }
 
-      await household.update({
+      const updates = {
         name: name !== undefined ? name : household.name,
         description: description !== undefined ? description : household.description
-      });
+      };
+
+      if (financialMonthStartDay !== undefined) {
+        const day = parseInt(financialMonthStartDay, 10);
+        if (!Number.isInteger(day) || day < 1 || day > 28) {
+          ctx.status = 400;
+          ctx.body = { error: 'financialMonthStartDay must be an integer between 1 and 28' };
+          return;
+        }
+        updates.financialMonthStartDay = day;
+      }
+
+      await household.update(updates);
 
       ctx.body = {
         success: true,
@@ -150,6 +162,64 @@ class HouseholdsController {
       console.error('Update household error:', error);
       ctx.status = 500;
       ctx.body = { error: 'Failed to update household' };
+    }
+  }
+
+  /**
+   * App: PUT /api/app/households/:id/settings
+   * Update household-level settings (currently only financialMonthStartDay).
+   * Caller must be an admin member of the household.
+   */
+  async appUpdateSettings(ctx) {
+    try {
+      const { id } = ctx.params;
+      const { financialMonthStartDay } = ctx.request.body;
+      const appUserId = ctx.state.appUser.id;
+
+      const membership = await HouseholdMember.findOne({
+        where: { householdId: Number(id), appUserId }
+      });
+      if (!membership) {
+        ctx.status = 403;
+        ctx.body = { error: 'You are not a member of this household' };
+        return;
+      }
+      if (membership.role !== 'admin') {
+        ctx.status = 403;
+        ctx.body = { error: 'Only household admins can change settings' };
+        return;
+      }
+
+      const household = await Household.findByPk(id);
+      if (!household) {
+        ctx.status = 404;
+        ctx.body = { error: 'Household not found' };
+        return;
+      }
+
+      if (financialMonthStartDay !== undefined) {
+        const day = parseInt(financialMonthStartDay, 10);
+        if (!Number.isInteger(day) || day < 1 || day > 28) {
+          ctx.status = 400;
+          ctx.body = { error: 'financialMonthStartDay must be an integer between 1 and 28' };
+          return;
+        }
+        await household.update({ financialMonthStartDay: day });
+      }
+
+      ctx.body = {
+        success: true,
+        household: {
+          householdId: household.id,
+          householdName: household.name,
+          role: membership.role,
+          financialMonthStartDay: household.financialMonthStartDay
+        }
+      };
+    } catch (error) {
+      console.error('App update household settings error:', error);
+      ctx.status = 500;
+      ctx.body = { error: 'Failed to update household settings' };
     }
   }
 

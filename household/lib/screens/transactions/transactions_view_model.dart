@@ -8,6 +8,7 @@ import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
 import 'package:household/models/recurring_expense.dart';
 import 'package:household/models/expense_schedule.dart';
+import 'package:household/models/transaction_attachment.dart';
 import 'package:household/repositories/attachment_repository.dart';
 import 'package:household/repositories/category_repository.dart';
 import 'package:household/services/credit_card_service.dart';
@@ -382,6 +383,7 @@ class TransactionsViewModel extends ChangeNotifier {
     editingId = expense.id;
     modalError = null;
     _clearPendingAttachments();
+    existingAttachments = List<TransactionAttachment>.from(expense.attachments);
     formAmount = expense.amount;
     _originalAmount = expense.amount;
     formCategoryId = expense.category?.id;
@@ -422,6 +424,7 @@ class TransactionsViewModel extends ChangeNotifier {
     isEditMode = true;
     editingId = income.id;
     modalError = null;
+    existingAttachments = List<TransactionAttachment>.from(income.attachments);
     formAmount = income.amount;
     formCategoryId = income.category?.id;
     formDateTime = DateTime.parse(income.dateTime).toLocal();
@@ -438,6 +441,19 @@ class TransactionsViewModel extends ChangeNotifier {
     modalOpen = false;
     modalError = null;
     _clearPendingAttachments();
+    notifyListeners();
+  }
+
+  // ── Existing attachments (already saved, shown in edit mode) ────────────────
+  List<TransactionAttachment> existingAttachments = [];
+
+  Future<void> removeExistingAttachment(int id) async {
+    try {
+      await _attachmentRepo.deleteAttachment(id);
+    } catch (e) {
+      debugPrint('[VM] delete attachment failed id=$id — $e');
+    }
+    existingAttachments = existingAttachments.where((a) => a.id != id).toList();
     notifyListeners();
   }
 
@@ -504,6 +520,7 @@ class TransactionsViewModel extends ChangeNotifier {
 
   void _clearPendingAttachments() {
     pendingAttachments = [];
+    existingAttachments = [];
   }
 
   Future<void> _uploadPendingAttachments({int? expenseId, int? incomeId}) async {

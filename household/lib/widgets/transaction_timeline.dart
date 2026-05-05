@@ -220,6 +220,8 @@ class TransactionTimeline extends StatefulWidget {
   /// Optional per-category monthly history for the bar chart in the detail sheet.
   /// Key: category name, value: list of monthly totals oldest→newest.
   final Map<String, List<double>>? categoryMonthHistory;
+  /// First day of the household's financial month (1..28). Default 10.
+  final int financialMonthStartDay;
 
   const TransactionTimeline({
     super.key,
@@ -229,6 +231,7 @@ class TransactionTimeline extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     this.categoryMonthHistory,
+    this.financialMonthStartDay = 10,
   });
 
   @override
@@ -266,8 +269,20 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
     }
   }
 
+  @override
+  void didUpdateWidget(covariant TransactionTimeline oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.financialMonthStartDay != widget.financialMonthStartDay) {
+      setState(_rebuild);
+    }
+  }
+
   void _rebuild() {
-    _period = getFinancialPeriod(_offset, locale: _locale);
+    _period = getFinancialPeriod(
+      _offset,
+      locale: _locale,
+      startDay: widget.financialMonthStartDay,
+    );
     _weeks = getFinancialWeeks(_period, locale: _locale);
   }
 
@@ -1060,7 +1075,7 @@ class _TxTile extends StatelessWidget {
 
 // ─── Auth-aware image widget ──────────────────────────────────────────────────
 
-class _AuthImage extends ConsumerWidget {
+class AuthImage extends ConsumerWidget {
   final String url;
   final double? width;
   final double? height;
@@ -1068,7 +1083,8 @@ class _AuthImage extends ConsumerWidget {
   final Color? loadingBg;
   final Widget? errorWidget;
 
-  const _AuthImage({
+  const AuthImage({
+    super.key,
     required this.url,
     this.width,
     this.height,
@@ -1184,27 +1200,127 @@ class _FileAttachmentTileState extends ConsumerState<_FileAttachmentTile> {
 
 // ─── Full-screen image viewer ─────────────────────────────────────────────────
 
-void _openImageViewer(BuildContext context, TransactionAttachment att) {
+void _openImageViewer(
+  BuildContext context,
+  TransactionAttachment att,
+  List<TransactionAttachment> allImages,
+) {
+  final initialIndex = allImages.indexWhere((a) => a.id == att.id);
   Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => Scaffold(
+    builder: (_) => _ImageViewerScreen(
+      images: allImages,
+      initialIndex: initialIndex < 0 ? 0 : initialIndex,
+    ),
+  ));
+}
+
+class _ImageViewerScreen extends StatefulWidget {
+  final List<TransactionAttachment> images;
+  final int initialIndex;
+
+  const _ImageViewerScreen({required this.images, required this.initialIndex});
+
+  @override
+  State<_ImageViewerScreen> createState() => _ImageViewerScreenState();
+}
+
+class _ImageViewerScreenState extends State<_ImageViewerScreen> {
+  late final PageController _pageCtrl;
+  late int _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialIndex;
+    _pageCtrl = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final att = widget.images[_current];
+    return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(att.filename, style: const TextStyle(fontSize: 14)),
       ),
-      body: Center(
-        child: InteractiveViewer(
-          child: _AuthImage(
-            url: '$kBaseUrl/app/attachments/${att.id}/file',
-            fit: BoxFit.contain,
-            loadingBg: Colors.black,
-            errorWidget: const Icon(Icons.broken_image, color: Colors.white, size: 48),
+      body: Column(
+        children: [
+          // Main swipeable image area
+          Expanded(
+            child: PageView.builder(
+              controller: _pageCtrl,
+              itemCount: widget.images.length,
+              onPageChanged: (i) => setState(() => _current = i),
+              itemBuilder: (context, i) {
+                final img = widget.images[i];
+                return InteractiveViewer(
+                  child: Center(
+                    child: AuthImage(
+                      url: '$kBaseUrl/app/attachments/${img.id}/file',
+                      fit: BoxFit.contain,
+                      loadingBg: Colors.black,
+                      errorWidget: const Icon(Icons.broken_image, color: Colors.white, size: 48),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
+          // Thumbnail strip
+          if (widget.images.length > 1)
+            Container(
+              color: Colors.black,
+              height: 72,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                itemCount: widget.images.length,
+                itemBuilder: (context, i) {
+                  final img = widget.images[i];
+                  final isSelected = i == _current;
+                  return GestureDetector(
+                    onTap: () => _pageCtrl.animateToPage(
+                      i,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isSelected ? Colors.white : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: AuthImage(
+                          url: '$kBaseUrl/app/attachments/${img.id}/thumb',
+                          width: 52,
+                          height: 52,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
       ),
-    ),
-  ));
+    );
+  }
 }
 
 // ─── Transaction detail bottom sheet ─────────────────────────────────────────
@@ -1423,11 +1539,12 @@ class _TxDetailSheet extends StatelessWidget {
                   runSpacing: 8,
                   children: tx.attachments.map((att) {
                     if (att.isImage) {
+                      final imageAttachments = tx.attachments.where((a) => a.isImage).toList();
                       return GestureDetector(
-                        onTap: () => _openImageViewer(context, att),
+                        onTap: () => _openImageViewer(context, att, imageAttachments),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
-                          child: _AuthImage(
+                          child: AuthImage(
                             url: '$kBaseUrl/app/attachments/${att.id}/thumb',
                             width: 60,
                             height: 60,

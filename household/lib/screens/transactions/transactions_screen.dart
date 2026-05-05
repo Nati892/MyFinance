@@ -11,6 +11,7 @@ import 'package:household/models/income.dart';
 import 'package:household/utils/icon_helper.dart';
 import 'package:household/models/expense_schedule.dart';
 import 'package:household/screens/transactions/transactions_view_model.dart';
+import 'package:household/services/household_service.dart';
 import 'package:household/widgets/create_category_sheet.dart';
 import 'package:household/widgets/expense_form_sheet.dart';
 import 'package:household/widgets/transaction_timeline.dart';
@@ -123,6 +124,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           child: TransactionTimeline(
                       transactions: vm.filteredTransactions,
                       loading: vm.state == TransactionsLoadState.loading,
+                      financialMonthStartDay:
+                          ref.watch(householdServiceProvider).currentStartDay,
                       onViewChanged: ({required view, required offset, week, dayDate}) {
                         vm.onViewChanged(
                             view: view, offset: offset, week: week, dayDate: dayDate);

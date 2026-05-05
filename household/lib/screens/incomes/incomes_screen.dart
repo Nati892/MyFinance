@@ -69,6 +69,8 @@ class _IncomesScreenState extends ConsumerState<IncomesScreen> {
                           .map(TimelineTx.fromIncome)
                           .toList(),
                       loading: vm.state == IncomesLoadState.loading,
+                      financialMonthStartDay:
+                          ref.watch(householdServiceProvider).currentStartDay,
                       onViewChanged: ({required view, required offset, week, dayDate}) {
                         vm.onViewChanged(
                             view: view, offset: offset, week: week, dayDate: dayDate);

@@ -1,33 +1,12 @@
 const { ExpenseCategory, Expense, Household, HouseholdMember, sequelize } = require('../models');
 const { Op } = require('sequelize');
+const { getCurrentFinancialPeriod } = require('../utils/financialCalendar');
 
-/**
- * Returns the start and end Date objects for the current financial month.
- * Financial month runs from the 10th of one month to the 9th of the next.
- * If today >= 10: start = this month's 10th 00:00:00, end = next month's 9th 23:59:59
- * If today < 10:  start = last month's 10th 00:00:00, end = this month's 9th 23:59:59
- */
-function getCurrentFinancialPeriod() {
-  const now = new Date();
-  const day = now.getDate();
-  const year = now.getFullYear();
-  const month = now.getMonth(); // 0-indexed
-
-  let start, end;
-
-  if (day >= 10) {
-    // Start: 10th of this month
-    start = new Date(year, month, 10, 0, 0, 0, 0);
-    // End: 9th of next month
-    end = new Date(year, month + 1, 9, 23, 59, 59, 999);
-  } else {
-    // Start: 10th of last month
-    start = new Date(year, month - 1, 10, 0, 0, 0, 0);
-    // End: 9th of this month
-    end = new Date(year, month, 9, 23, 59, 59, 999);
-  }
-
-  return { start, end };
+async function getHouseholdStartDay(householdId) {
+  const h = await Household.findByPk(Number(householdId), {
+    attributes: ['id', 'financialMonthStartDay']
+  });
+  return h?.financialMonthStartDay ?? 10;
 }
 
 class ExpenseCategoriesController {
@@ -270,7 +249,8 @@ class ExpenseCategoriesController {
 
       let favorites = [];
       if (favoriteIds.length > 0) {
-        const { start, end } = getCurrentFinancialPeriod();
+        const startDay = await getHouseholdStartDay(householdId);
+        const { start, end } = getCurrentFinancialPeriod(startDay);
         const cats = await ExpenseCategory.findAll({ where: { id: favoriteIds, householdId } });
 
         favorites = await Promise.all(cats.map(async (category) => {
@@ -334,7 +314,8 @@ class ExpenseCategoriesController {
         order: [['sortOrder', 'ASC']]
       });
 
-      const { start, end } = getCurrentFinancialPeriod();
+      const startDay = await getHouseholdStartDay(householdId);
+      const { start, end } = getCurrentFinancialPeriod(startDay);
 
       // Calculate current spend per category for the financial month
       const categoriesWithBudget = await Promise.all(

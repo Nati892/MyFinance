@@ -895,6 +895,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguageHint => 'Toggle between English and Hebrew';
 
   @override
+  String get settingsFinancialMonth => 'Financial month';
+
+  @override
+  String get settingsFinancialMonthHint =>
+      'Pick the day each financial month starts. The month then runs until the day before, of the following month.';
+
+  @override
+  String get settingsFinancialMonthDayLabel => 'Starts on day';
+
+  @override
+  String settingsFinancialMonthRange(Object end, Object start) {
+    return 'Day $start of one month – day $end of the next';
+  }
+
+  @override
+  String get settingsFinancialMonthCalendarRange =>
+      '1st – last day of each month';
+
+  @override
+  String get settingsFinancialMonthPickerTitle =>
+      'Start the financial month on…';
+
+  @override
+  String get settingsFinancialMonthSaveError =>
+      'Couldn\'t save. Please try again.';
+
+  @override
   String get settingsAbout => 'About';
 
   @override

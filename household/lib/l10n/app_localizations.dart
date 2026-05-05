@@ -1862,6 +1862,48 @@ abstract class AppLocalizations {
   /// **'Toggle between English and Hebrew'**
   String get settingsLanguageHint;
 
+  /// No description provided for @settingsFinancialMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial month'**
+  String get settingsFinancialMonth;
+
+  /// No description provided for @settingsFinancialMonthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the day each financial month starts. The month then runs until the day before, of the following month.'**
+  String get settingsFinancialMonthHint;
+
+  /// No description provided for @settingsFinancialMonthDayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts on day'**
+  String get settingsFinancialMonthDayLabel;
+
+  /// No description provided for @settingsFinancialMonthRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {start} of one month – day {end} of the next'**
+  String settingsFinancialMonthRange(Object end, Object start);
+
+  /// No description provided for @settingsFinancialMonthCalendarRange.
+  ///
+  /// In en, this message translates to:
+  /// **'1st – last day of each month'**
+  String get settingsFinancialMonthCalendarRange;
+
+  /// No description provided for @settingsFinancialMonthPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the financial month on…'**
+  String get settingsFinancialMonthPickerTitle;
+
+  /// No description provided for @settingsFinancialMonthSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save. Please try again.'**
+  String get settingsFinancialMonthSaveError;
+
   /// No description provided for @settingsAbout.
   ///
   /// In en, this message translates to:

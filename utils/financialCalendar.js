@@ -35,29 +35,30 @@ function buildPeriodLabel(start, end) {
 }
 
 /**
- * Get the current financial period (month from 10th to 9th).
- * - If today >= 10th: starts on the 10th of THIS month, ends 9th of NEXT month at 23:59:59
- * - If today < 10th:  starts on the 10th of LAST month, ends 9th of THIS month at 23:59:59
+ * Get the current financial period.
+ * Period runs from `startDay` of one month to `startDay - 1` of the next.
+ * @param {number} startDay - 1..28 (default 10)
  * @returns {{ start: Date, end: Date, label: string }}
  */
-function getCurrentFinancialPeriod() {
-  return getFinancialPeriod(0);
+function getCurrentFinancialPeriod(startDay = 10) {
+  return getFinancialPeriod(0, startDay);
 }
 
 /**
  * Get a specific financial period by offset from current.
  * @param {number} offset - 0 = current, -1 = previous, 1 = next
+ * @param {number} startDay - day of month the period begins on (1..28, default 10)
  * @returns {{ start: Date, end: Date, label: string }}
  */
-function getFinancialPeriod(offset = 0) {
+function getFinancialPeriod(offset = 0, startDay = 10) {
   const today = new Date();
   const day = today.getDate();
 
-  // Determine the "anchor" month — the month in which the period starts (on the 10th)
+  // Determine the "anchor" month — the month in which the period starts (on `startDay`)
   let anchorYear = today.getFullYear();
   let anchorMonth = today.getMonth(); // 0-based
 
-  if (day < 10) {
+  if (day < startDay) {
     // Current period started last month
     anchorMonth -= 1;
     if (anchorMonth < 0) {
@@ -71,16 +72,36 @@ function getFinancialPeriod(offset = 0) {
   while (anchorMonth > 11) { anchorMonth -= 12; anchorYear += 1; }
   while (anchorMonth < 0)  { anchorMonth += 12; anchorYear -= 1; }
 
-  // Period start: 10th of anchor month at 00:00:00
-  const start = new Date(anchorYear, anchorMonth, 10, 0, 0, 0, 0);
+  // Period start: `startDay` of anchor month at 00:00:00
+  const start = new Date(anchorYear, anchorMonth, startDay, 0, 0, 0, 0);
 
-  // Period end: 9th of anchor month + 1 at 23:59:59
-  let endMonth = anchorMonth + 1;
-  let endYear  = anchorYear;
-  if (endMonth > 11) { endMonth = 0; endYear += 1; }
-  const end = new Date(endYear, endMonth, 9, 23, 59, 59, 999);
+  let end;
+  if (startDay === 1) {
+    // Calendar month: end is last day of anchor month
+    let nextMonth = anchorMonth + 1;
+    let nextYear  = anchorYear;
+    if (nextMonth > 11) { nextMonth = 0; nextYear += 1; }
+    end = new Date(nextYear, nextMonth, 1, 0, 0, 0, 0);
+    end = new Date(end.getTime() - 1);
+  } else {
+    // Period end: (startDay - 1) of anchor month + 1 at 23:59:59
+    let endMonth = anchorMonth + 1;
+    let endYear  = anchorYear;
+    if (endMonth > 11) { endMonth = 0; endYear += 1; }
+    end = new Date(endYear, endMonth, startDay - 1, 23, 59, 59, 999);
+  }
 
   return { start, end, label: buildPeriodLabel(start, end) };
+}
+
+/**
+ * Get a calendar-month period (1st → end of month) for a given offset.
+ * Used when the caller explicitly requests `periodType=calendar`.
+ * @param {number} offset - 0 = current, -1 = previous, 1 = next
+ * @returns {{ start: Date, end: Date, label: string }}
+ */
+function getCalendarMonthPeriod(offset = 0) {
+  return getFinancialPeriod(offset, 1);
 }
 
 /**
@@ -233,6 +254,7 @@ function getDailySlots(week) {
 module.exports = {
   getCurrentFinancialPeriod,
   getFinancialPeriod,
+  getCalendarMonthPeriod,
   getFinancialWeeks,
   getFinancialWeekForDate,
   getHourlySlots,

@@ -12,6 +12,12 @@ module.exports = (sequelize, DataTypes) => {
     description: {
       type: DataTypes.STRING(255),
       allowNull: true
+    },
+    financialMonthStartDay: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 10,
+      validate: { min: 1, max: 28 }
     }
   }, {
     timestamps: true,

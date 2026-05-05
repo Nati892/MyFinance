@@ -29,16 +29,58 @@ const _heDays = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי',
 
 // ─── Period / weeks ───────────────────────────────────────────────────────────
 
-/// Returns a calendar-month period shifted by [offset] months from today.
-FinancialPeriod getFinancialPeriod(int offset, {String locale = 'en'}) {
+/// Returns the financial period for [offset] months from today.
+/// The period runs from [startDay] of one month to ([startDay] - 1) of the next.
+/// When [startDay] is 1, the period equals the calendar month.
+FinancialPeriod getFinancialPeriod(
+  int offset, {
+  String locale = 'en',
+  int startDay = 10,
+}) {
   final now = DateTime.now();
-  final year  = now.year  + ((now.month - 1 + offset) ~/ 12);
-  final month = ((now.month - 1 + offset) % 12) + 1;
-  final start = DateTime(year, month, 1);
-  final end   = DateTime(year, month + 1, 1).subtract(const Duration(seconds: 1));
-  final label = locale == 'he'
-      ? '${_heMonths[month - 1]} $year'
-      : DateFormat('MMMM yyyy').format(start);
+
+  // Anchor month = month in which the period starts (on `startDay`).
+  int anchorYear  = now.year;
+  int anchorMonth = now.month; // 1-based
+  if (now.day < startDay) {
+    anchorMonth -= 1;
+    if (anchorMonth < 1) {
+      anchorMonth = 12;
+      anchorYear -= 1;
+    }
+  }
+  // Apply offset.
+  anchorMonth += offset;
+  while (anchorMonth > 12) { anchorMonth -= 12; anchorYear += 1; }
+  while (anchorMonth < 1)  { anchorMonth += 12; anchorYear -= 1; }
+
+  final start = DateTime(anchorYear, anchorMonth, startDay);
+  final DateTime end;
+  final String label;
+
+  if (startDay == 1) {
+    end = DateTime(anchorYear, anchorMonth + 1, 1)
+        .subtract(const Duration(seconds: 1));
+    label = locale == 'he'
+        ? '${_heMonths[anchorMonth - 1]} $anchorYear'
+        : DateFormat('MMMM yyyy').format(start);
+  } else {
+    // End: (startDay - 1) of the next month at 23:59:59.
+    end = DateTime(anchorYear, anchorMonth + 1, startDay)
+        .subtract(const Duration(seconds: 1));
+    final endDate = end;
+    if (locale == 'he') {
+      final s = '$startDay ${_heMonths[anchorMonth - 1]}';
+      final e = '${endDate.day} ${_heMonths[endDate.month - 1]} ${endDate.year}';
+      label = '$s – $e';
+    } else {
+      final monthShort = DateFormat('MMM');
+      final s = '$startDay ${monthShort.format(start)}';
+      final e = '${endDate.day} ${monthShort.format(endDate)} ${endDate.year}';
+      label = '$s – $e';
+    }
+  }
+
   return FinancialPeriod(start: start, end: end, label: label);
 }
 

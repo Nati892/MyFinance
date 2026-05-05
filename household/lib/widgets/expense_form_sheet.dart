@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:household/core/network/dio_provider.dart';
 import 'package:household/l10n/app_localizations.dart';
 import 'package:household/models/category.dart';
 import 'package:household/models/credit_card.dart';
@@ -11,6 +12,7 @@ import 'package:household/screens/transactions/transactions_view_model.dart';
 import 'package:household/services/household_service.dart';
 import 'package:household/utils/icon_helper.dart';
 import 'package:household/widgets/create_category_sheet.dart';
+import 'package:household/widgets/transaction_timeline.dart' show AuthImage;
 import 'package:image_picker/image_picker.dart';
 
 const _monthNames = [
@@ -700,6 +702,52 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
             ),
           ],
         ),
+        // Existing saved attachments (edit mode)
+        if (vm.existingAttachments.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          ...vm.existingAttachments.map((att) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  att.isImage
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: AuthImage(
+                            url: '$kBaseUrl/app/attachments/${att.id}/thumb',
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: kExpensePurple.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(Icons.insert_drive_file, size: 22, color: kExpensePurple),
+                        ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      att.filename,
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF444444)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: Color(0xFF888888)),
+                    onPressed: () => vm.removeExistingAttachment(att.id),
+                    tooltip: l10n.attachmentsRemove,
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+        // Newly picked attachments (not yet uploaded)
         if (vm.pendingAttachments.isNotEmpty) ...[
           const SizedBox(height: 10),
           ...vm.pendingAttachments.asMap().entries.map((entry) {
@@ -712,7 +760,6 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
-                  // Thumbnail or icon
                   pa.isImage
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(6),
@@ -733,7 +780,6 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
                           child: const Icon(Icons.insert_drive_file, size: 22, color: kExpensePurple),
                         ),
                   const SizedBox(width: 8),
-                  // Editable name
                   Expanded(
                     child: TextField(
                       controller: nameCtrl,
@@ -742,7 +788,6 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
-                  // Remove button
                   IconButton(
                     icon: const Icon(Icons.close, size: 18, color: Color(0xFF888888)),
                     onPressed: () => vm.removePendingAttachment(idx),
