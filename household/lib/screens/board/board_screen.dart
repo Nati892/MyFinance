@@ -11,6 +11,7 @@ import 'package:household/models/shopping_store.dart';
 import 'package:household/screens/board/board_view_model.dart';
 import 'package:household/screens/board/canvas_note_widget.dart';
 import 'package:household/screens/board/canvas_shopping_session_widget.dart';
+import 'package:household/screens/board/note_detail_modal.dart';
 import 'package:household/screens/board/shopping_view_model.dart';
 import 'package:household/screens/shopping/shopping_management_screen.dart';
 import 'package:household/screens/shopping/shopping_session_panel.dart';
@@ -153,25 +154,15 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
                   isSelected: isSelected,
                   isOwner: isOwner,
                   onPositionCommit: (x, y) => vm.commitNotePosition(note.id, x, y),
-                  onTap: () => vm.bringToFront(note.id),
+                  onTap: () {
+                    vm.bringToFront(note.id);
+                    NoteDetailModal.show(context, note.id);
+                  },
                   onScaleUpdate: (scale, baseW, baseH) =>
                       vm.resizeNote(note.id, scale, baseW, baseH),
                   onScaleEnd: () {},
                   onRotateUpdate: (rot) => vm.rotateNote(note.id, rot),
                   onRotateEnd: () {},
-                  onDelete: () => vm.deleteNote(note.id),
-                  onColorChange: (color) =>
-                      vm.updateNoteStyle(note.id, {'noteColor': color}),
-                  onBoldChange: (bold) =>
-                      vm.updateNoteStyle(note.id, {'isBold': bold}),
-                  onUnderlineChange: (ul) =>
-                      vm.updateNoteStyle(note.id, {'isUnderline': ul}),
-                  onTextSizeChange: (size) =>
-                      vm.updateNoteStyle(note.id, {'textSize': size}),
-                  onDirectionChange: (dir) =>
-                      vm.updateNoteStyle(note.id, {'textDirection': dir}),
-                  onContentChange: (content) =>
-                      vm.updateNoteContent(note.id, content),
                 );
               }),
               // Shopping sessions
@@ -1572,13 +1563,6 @@ class _DraggableNoteItem extends StatefulWidget {
   final VoidCallback onScaleEnd;
   final void Function(double rotation) onRotateUpdate;
   final VoidCallback onRotateEnd;
-  final VoidCallback onDelete;
-  final void Function(String color) onColorChange;
-  final void Function(bool bold) onBoldChange;
-  final void Function(bool underline) onUnderlineChange;
-  final void Function(int size) onTextSizeChange;
-  final void Function(String dir) onDirectionChange;
-  final void Function(String content) onContentChange;
 
   const _DraggableNoteItem({
     required super.key,
@@ -1591,13 +1575,6 @@ class _DraggableNoteItem extends StatefulWidget {
     required this.onScaleEnd,
     required this.onRotateUpdate,
     required this.onRotateEnd,
-    required this.onDelete,
-    required this.onColorChange,
-    required this.onBoldChange,
-    required this.onUnderlineChange,
-    required this.onTextSizeChange,
-    required this.onDirectionChange,
-    required this.onContentChange,
   });
 
   @override
@@ -1652,13 +1629,6 @@ class _DraggableNoteItemState extends State<_DraggableNoteItem> {
           onScaleEnd: widget.onScaleEnd,
           onRotateUpdate: widget.onRotateUpdate,
           onRotateEnd: widget.onRotateEnd,
-          onDelete: widget.onDelete,
-          onColorChange: widget.onColorChange,
-          onBoldChange: widget.onBoldChange,
-          onUnderlineChange: widget.onUnderlineChange,
-          onTextSizeChange: widget.onTextSizeChange,
-          onDirectionChange: widget.onDirectionChange,
-          onContentChange: widget.onContentChange,
         ),
       ),
     );

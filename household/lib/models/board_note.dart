@@ -4,6 +4,8 @@
 /// Notes have a `type` field: 'text', 'heart', or 'image'.
 /// The API does NOT have a dedicated heart-toggle endpoint;
 /// hearts are stored as note type='heart' entries created/deleted like any note.
+const Object _kUnset = Object();
+
 class BoardNote {
   final int id;
   final String content;
@@ -21,6 +23,8 @@ class BoardNote {
   final bool isBold;
   final bool isUnderline;
   final String textDirection; // 'ltr' | 'rtl' | 'auto'
+  final String? headerText;
+  final bool locked;
   final int householdId;
   final int appUserId;
   final String authorUsername;
@@ -43,6 +47,8 @@ class BoardNote {
     required this.isBold,
     required this.isUnderline,
     required this.textDirection,
+    this.headerText,
+    this.locked = false,
     required this.householdId,
     required this.appUserId,
     required this.authorUsername,
@@ -65,6 +71,8 @@ class BoardNote {
     bool? isBold,
     bool? isUnderline,
     String? textDirection,
+    Object? headerText = _kUnset,
+    bool? locked,
   }) {
     return BoardNote(
       id: id,
@@ -83,6 +91,10 @@ class BoardNote {
       isBold: isBold ?? this.isBold,
       isUnderline: isUnderline ?? this.isUnderline,
       textDirection: textDirection ?? this.textDirection,
+      headerText: identical(headerText, _kUnset)
+          ? this.headerText
+          : headerText as String?,
+      locked: locked ?? this.locked,
       householdId: householdId,
       appUserId: appUserId,
       authorUsername: authorUsername,
@@ -109,6 +121,8 @@ class BoardNote {
       isBold:         json['isBold'] as bool? ?? false,
       isUnderline:    json['isUnderline'] as bool? ?? false,
       textDirection:  json['textDirection'] as String? ?? 'auto',
+      headerText:     json['headerText'] as String?,
+      locked:         json['locked'] as bool? ?? false,
       householdId:    json['householdId'] as int,
       appUserId:      json['appUserId'] as int,
       authorUsername: appUser?['username'] as String? ?? '',

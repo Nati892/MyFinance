@@ -350,6 +350,7 @@ class _TableSectionState extends ConsumerState<_TableSection> {
                 ),
               ),
               const _TableHeader(),
+              _TableTotalsRow(rows: vm.budgetRows),
             ],
           ),
         ),
@@ -424,6 +425,85 @@ class _TableHeader extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF888888))),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TableTotalsRow extends StatelessWidget {
+  final List<MonthBudgetRow> rows;
+  const _TableTotalsRow({required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final totalBudget = rows
+        .where((r) => r.effectiveBudget != null)
+        .fold<double>(0.0, (s, r) => s + r.effectiveBudget!);
+    final totalSpent = rows.fold<double>(0.0, (s, r) => s + r.spent);
+    final totalDelta = totalSpent - totalBudget;
+    final deltaColor = totalDelta > 0
+        ? const Color(0xFFC62828)
+        : const Color(0xFF2E7D32);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Color(0xFFEEEEEE)),
+          bottom: BorderSide(color: Color(0xFFEEEEEE)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 5,
+            child: Text(
+              l10n.timelineTotal,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF333333),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              '₪${totalBudget.toStringAsFixed(0)}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF333333),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              '₪${totalSpent.toStringAsFixed(0)}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF333333),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              '${totalDelta >= 0 ? '+' : '−'}₪${totalDelta.abs().toStringAsFixed(0)}',
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: deltaColor,
+              ),
+            ),
           ),
         ],
       ),

@@ -13,6 +13,28 @@ import 'package:household/utils/icon_helper.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 
+// ─── Period info (exported contract for parent screens) ──────────────────────
+
+class TimelinePeriodInfo {
+  final String view;        // 'monthly' | 'weekly' | 'daily'
+  final String label;       // human-readable, matches _navLabel
+  final int year;           // financial month year (used for budget lookup)
+  final int month;          // financial month 1-12 (used for budget lookup)
+  final double totalIn;
+  final double totalOut;
+  final int transactionCount;
+
+  const TimelinePeriodInfo({
+    required this.view,
+    required this.label,
+    required this.year,
+    required this.month,
+    required this.totalIn,
+    required this.totalOut,
+    required this.transactionCount,
+  });
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 Color _hexColor(String hex) {
@@ -176,12 +198,16 @@ class DayGroup {
   final String label;
   final String dateKey;
   final double total;
+  final double totalIn;
+  final double totalOut;
   final List<TimelineTx> transactions;
   bool collapsed;
   DayGroup({
     required this.label,
     required this.dateKey,
     required this.total,
+    required this.totalIn,
+    required this.totalOut,
     required this.transactions,
     this.collapsed = false,
   });
@@ -191,12 +217,16 @@ class WeekGroup {
   final int weekNumber;
   final String label;
   final double total;
+  final double totalIn;
+  final double totalOut;
   final List<DayGroup> dayGroups;
   bool collapsed;
   WeekGroup({
     required this.weekNumber,
     required this.label,
     required this.total,
+    required this.totalIn,
+    required this.totalOut,
     required this.dayGroups,
     this.collapsed = false,
   });
@@ -222,6 +252,8 @@ class TransactionTimeline extends StatefulWidget {
   final Map<String, List<double>>? categoryMonthHistory;
   /// First day of the household's financial month (1..28). Default 10.
   final int financialMonthStartDay;
+  /// Optional callback fired when the displayed period (view/label/totals) changes.
+  final ValueChanged<TimelinePeriodInfo>? onPeriodChanged;
 
   const TransactionTimeline({
     super.key,
@@ -232,6 +264,7 @@ class TransactionTimeline extends StatefulWidget {
     required this.onDelete,
     this.categoryMonthHistory,
     this.financialMonthStartDay = 10,
+    this.onPeriodChanged,
   });
 
   @override
@@ -250,6 +283,8 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
 
   late FinancialPeriod _period;
   late List<FinancialWeek> _weeks;
+
+  TimelinePeriodInfo? _lastEmitted;
 
   @override
   void initState() {
@@ -399,7 +434,14 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
     return _weeks.reversed.map((week) {
       if (week.start == null || week.end == null) {
         final wk = _locale == 'he' ? "שב׳" : 'Week';
-        return WeekGroup(weekNumber: week.weekNumber, label: '$wk ${week.weekNumber}', total: 0, dayGroups: []);
+        return WeekGroup(
+          weekNumber: week.weekNumber,
+          label: '$wk ${week.weekNumber}',
+          total: 0,
+          totalIn: 0,
+          totalOut: 0,
+          dayGroups: [],
+        );
       }
       final txs = widget.transactions.where((t) {
         if (t.isRecurring) return false;
@@ -408,11 +450,15 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
       }).toList();
       final days = _groupByDay(txs);
       final total = txs.fold(0.0, (s, t) => s + (t.txType == 'expense' ? -t.amount : t.amount));
+      final totalIn = txs.where((t) => t.txType == 'income').fold(0.0, (s, t) => s + t.amount);
+      final totalOut = txs.where((t) => t.txType == 'expense').fold(0.0, (s, t) => s + t.amount);
       final wk = _locale == 'he' ? "שב׳" : 'Week';
       return WeekGroup(
         weekNumber: week.weekNumber,
-        label: '$wk ${week.weekNumber} · ${week.label} · ${formatNIS(total)}',
+        label: '$wk ${week.weekNumber} · ${week.label}',
         total: total,
+        totalIn: totalIn,
+        totalOut: totalOut,
         dayGroups: days,
       );
     }).toList();
@@ -448,10 +494,14 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
       final parts = e.key.split('-').map(int.parse).toList();
       final date = DateTime(parts[0], parts[1], parts[2]);
       final total = e.value.fold(0.0, (s, t) => s + (t.txType == 'expense' ? -t.amount : t.amount));
+      final totalIn = e.value.where((t) => t.txType == 'income').fold(0.0, (s, t) => s + t.amount);
+      final totalOut = e.value.where((t) => t.txType == 'expense').fold(0.0, (s, t) => s + t.amount);
       return DayGroup(
-        label: '${buildDayLabel(date, locale: _locale)} · ${formatNIS(total)}',
+        label: buildDayLabel(date, locale: _locale),
         dateKey: e.key,
         total: total,
+        totalIn: totalIn,
+        totalOut: totalOut,
         transactions: e.value..sort((a, b) => DateTime.parse(b.dateTime).compareTo(DateTime.parse(a.dateTime))),
       );
     }).toList()
@@ -462,15 +512,67 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
 
   @override
   Widget build(BuildContext context) {
-    final grandTotal = widget.transactions.fold(0.0, (s, t) => s + (t.txType == 'expense' ? -t.amount : t.amount));
+    final totalIn = widget.transactions
+        .where((t) => t.txType == 'income')
+        .fold(0.0, (s, t) => s + t.amount);
+    final totalOut = widget.transactions
+        .where((t) => t.txType == 'expense')
+        .fold(0.0, (s, t) => s + t.amount);
+
+    _maybeEmitPeriod(totalIn, totalOut);
 
     return Column(
       children: [
         _buildViewSelector(),
-        _buildNavRow(grandTotal),
+        _buildNavRow(totalIn, totalOut),
         Expanded(child: widget.loading ? _buildSkeleton() : _buildContent()),
       ],
     );
+  }
+
+  void _maybeEmitPeriod(double totalIn, double totalOut) {
+    final cb = widget.onPeriodChanged;
+    if (cb == null) return;
+
+    // Derive year/month for the financial month containing this period.
+    // - daily view: use the active date's year/month
+    // - weekly/monthly: use the financial period's anchor (start date)
+    final int year;
+    final int month;
+    if (_view == 'daily') {
+      year = _activeDate.year;
+      month = _activeDate.month;
+    } else {
+      year = _period.start.year;
+      month = _period.start.month;
+    }
+
+    final info = TimelinePeriodInfo(
+      view: _view,
+      label: _navLabel,
+      year: year,
+      month: month,
+      totalIn: totalIn,
+      totalOut: totalOut,
+      transactionCount: widget.transactions.length,
+    );
+
+    final prev = _lastEmitted;
+    final changed = prev == null ||
+        prev.view != info.view ||
+        prev.label != info.label ||
+        prev.year != info.year ||
+        prev.month != info.month ||
+        prev.transactionCount != info.transactionCount ||
+        prev.totalIn != info.totalIn ||
+        prev.totalOut != info.totalOut;
+    if (!changed) return;
+
+    _lastEmitted = info;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onPeriodChanged?.call(info);
+    });
   }
 
   Widget _buildViewSelector() {
@@ -512,7 +614,7 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
     );
   }
 
-  Widget _buildNavRow(double total) {
+  Widget _buildNavRow(double totalIn, double totalOut) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
@@ -529,14 +631,8 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
             child: Column(
               children: [
                 Text(_navLabel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                Text(
-                  formatNIS(total),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: total >= 0 ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                const SizedBox(height: 2),
+                _PeriodTotalsBadge(totalIn: totalIn, totalOut: totalOut),
               ],
             ),
           ),
@@ -565,41 +661,42 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
     final catTotals = _computeCategoryTotals();
     final history = widget.categoryMonthHistory;
 
-    Widget view;
     switch (_view) {
       case 'monthly':
-        view = _buildMonthly(catTotals, history);
-        break;
+        return _buildMonthly(catTotals, history, recurring);
       case 'weekly':
-        view = _buildWeekly(catTotals, history);
-        break;
+        return _buildWeekly(catTotals, history, recurring);
       case 'daily':
-        view = _buildDaily(catTotals, history);
-        break;
+        return _buildDaily(catTotals, history, recurring);
       default:
-        view = const SizedBox();
+        return const SizedBox();
     }
-    return Column(
-      children: [
-        if (recurring.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-            child: _RecurringGroupTile(
-              transactions: recurring,
-              onEdit: widget.onEdit,
-              onDelete: widget.onDelete,
-              categoryCurrentTotals: catTotals,
-              categoryMonthHistory: history,
-            ),
-          ),
-        Expanded(child: view),
-      ],
+  }
+
+  Widget _buildRecurringTile(
+    List<TimelineTx> recurring,
+    Map<String, double> catTotals,
+    Map<String, List<double>>? history,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: _RecurringGroupTile(
+        transactions: recurring,
+        onEdit: widget.onEdit,
+        onDelete: widget.onDelete,
+        categoryCurrentTotals: catTotals,
+        categoryMonthHistory: history,
+      ),
     );
   }
 
-  Widget _buildMonthly(Map<String, double> catTotals, Map<String, List<double>>? history) {
+  Widget _buildMonthly(
+    Map<String, double> catTotals,
+    Map<String, List<double>>? history,
+    List<TimelineTx> recurring,
+  ) {
     final groups = _buildMonthlyGroups().where((g) => g.dayGroups.isNotEmpty).toList();
-    if (groups.isEmpty) {
+    if (groups.isEmpty && recurring.isEmpty) {
       return Center(
         child: Text(
           AppLocalizations.of(context)!.timelineNoTransactionsMonth,
@@ -607,22 +704,33 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
         ),
       );
     }
+    final hasRecurring = recurring.isNotEmpty;
+    final offset = hasRecurring ? 1 : 0;
     return ListView.builder(
       padding: const EdgeInsets.all(8),
-      itemCount: groups.length,
-      itemBuilder: (_, i) => _WeekGroupTile(
-        group: groups[i],
-        onEdit: widget.onEdit,
-        onDelete: widget.onDelete,
-        categoryCurrentTotals: catTotals,
-        categoryMonthHistory: history,
-      ),
+      itemCount: groups.length + offset,
+      itemBuilder: (_, i) {
+        if (hasRecurring && i == 0) {
+          return _buildRecurringTile(recurring, catTotals, history);
+        }
+        return _WeekGroupTile(
+          group: groups[i - offset],
+          onEdit: widget.onEdit,
+          onDelete: widget.onDelete,
+          categoryCurrentTotals: catTotals,
+          categoryMonthHistory: history,
+        );
+      },
     );
   }
 
-  Widget _buildWeekly(Map<String, double> catTotals, Map<String, List<double>>? history) {
+  Widget _buildWeekly(
+    Map<String, double> catTotals,
+    Map<String, List<double>>? history,
+    List<TimelineTx> recurring,
+  ) {
     final days = _buildWeeklyGroups();
-    if (days.isEmpty) {
+    if (days.isEmpty && recurring.isEmpty) {
       return Center(
         child: Text(
           AppLocalizations.of(context)!.timelineNoTransactionsWeek,
@@ -630,22 +738,33 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
         ),
       );
     }
+    final hasRecurring = recurring.isNotEmpty;
+    final offset = hasRecurring ? 1 : 0;
     return ListView.builder(
       padding: const EdgeInsets.all(8),
-      itemCount: days.length,
-      itemBuilder: (_, i) => _DayGroupTile(
-        group: days[i],
-        onEdit: widget.onEdit,
-        onDelete: widget.onDelete,
-        categoryCurrentTotals: catTotals,
-        categoryMonthHistory: history,
-      ),
+      itemCount: days.length + offset,
+      itemBuilder: (_, i) {
+        if (hasRecurring && i == 0) {
+          return _buildRecurringTile(recurring, catTotals, history);
+        }
+        return _DayGroupTile(
+          group: days[i - offset],
+          onEdit: widget.onEdit,
+          onDelete: widget.onDelete,
+          categoryCurrentTotals: catTotals,
+          categoryMonthHistory: history,
+        );
+      },
     );
   }
 
-  Widget _buildDaily(Map<String, double> catTotals, Map<String, List<double>>? history) {
+  Widget _buildDaily(
+    Map<String, double> catTotals,
+    Map<String, List<double>>? history,
+    List<TimelineTx> recurring,
+  ) {
     final txs = _buildDailyList();
-    if (txs.isEmpty) {
+    if (txs.isEmpty && recurring.isEmpty) {
       return Center(
         child: Text(
           AppLocalizations.of(context)!.timelineNoTransactionsDay,
@@ -653,16 +772,23 @@ class _TransactionTimelineState extends State<TransactionTimeline> {
         ),
       );
     }
+    final hasRecurring = recurring.isNotEmpty;
+    final offset = hasRecurring ? 1 : 0;
     return ListView.builder(
       padding: const EdgeInsets.all(8),
-      itemCount: txs.length,
-      itemBuilder: (_, i) => _TxTile(
-        tx: txs[i],
-        onEdit: widget.onEdit,
-        onDelete: widget.onDelete,
-        categoryCurrentTotals: catTotals,
-        categoryMonthHistory: history,
-      ),
+      itemCount: txs.length + offset,
+      itemBuilder: (_, i) {
+        if (hasRecurring && i == 0) {
+          return _buildRecurringTile(recurring, catTotals, history);
+        }
+        return _TxTile(
+          tx: txs[i - offset],
+          onEdit: widget.onEdit,
+          onDelete: widget.onDelete,
+          categoryCurrentTotals: catTotals,
+          categoryMonthHistory: history,
+        );
+      },
     );
   }
 
@@ -715,12 +841,30 @@ class _WeekGroupTileState extends State<_WeekGroupTile> {
           onTap: () => setState(() => _collapsed = !_collapsed),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            child: Row(children: [
-              Icon(_collapsed ? Icons.expand_more : Icons.expand_less, size: 16, color: const Color(0xFF888888)),
-              const SizedBox(width: 4),
-              Text(widget.group.label,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF555555))),
-            ]),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_collapsed ? Icons.expand_more : Icons.expand_less,
+                        size: 16, color: const Color(0xFF888888)),
+                    const SizedBox(width: 4),
+                    Text(widget.group.label,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF555555))),
+                  ],
+                ),
+                _HeaderPillRow(
+                  totalIn: widget.group.totalIn,
+                  totalOut: widget.group.totalOut,
+                ),
+              ],
+            ),
           ),
         ),
         if (!_collapsed)
@@ -758,8 +902,19 @@ class _DayGroupTile extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-          child: Text(group.label,
-              style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA), fontWeight: FontWeight.w500)),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 2,
+            children: [
+              Text(group.label,
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFFAAAAAA),
+                      fontWeight: FontWeight.w500)),
+              _HeaderPillRow(totalIn: group.totalIn, totalOut: group.totalOut),
+            ],
+          ),
         ),
         ...group.transactions.map((tx) => _TxTile(
               tx: tx,
@@ -1788,6 +1943,81 @@ class _ActionButton extends StatelessWidget {
             Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Period totals badge (income / expense pills) ────────────────────────────
+
+class _HeaderPillRow extends StatelessWidget {
+  final double totalIn;
+  final double totalOut;
+  const _HeaderPillRow({required this.totalIn, required this.totalOut});
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[];
+    if (totalIn > 0) {
+      children.add(_Pill(
+          icon: Icons.arrow_drop_up,
+          color: const Color(0xFF2E7D32),
+          amount: totalIn));
+    }
+    if (totalOut > 0) {
+      if (children.isNotEmpty) children.add(const SizedBox(width: 6));
+      children.add(_Pill(
+          icon: Icons.arrow_drop_down,
+          color: const Color(0xFFC62828),
+          amount: totalOut));
+    }
+    if (children.isEmpty) return const SizedBox.shrink();
+    return Row(mainAxisSize: MainAxisSize.min, children: children);
+  }
+}
+
+class _PeriodTotalsBadge extends StatelessWidget {
+  final double totalIn;
+  final double totalOut;
+  const _PeriodTotalsBadge({required this.totalIn, required this.totalOut});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _Pill(icon: Icons.arrow_drop_up, color: const Color(0xFF2E7D32), amount: totalIn),
+        const SizedBox(width: 8),
+        _Pill(icon: Icons.arrow_drop_down, color: const Color(0xFFC62828), amount: totalOut),
+      ],
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double amount;
+  const _Pill({required this.icon, required this.color, required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 2),
+          Text(
+            formatNIS(amount),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+          ),
+        ],
       ),
     );
   }

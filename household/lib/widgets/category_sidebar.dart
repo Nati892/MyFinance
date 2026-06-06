@@ -15,6 +15,7 @@ class CategorySidebar extends StatefulWidget {
   final void Function(Category)? onDeleteCategory;
   final VoidCallback? onFavoritesToggle;
   final bool favoritesExpanded;
+  final VoidCallback? onSummaryTap;
 
   const CategorySidebar({
     super.key,
@@ -27,6 +28,7 @@ class CategorySidebar extends StatefulWidget {
     this.onDeleteCategory,
     this.onFavoritesToggle,
     this.favoritesExpanded = false,
+    this.onSummaryTap,
   });
 
   @override
@@ -182,33 +184,55 @@ class _CategorySidebarState extends State<CategorySidebar> {
               ],
             ),
           ),
-          // ── Favorites button ─────────────────────────────────────────────────
-          if (widget.favoriteCategories.isNotEmpty && widget.onFavoritesToggle != null) ...[
+          // ── Favorites button (currently disabled — kept for future re-enable) ─────
+          // if (widget.favoriteCategories.isNotEmpty && widget.onFavoritesToggle != null) ...[
+          //   const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
+          //   GestureDetector(
+          //     onTap: widget.onFavoritesToggle,
+          //     child: Padding(
+          //       padding: const EdgeInsets.symmetric(vertical: 8),
+          //       child: Column(
+          //         mainAxisSize: MainAxisSize.min,
+          //         children: [
+          //           Icon(
+          //             widget.favoritesExpanded ? Icons.star : Icons.star_border,
+          //             size: 20,
+          //             color: widget.favoritesExpanded
+          //                 ? const Color(0xFFFFB300)
+          //                 : const Color(0xFF888888),
+          //           ),
+          //           const SizedBox(height: 3),
+          //           Text(
+          //             AppLocalizations.of(context)!.categoryFavorites,
+          //             textAlign: TextAlign.center,
+          //             style: TextStyle(
+          //               fontSize: 9,
+          //               color: widget.favoritesExpanded
+          //                   ? const Color(0xFFFFB300)
+          //                   : const Color(0xFF888888),
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
+          // ],
+          // ── Summary button ───────────────────────────────────────────────────
+          if (widget.onSummaryTap != null) ...[
             const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
             GestureDetector(
-              onTap: widget.onFavoritesToggle,
+              onTap: widget.onSummaryTap,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      widget.favoritesExpanded ? Icons.star : Icons.star_border,
-                      size: 20,
-                      color: widget.favoritesExpanded
-                          ? const Color(0xFFFFB300)
-                          : const Color(0xFF888888),
-                    ),
+                    const Icon(Icons.pie_chart_outline, size: 20, color: Color(0xFF888888)),
                     const SizedBox(height: 3),
                     Text(
-                      AppLocalizations.of(context)!.categoryFavorites,
+                      AppLocalizations.of(context)!.categorySummary,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: widget.favoritesExpanded
-                            ? const Color(0xFFFFB300)
-                            : const Color(0xFF888888),
-                      ),
+                      style: const TextStyle(fontSize: 9, color: Color(0xFF888888)),
                     ),
                   ],
                 ),

@@ -14,13 +14,6 @@ class CanvasNoteWidget extends StatefulWidget {
   final VoidCallback onScaleEnd;
   final void Function(double rotation) onRotateUpdate;
   final VoidCallback onRotateEnd;
-  final VoidCallback onDelete;
-  final void Function(String color) onColorChange;
-  final void Function(bool bold) onBoldChange;
-  final void Function(bool underline) onUnderlineChange;
-  final void Function(int size) onTextSizeChange;
-  final void Function(String dir) onDirectionChange;
-  final void Function(String content)? onContentChange;
 
   const CanvasNoteWidget({
     super.key,
@@ -34,13 +27,6 @@ class CanvasNoteWidget extends StatefulWidget {
     required this.onScaleEnd,
     required this.onRotateUpdate,
     required this.onRotateEnd,
-    required this.onDelete,
-    required this.onColorChange,
-    required this.onBoldChange,
-    required this.onUnderlineChange,
-    required this.onTextSizeChange,
-    required this.onDirectionChange,
-    this.onContentChange,
   });
 
   @override
@@ -52,71 +38,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
   double _baseHeight = 0;
   double _startRotation = 0;
   bool _isScaling = false;
-  bool _isEditing = false;
-  TextEditingController? _textController;
-  FocusNode? _focusNode;
-
-  static const _kNoteColors = [
-    '#fff9c4', '#f8bbd0', '#c8e6c9', '#b3e5fc',
-    '#ffe0b2', '#e1bee7', '#ffffff', '#ffccbc',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.note.type == 'text') {
-      _textController = TextEditingController(text: widget.note.content);
-      _focusNode = FocusNode();
-      _focusNode!.addListener(_onFocusChange);
-    }
-  }
-
-  @override
-  void didUpdateWidget(CanvasNoteWidget old) {
-    super.didUpdateWidget(old);
-    // Keep text controller in sync with external content changes (e.g. socket updates)
-    // but only when not actively editing.
-    if (!_isEditing && old.note.content != widget.note.content && widget.note.type == 'text') {
-      _textController?.text = widget.note.content;
-    }
-  }
-
-  @override
-  void dispose() {
-    _focusNode?.removeListener(_onFocusChange);
-    _focusNode?.dispose();
-    _textController?.dispose();
-    super.dispose();
-  }
-
-  void _onFocusChange() {
-    if (_focusNode != null && !_focusNode!.hasFocus && _isEditing) {
-      _commitEdit();
-    }
-  }
-
-  void _commitEdit() {
-    if (!_isEditing) return;
-    setState(() => _isEditing = false);
-    final content = _textController?.text ?? '';
-    if (content != widget.note.content) {
-      widget.onContentChange?.call(content);
-    }
-  }
-
-  /// Single tap: if already selected text note, enter edit mode. Otherwise select.
-  void _handleTap() {
-    if (_isEditing) {
-      _commitEdit();
-      return;
-    }
-    if (widget.isSelected && widget.note.type == 'text') {
-      setState(() => _isEditing = true);
-      _focusNode?.requestFocus();
-    } else {
-      widget.onTap();
-    }
-  }
 
   double _effectiveWidth() => (widget.note.width ?? 170).toDouble();
   double _effectiveHeight() => (widget.note.height ?? 190).toDouble();
@@ -127,8 +48,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
     final h = _effectiveHeight();
     final isHeart = widget.note.type == 'heart';
 
-    final toolbarExtraH = (widget.isSelected && !isHeart) ? 60.0 : 0.0;
-
     final bgColor = hexColor(widget.note.noteColor);
     final headerColor = darken(bgColor, 0.15);
     final textColor = hexColor(widget.note.textColor, fallback: const Color(0xFF333333));
@@ -137,9 +56,8 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
       angle: widget.note.rotation,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: _handleTap,
+        onTap: widget.onTap,
         onScaleStart: (details) {
-          if (_isEditing) return;
           if (details.pointerCount >= 2) {
             _isScaling = true;
             _baseWidth = w;
@@ -148,7 +66,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
           }
         },
         onScaleUpdate: (details) {
-          if (_isEditing) return;
           if (_isScaling && details.pointerCount >= 2) {
             widget.onScaleUpdate(details.scale, _baseWidth, _baseHeight);
             widget.onRotateUpdate(_startRotation + details.rotation);
@@ -157,7 +74,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
           }
         },
         onScaleEnd: (details) {
-          if (_isEditing) return;
           if (_isScaling) {
             widget.onScaleEnd();
             widget.onRotateEnd();
@@ -168,38 +84,10 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
         },
         child: SizedBox(
           width: w,
-          height: h + toolbarExtraH,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              SizedBox(
-                width: w,
-                height: h,
-                child: isHeart
-                    ? _buildHeartContent(w, h)
-                    : _buildNoteCard(w, h, bgColor, headerColor, textColor),
-              ),
-              if (widget.isSelected && widget.isOwner && isHeart)
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: GestureDetector(
-                    onTap: widget.onDelete,
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.close, size: 14, color: Colors.white),
-                    ),
-                  ),
-                ),
-              if (widget.isSelected && !isHeart)
-                _buildToolbar(w, h),
-            ],
-          ),
+          height: h,
+          child: isHeart
+              ? _buildHeartContent(w, h)
+              : _buildNoteCard(w, h, bgColor, headerColor, textColor),
         ),
       ),
     );
@@ -243,7 +131,6 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header bar
           Container(
             height: 28,
             decoration: BoxDecoration(
@@ -258,20 +145,9 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
                   style: TextStyle(fontSize: 10, color: iconColor.withValues(alpha: 0.75)),
                 ),
                 const Spacer(),
-                if (_isEditing)
-                  GestureDetector(
-                    onTap: _commitEdit,
-                    child: Icon(Icons.check, size: 16, color: iconColor),
-                  )
-                else if (widget.isOwner && widget.isSelected)
-                  GestureDetector(
-                    onTap: widget.onDelete,
-                    child: Icon(Icons.close, size: 16, color: iconColor),
-                  ),
               ],
             ),
           ),
-          // Content area
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8),
@@ -303,34 +179,10 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
                       const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
                 ),
         );
-      default: // text
+      default:
         final td = widget.note.textDirection == 'rtl'
             ? TextDirection.rtl
             : TextDirection.ltr;
-        if (_isEditing) {
-          return Directionality(
-            textDirection: td,
-            child: TextField(
-              controller: _textController,
-              focusNode: _focusNode,
-              style: TextStyle(
-                color: textColor,
-                fontSize: widget.note.textSize.toDouble(),
-                fontWeight: widget.note.isBold ? FontWeight.bold : FontWeight.normal,
-                decoration:
-                    widget.note.isUnderline ? TextDecoration.underline : null,
-              ),
-              maxLines: null,
-              expands: true,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
-              ),
-              textAlignVertical: TextAlignVertical.top,
-            ),
-          );
-        }
         return Directionality(
           textDirection: td,
           child: Text(
@@ -345,155 +197,5 @@ class _CanvasNoteWidgetState extends State<CanvasNoteWidget> {
           ),
         );
     }
-  }
-
-  void _showColorDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black38,
-      builder: (dctx) => AlertDialog(
-        title: const Text('Note color', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-        contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-        content: Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: _kNoteColors.map((hex) {
-            final isCurrent = hex == widget.note.noteColor;
-            return GestureDetector(
-              onTap: () {
-                widget.onColorChange(hex);
-                Navigator.of(dctx).pop();
-              },
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: hexColor(hex),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isCurrent ? const Color(0xFFE53935) : Colors.black12,
-                    width: isCurrent ? 2.5 : 1,
-                  ),
-                ),
-                child: isCurrent
-                    ? Icon(
-                        Icons.check,
-                        size: 16,
-                        color: hexColor(hex).computeLuminance() > 0.4
-                            ? const Color(0xFF3E2723)
-                            : Colors.white,
-                      )
-                    : null,
-              ),
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dctx).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToolbar(double noteWidth, double noteHeight) {
-    return Positioned(
-      top: noteHeight + 6,
-      left: 0,
-      child: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Color picker — opens a dialog (PopupMenuButton broken inside InteractiveViewer)
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _showColorDialog(context),
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
-                    color: hexColor(widget.note.noteColor),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black26),
-                  ),
-                ),
-              ),
-              if (widget.note.type == 'text') ...[
-                _ToolbarBtn(
-                  icon: Icons.format_bold,
-                  active: widget.note.isBold,
-                  onTap: () => widget.onBoldChange(!widget.note.isBold),
-                ),
-                _ToolbarBtn(
-                  icon: Icons.format_underlined,
-                  active: widget.note.isUnderline,
-                  onTap: () => widget.onUnderlineChange(!widget.note.isUnderline),
-                ),
-                _ToolbarBtn(
-                  icon: Icons.text_decrease,
-                  active: false,
-                  onTap: () =>
-                      widget.onTextSizeChange((widget.note.textSize - 2).clamp(8, 32)),
-                ),
-                _ToolbarBtn(
-                  icon: Icons.text_increase,
-                  active: false,
-                  onTap: () =>
-                      widget.onTextSizeChange((widget.note.textSize + 2).clamp(8, 32)),
-                ),
-                _ToolbarBtn(
-                  icon: widget.note.textDirection == 'rtl'
-                      ? Icons.format_textdirection_r_to_l
-                      : Icons.format_textdirection_l_to_r,
-                  active: false,
-                  onTap: () => widget.onDirectionChange(
-                      widget.note.textDirection == 'rtl' ? 'ltr' : 'rtl'),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ToolbarBtn extends StatelessWidget {
-  final IconData icon;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _ToolbarBtn({required this.icon, required this.active, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 30,
-        height: 30,
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF667EEA) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Icon(
-          icon,
-          size: 16,
-          color: active ? Colors.white : const Color(0xFF555555),
-        ),
-      ),
-    );
   }
 }

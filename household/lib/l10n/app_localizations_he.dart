@@ -525,6 +525,28 @@ class AppLocalizationsHe extends AppLocalizations {
   String get boardTryAgain => 'נסה שוב';
 
   @override
+  String get boardNoteHeaderPlaceholder => 'הקש להוספת כותרת…';
+
+  @override
+  String get boardSave => 'שמור';
+
+  @override
+  String get boardLockNote => 'נעל פתק';
+
+  @override
+  String get boardUnlockNote => 'בטל נעילה';
+
+  @override
+  String boardLockedByOwner(String user) {
+    return 'ננעל על ידי $user';
+  }
+
+  @override
+  String boardWatermarkBy(String user) {
+    return 'מאת $user';
+  }
+
+  @override
   String get shoppingTab => 'קניות';
 
   @override
@@ -793,6 +815,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get commonNew => 'חדש';
+
+  @override
+  String get commonMore => 'עוד…';
 
   @override
   String get commonDeleteExpense => 'מחק הוצאה?';
@@ -1133,4 +1158,27 @@ class AppLocalizationsHe extends AppLocalizations {
   String attachmentsCount(int count) {
     return '$count קבצים';
   }
+
+  @override
+  String get commonClose => 'סגור';
+
+  @override
+  String get categorySummary => 'סיכום';
+
+  @override
+  String get summaryDialogTitle => 'סיכום תקופה';
+
+  @override
+  String get summaryNet => 'נטו';
+
+  @override
+  String summaryTransactionCount(int count) {
+    return 'תנועות: $count';
+  }
+
+  @override
+  String get summaryOverBudgetTitle => 'חריגה מתקציב';
+
+  @override
+  String get summaryNoOverBudget => 'אין קטגוריות בחריגה';
 }

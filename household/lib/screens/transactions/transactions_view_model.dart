@@ -109,6 +109,8 @@ class TransactionsViewModel extends ChangeNotifier {
     return combined;
   }
 
+  // NOTE: favoriteCategories is currently not in use in the UI (Favorites
+  // button replaced by Summary popup). Kept here so re-enabling is trivial.
   List<Category> get favoriteCategories => expenseFavoriteCategories;
 
   /// The filtered + combined list of TimelineTx items to show.
@@ -829,6 +831,19 @@ class TransactionsViewModel extends ChangeNotifier {
       modalError = 'Failed to save. Please try again.';
       notifyListeners();
     }
+  }
+
+  /// Returns a map of category id → usage count, computed from currently
+  /// loaded expenses. Used by the wheel to surface the most-used sub-categories
+  /// at the top.
+  Map<int, int> getCategoryUsageCounts() {
+    final counts = <int, int>{};
+    for (final e in expenses) {
+      final id = e.category?.id;
+      if (id == null) continue;
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+    return counts;
   }
 
   // ── Frequent amounts helper ────────────────────────────────────────────────

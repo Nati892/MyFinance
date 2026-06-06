@@ -8,9 +8,13 @@ import 'package:household/models/category.dart';
 import 'package:household/models/credit_card.dart';
 import 'package:household/models/expense.dart';
 import 'package:household/models/income.dart';
+import 'package:household/models/recurring_expense.dart';
 import 'package:household/utils/icon_helper.dart';
+import 'package:household/utils/financial_calendar.dart';
+import 'package:household/models/budget.dart';
 import 'package:household/models/expense_schedule.dart';
 import 'package:household/screens/transactions/transactions_view_model.dart';
+import 'package:household/services/budget_service.dart';
 import 'package:household/services/household_service.dart';
 import 'package:household/widgets/create_category_sheet.dart';
 import 'package:household/widgets/expense_form_sheet.dart';
@@ -30,16 +34,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   int? _expandedCategoryId;
   double? _expandedCategoryYCenter;
   final GlobalKey _stackKey = GlobalKey();
-  bool _favoritesExpanded = false;
+  // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+  // bool _favoritesExpanded = false;
 
-  Color _hexColor(String hex) {
-    try {
-      final h = hex.trim().replaceFirst('#', '');
-      return Color(int.parse('FF$h', radix: 16));
-    } catch (_) {
-      return Colors.grey;
-    }
-  }
+  // Latest period info reported by TransactionTimeline.onPeriodChanged.
+  // Drives the Summary popup contents.
+  TimelinePeriodInfo? _periodInfo;
+
+  // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+  // Color _hexColor(String hex) {
+  //   try {
+  //     final h = hex.trim().replaceFirst('#', '');
+  //     return Color(int.parse('FF$h', radix: 16));
+  //   } catch (_) {
+  //     return Colors.grey;
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +84,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             // Category sidebar — shows all categories + enhanced filter button
             _TransactionsSidebar(
               categories: vm.allCategories,
-              favoriteCategories: vm.favoriteCategories,
+              // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+              // favoriteCategories: vm.favoriteCategories,
               filterCategoryId: vm.filterCategoryId,
               viewMode: vm.viewMode,
               priceMin: vm.priceMin,
@@ -102,8 +113,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 _expandedCategoryId = id;
                 _expandedCategoryYCenter = yCenter;
               }),
-              favoritesExpanded: _favoritesExpanded,
-              onFavoritesToggle: () => setState(() => _favoritesExpanded = !_favoritesExpanded),
+              // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+              // favoritesExpanded: _favoritesExpanded,
+              // onFavoritesToggle: () => setState(() => _favoritesExpanded = !_favoritesExpanded),
+              onSummaryTap: () => _showPeriodSummary(context, vm),
             ),
             // Timeline (with optional suggestions banner)
             Expanded(
@@ -130,6 +143,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         vm.onViewChanged(
                             view: view, offset: offset, week: week, dayDate: dayDate);
                       },
+                      onPeriodChanged: (info) {
+                        if (mounted) setState(() => _periodInfo = info);
+                      },
                       onEdit: (tx) {
                         if (tx.isRecurring && tx.recurringExpenseId != null) {
                           final rec = vm.recurringExpenses.firstWhere(
@@ -151,8 +167,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       onDelete: (tx) {
                         if (tx.isRecurring && tx.recurringExpenseId != null) {
                           final rec = vm.recurringExpenses.firstWhere((r) => r.id == tx.recurringExpenseId);
-                          vm.openEditRecurringAsExpenseModal(rec);
-                          _showTransactionSheet(context, vm);
+                          _confirmDeleteRecurring(context, vm, rec);
                         } else if (tx.txType == 'expense') {
                           final expense = vm.expenses.firstWhere((e) => e.id == tx.id);
                           _confirmDeleteExpense(context, vm, expense);
@@ -195,6 +210,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
             final arc = _SubCategoriesArc(
               parent: parent,
+              usageCounts: vm.getCategoryUsageCounts(),
               onSelected: (id) {
                 setState(() {
                   _expandedCategoryId = null;
@@ -236,70 +252,71 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           }),
 
         // ── Favorites overlay ────────────────────────────────────────────────
-        if (_favoritesExpanded) ...[
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _favoritesExpanded = false),
-              child: const SizedBox.expand(),
-            ),
-          ),
-          Positioned.directional(
-            textDirection: Directionality.of(context),
-            bottom: 130,
-            start: 96,
-            child: Material(
-              elevation: 6,
-              borderRadius: BorderRadius.circular(14),
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: vm.favoriteCategories.map((cat) {
-                    final isHe = Localizations.localeOf(context).languageCode == 'he';
-                    final name = isHe ? (cat.nameHe?.isNotEmpty == true ? cat.nameHe! : cat.name) : cat.name;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() => _favoritesExpanded = false);
-                          vm.onCategoryQuickAdd(cat.id);
-                          _showTransactionSheet(context, vm);
-                        },
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: _hexColor(cat.color),
-                                borderRadius: BorderRadius.circular(11),
-                              ),
-                              child: Icon(iconDataFromName(cat.icon), color: Colors.white, size: 22),
-                            ),
-                            const SizedBox(height: 5),
-                            SizedBox(
-                              width: 52,
-                              child: Text(
-                                name,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 10, color: Color(0xFF444444)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-          ),
-        ],
+        // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+        // if (_favoritesExpanded) ...[
+        //   Positioned.fill(
+        //     child: GestureDetector(
+        //       behavior: HitTestBehavior.opaque,
+        //       onTap: () => setState(() => _favoritesExpanded = false),
+        //       child: const SizedBox.expand(),
+        //     ),
+        //   ),
+        //   Positioned.directional(
+        //     textDirection: Directionality.of(context),
+        //     bottom: 130,
+        //     start: 96,
+        //     child: Material(
+        //       elevation: 6,
+        //       borderRadius: BorderRadius.circular(14),
+        //       color: Colors.white,
+        //       child: Padding(
+        //         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        //         child: Row(
+        //           mainAxisSize: MainAxisSize.min,
+        //           children: vm.favoriteCategories.map((cat) {
+        //             final isHe = Localizations.localeOf(context).languageCode == 'he';
+        //             final name = isHe ? (cat.nameHe?.isNotEmpty == true ? cat.nameHe! : cat.name) : cat.name;
+        //             return Padding(
+        //               padding: const EdgeInsets.symmetric(horizontal: 6),
+        //               child: GestureDetector(
+        //                 onTap: () {
+        //                   setState(() => _favoritesExpanded = false);
+        //                   vm.onCategoryQuickAdd(cat.id);
+        //                   _showTransactionSheet(context, vm);
+        //                 },
+        //                 child: Column(
+        //                   mainAxisSize: MainAxisSize.min,
+        //                   children: [
+        //                     Container(
+        //                       width: 44,
+        //                       height: 44,
+        //                       decoration: BoxDecoration(
+        //                         color: _hexColor(cat.color),
+        //                         borderRadius: BorderRadius.circular(11),
+        //                       ),
+        //                       child: Icon(iconDataFromName(cat.icon), color: Colors.white, size: 22),
+        //                     ),
+        //                     const SizedBox(height: 5),
+        //                     SizedBox(
+        //                       width: 52,
+        //                       child: Text(
+        //                         name,
+        //                         textAlign: TextAlign.center,
+        //                         maxLines: 1,
+        //                         overflow: TextOverflow.ellipsis,
+        //                         style: const TextStyle(fontSize: 10, color: Color(0xFF444444)),
+        //                       ),
+        //                     ),
+        //                   ],
+        //                 ),
+        //               ),
+        //             );
+        //           }).toList(),
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ],
         // ── FABs (stacked column, bottom-end) ────────────────────────────────
         Positioned.directional(
           textDirection: Directionality.of(context),
@@ -364,6 +381,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
+  void _showPeriodSummary(BuildContext context, TransactionsViewModel vm) {
+    final info = _periodInfo;
+    if (info == null) return;
+    showDialog<void>(
+      context: context,
+      builder: (_) => _PeriodSummaryDialog(info: info),
+    );
+  }
+
   void _confirmDeleteExpense(
       BuildContext context, TransactionsViewModel vm, Expense expense) {
     final l10n = AppLocalizations.of(context)!;
@@ -422,6 +448,34 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             onPressed: () {
               Navigator.pop(dialogContext);
               vm.deleteIncome(income);
+            },
+            child: Text(l10n.commonDelete, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteRecurring(
+      BuildContext context, TransactionsViewModel vm, RecurringExpense rec) {
+    final l10n = AppLocalizations.of(context)!;
+    final name = rec.description?.isNotEmpty == true
+        ? rec.description!
+        : rec.category?.name ?? 'this recurring expense';
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.commonDeleteExpense),
+        content: Text('Delete recurring "$name"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              vm.deleteRecurring(rec.id);
             },
             child: Text(l10n.commonDelete, style: const TextStyle(color: Colors.red)),
           ),
@@ -527,7 +581,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
 class _TransactionsSidebar extends StatefulWidget {
   final List<Category> categories;
-  final List<Category> favoriteCategories;
+  // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+  // final List<Category> favoriteCategories;
   final int? filterCategoryId;
   final String viewMode;
   final double? priceMin;
@@ -546,12 +601,15 @@ class _TransactionsSidebar extends StatefulWidget {
   final Set<int> expenseCategoryIds;
   final int? expandedCategoryId;
   final void Function(int? id, double? yCenter) onCategoryExpanded;
-  final VoidCallback? onFavoritesToggle;
-  final bool favoritesExpanded;
+  // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+  // final VoidCallback? onFavoritesToggle;
+  // final bool favoritesExpanded;
+  final VoidCallback? onSummaryTap;
 
   const _TransactionsSidebar({
     required this.categories,
-    required this.favoriteCategories,
+    // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+    // required this.favoriteCategories,
     required this.filterCategoryId,
     required this.viewMode,
     required this.priceMin,
@@ -569,8 +627,10 @@ class _TransactionsSidebar extends StatefulWidget {
     this.expenseCategoryIds = const {},
     required this.expandedCategoryId,
     required this.onCategoryExpanded,
-    this.onFavoritesToggle,
-    this.favoritesExpanded = false,
+    // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+    // this.onFavoritesToggle,
+    // this.favoritesExpanded = false,
+    this.onSummaryTap,
   });
 
   @override
@@ -684,32 +744,57 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
             ),
           ),
           // ── Favorites button ─────────────────────────────────────────────
-          if (widget.favoriteCategories.isNotEmpty && widget.onFavoritesToggle != null) ...[
+          // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+          // if (widget.favoriteCategories.isNotEmpty && widget.onFavoritesToggle != null) ...[
+          //   const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
+          //   GestureDetector(
+          //     onTap: widget.onFavoritesToggle,
+          //     child: Padding(
+          //       padding: const EdgeInsets.symmetric(vertical: 8),
+          //       child: Column(
+          //         mainAxisSize: MainAxisSize.min,
+          //         children: [
+          //           Icon(
+          //             widget.favoritesExpanded ? Icons.star : Icons.star_border,
+          //             size: 20,
+          //             color: widget.favoritesExpanded
+          //                 ? const Color(0xFFFFB300)
+          //                 : const Color(0xFF888888),
+          //           ),
+          //           const SizedBox(height: 3),
+          //           Text(
+          //             AppLocalizations.of(context)!.categoryFavorites,
+          //             textAlign: TextAlign.center,
+          //             style: TextStyle(
+          //               fontSize: 9,
+          //               color: widget.favoritesExpanded
+          //                   ? const Color(0xFFFFB300)
+          //                   : const Color(0xFF888888),
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
+          // ],
+          // ── Summary button ───────────────────────────────────────────────
+          if (widget.onSummaryTap != null) ...[
             const Divider(height: 1, thickness: 1, indent: 8, endIndent: 8),
             GestureDetector(
-              onTap: widget.onFavoritesToggle,
+              onTap: widget.onSummaryTap,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      widget.favoritesExpanded ? Icons.star : Icons.star_border,
-                      size: 20,
-                      color: widget.favoritesExpanded
-                          ? const Color(0xFFFFB300)
-                          : const Color(0xFF888888),
-                    ),
+                    const Icon(Icons.pie_chart_outline,
+                        size: 20, color: Color(0xFF888888)),
                     const SizedBox(height: 3),
                     Text(
-                      AppLocalizations.of(context)!.categoryFavorites,
+                      AppLocalizations.of(context)!.categorySummary,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: widget.favoritesExpanded
-                            ? const Color(0xFFFFB300)
-                            : const Color(0xFF888888),
-                      ),
+                      style: const TextStyle(
+                          fontSize: 9, color: Color(0xFF888888)),
                     ),
                   ],
                 ),
@@ -859,7 +944,8 @@ class _TransactionsSidebarState extends State<_TransactionsSidebar> {
   void _showSearchSheet(BuildContext context) {
     final allCats = [
       ...widget.categories.expand((c) => c.flatList),
-      ...widget.favoriteCategories
+      // Favorites — currently disabled (see ai_dev/transactions_period_summary_redesign/)
+      // ...widget.favoriteCategories,
     ];
     showModalBottomSheet(
       context: context,
@@ -1129,6 +1215,7 @@ class _SubCategoriesArc extends StatefulWidget {
   final ValueChanged<int> onSelected;
   final VoidCallback onClose;
   final ValueChanged<Category>? onEditSubCategory;
+  final Map<int, int> usageCounts;
 
   // ── Tune these to change the feel of the arc ─────────────────────────────
   static const double itemHeight   = 52.0;
@@ -1146,6 +1233,7 @@ class _SubCategoriesArc extends StatefulWidget {
     required this.onSelected,
     required this.onClose,
     this.onEditSubCategory,
+    this.usageCounts = const {},
   });
 
   @override
@@ -1223,6 +1311,23 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
     final parentName = (isHe && widget.parent.nameHe?.isNotEmpty == true)
         ? widget.parent.nameHe!
         : widget.parent.name;
+    // Stable-sort sub-categories by usage count (desc). Ties keep the original
+    // server order. "General" (the parent itself) always stays at the top.
+    final subs = widget.parent.subCategories.toList();
+    if (widget.usageCounts.isNotEmpty) {
+      final indexed = <(int, Category)>[
+        for (int i = 0; i < subs.length; i++) (i, subs[i]),
+      ];
+      indexed.sort((a, b) {
+        final ca = widget.usageCounts[a.$2.id] ?? 0;
+        final cb = widget.usageCounts[b.$2.id] ?? 0;
+        if (cb != ca) return cb.compareTo(ca);
+        return a.$1.compareTo(b.$1); // stable
+      });
+      subs
+        ..clear()
+        ..addAll(indexed.map((e) => e.$2));
+    }
     return [
       (
         id: widget.parent.id,
@@ -1230,7 +1335,7 @@ class _SubCategoriesArcState extends State<_SubCategoriesArc>
         name: '$parentName - $generalLabel',
         isGeneral: true,
       ),
-      ...widget.parent.subCategories.map((s) {
+      ...subs.map((s) {
         final subName = (isHe && s.nameHe?.isNotEmpty == true) ? s.nameHe! : s.name;
         return (id: s.id, icon: s.icon, name: subName, isGeneral: false);
       }),
@@ -2961,6 +3066,302 @@ class _SuggestionsBannerState extends State<_SuggestionsBanner> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Period Summary Dialog ───────────────────────────────────────────────────
+//
+// Small popup launched from the sidebar Summary tile. Shows the totals,
+// net, transaction count for the currently-selected period, and (only in
+// monthly view) a list of categories that went over budget for the month.
+
+class _PeriodSummaryDialog extends ConsumerStatefulWidget {
+  final TimelinePeriodInfo info;
+  const _PeriodSummaryDialog({required this.info});
+
+  @override
+  ConsumerState<_PeriodSummaryDialog> createState() => _PeriodSummaryDialogState();
+}
+
+class _PeriodSummaryDialogState extends ConsumerState<_PeriodSummaryDialog> {
+  bool _loadingBudget = false;
+  List<MonthBudgetRow>? _budgetRows;
+  Object? _budgetError;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.info.view == 'monthly') {
+      _loadingBudget = true;
+      // Fire-and-forget; UI shows a spinner until it completes.
+      Future.microtask(() async {
+        try {
+          final rows = await ref
+              .read(budgetServiceProvider)
+              .getMonthlyBudget(year: widget.info.year, month: widget.info.month);
+          if (!mounted) return;
+          setState(() {
+            _budgetRows = rows;
+            _loadingBudget = false;
+          });
+        } catch (e) {
+          if (!mounted) return;
+          setState(() {
+            _budgetError = e;
+            _loadingBudget = false;
+          });
+        }
+      });
+    }
+  }
+
+  Color _parseHexColor(String hex) {
+    try {
+      final clean = hex.trim().replaceFirst('#', '');
+      return Color(int.parse('FF$clean', radix: 16));
+    } catch (_) {
+      return const Color(0xFF888888);
+    }
+  }
+
+  String _viewModeLabel(AppLocalizations l10n) {
+    switch (widget.info.view) {
+      case 'monthly':
+        return l10n.timelineMonthly;
+      case 'weekly':
+        return l10n.timelineWeekly;
+      case 'daily':
+        return l10n.timelineDaily;
+      default:
+        return widget.info.view;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isHe = Localizations.localeOf(context).languageCode == 'he';
+    final info = widget.info;
+    final net = info.totalIn - info.totalOut;
+    const incomeGreen = Color(0xFF2E7D32);
+    const expenseRed = Color(0xFFC62828);
+    const primary = Color(0xFF222222);
+    const secondary = Color(0xFF888888);
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.summaryDialogTitle,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: primary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  info.label,
+                  style: const TextStyle(fontSize: 12, color: secondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFEFEF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _viewModeLabel(l10n),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF555555),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SummaryRow(
+                label: l10n.navIncomes,
+                value: formatNIS(info.totalIn),
+                valueColor: incomeGreen,
+              ),
+              const Divider(height: 1),
+              _SummaryRow(
+                label: l10n.navExpenses,
+                value: formatNIS(info.totalOut),
+                valueColor: expenseRed,
+              ),
+              const Divider(height: 1),
+              _SummaryRow(
+                label: l10n.summaryNet,
+                value: formatNIS(net),
+                valueColor: net >= 0 ? incomeGreen : expenseRed,
+                bold: true,
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  l10n.summaryTransactionCount(info.transactionCount),
+                  style: const TextStyle(fontSize: 13, color: primary),
+                ),
+              ),
+              if (info.view == 'monthly') ...[
+                const Divider(height: 1),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.summaryOverBudgetTitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: primary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                if (_loadingBudget)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (_budgetError != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      l10n.summaryNoOverBudget,
+                      style: const TextStyle(fontSize: 12, color: secondary),
+                    ),
+                  )
+                else
+                  ..._buildOverBudgetList(l10n, isHe, expenseRed, secondary),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonClose),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildOverBudgetList(
+      AppLocalizations l10n, bool isHe, Color overColor, Color secondary) {
+    final rows = (_budgetRows ?? const <MonthBudgetRow>[])
+        .where((r) => (r.result ?? 0) > 0)
+        .toList()
+      ..sort((a, b) => b.result!.compareTo(a.result!));
+    if (rows.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(
+            l10n.summaryNoOverBudget,
+            style: TextStyle(fontSize: 12, color: secondary),
+          ),
+        ),
+      ];
+    }
+    return rows.map((r) {
+      final name = isHe ? (r.nameHe ?? r.name) : r.name;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: _parseHexColor(r.color),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF222222)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '+${formatNIS(r.result!)}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: overColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color valueColor;
+  final bool bold;
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF555555)),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+              color: valueColor,
+            ),
+          ),
         ],
       ),
     );

@@ -528,6 +528,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get boardTryAgain => 'Try again';
 
   @override
+  String get boardNoteHeaderPlaceholder => 'Tap to add title…';
+
+  @override
+  String get boardSave => 'Save';
+
+  @override
+  String get boardLockNote => 'Lock note';
+
+  @override
+  String get boardUnlockNote => 'Unlock note';
+
+  @override
+  String boardLockedByOwner(String user) {
+    return 'Locked by $user';
+  }
+
+  @override
+  String boardWatermarkBy(String user) {
+    return 'by $user';
+  }
+
+  @override
   String get shoppingTab => 'Shopping';
 
   @override
@@ -797,6 +819,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonNew => 'New';
+
+  @override
+  String get commonMore => 'More…';
 
   @override
   String get commonDeleteExpense => 'Delete expense?';
@@ -1146,4 +1171,27 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get commonClose => 'Close';
+
+  @override
+  String get categorySummary => 'Summary';
+
+  @override
+  String get summaryDialogTitle => 'Period summary';
+
+  @override
+  String get summaryNet => 'Net';
+
+  @override
+  String summaryTransactionCount(int count) {
+    return 'Transactions: $count';
+  }
+
+  @override
+  String get summaryOverBudgetTitle => 'Over budget';
+
+  @override
+  String get summaryNoOverBudget => 'No categories over budget';
 }

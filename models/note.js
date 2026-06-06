@@ -86,6 +86,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: true,
       defaultValue: 0
+    },
+    headerText: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+      defaultValue: null
+    },
+    locked: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
     }
   }, {
     timestamps: true,

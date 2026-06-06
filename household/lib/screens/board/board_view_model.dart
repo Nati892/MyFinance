@@ -297,11 +297,34 @@ class BoardViewModel extends ChangeNotifier {
         isBold: props['isBold'] as bool?,
         isUnderline: props['isUnderline'] as bool?,
         textDirection: props['textDirection'] as String?,
+        heartColor: props['heartColor'] as String?,
       );
     }).toList();
     notifyListeners();
     try {
       await _repo.updateNote(id, props);
+    } catch (_) {}
+  }
+
+  Future<void> updateNoteHeaderText(int id, String? headerText) async {
+    notes = _notes.map((n) {
+      if (n.id != id) return n;
+      return n.copyWith(headerText: headerText);
+    }).toList();
+    notifyListeners();
+    try {
+      await _repo.updateNote(id, {'headerText': headerText});
+    } catch (_) {}
+  }
+
+  Future<void> updateNoteLocked(int id, bool locked) async {
+    notes = _notes.map((n) {
+      if (n.id != id) return n;
+      return n.copyWith(locked: locked);
+    }).toList();
+    notifyListeners();
+    try {
+      await _repo.updateNote(id, {'locked': locked});
     } catch (_) {}
   }
 

@@ -1130,6 +1130,42 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get boardTryAgain;
 
+  /// No description provided for @boardNoteHeaderPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to add title…'**
+  String get boardNoteHeaderPlaceholder;
+
+  /// No description provided for @boardSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get boardSave;
+
+  /// No description provided for @boardLockNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock note'**
+  String get boardLockNote;
+
+  /// No description provided for @boardUnlockNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock note'**
+  String get boardUnlockNote;
+
+  /// No description provided for @boardLockedByOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked by {user}'**
+  String boardLockedByOwner(String user);
+
+  /// No description provided for @boardWatermarkBy.
+  ///
+  /// In en, this message translates to:
+  /// **'by {user}'**
+  String boardWatermarkBy(String user);
+
   /// No description provided for @shoppingTab.
   ///
   /// In en, this message translates to:
@@ -1669,6 +1705,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New'**
   String get commonNew;
+
+  /// No description provided for @commonMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More…'**
+  String get commonMore;
 
   /// No description provided for @commonDeleteExpense.
   ///
@@ -2329,6 +2371,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 attachment} other{{count} attachments}}'**
   String attachmentsCount(int count);
+
+  /// No description provided for @commonClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get commonClose;
+
+  /// No description provided for @categorySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get categorySummary;
+
+  /// No description provided for @summaryDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Period summary'**
+  String get summaryDialogTitle;
+
+  /// No description provided for @summaryNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get summaryNet;
+
+  /// No description provided for @summaryTransactionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions: {count}'**
+  String summaryTransactionCount(int count);
+
+  /// No description provided for @summaryOverBudgetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Over budget'**
+  String get summaryOverBudgetTitle;
+
+  /// No description provided for @summaryNoOverBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'No categories over budget'**
+  String get summaryNoOverBudget;
 }
 
 class _AppLocalizationsDelegate

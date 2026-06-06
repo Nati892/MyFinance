@@ -38,6 +38,10 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
   final FocusNode _amountFocus = FocusNode();
   int? _selectedParentId;
 
+  static const int _initialFavoritesCount = 8;
+  static const int _moreRevealStep = 10;
+  int _extraRevealed = 0;
+
   static const _paymentMethodKeys = [
     ('card',          '💳'),
     ('cash',          '💵'),
@@ -521,9 +525,28 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
 
     // When a parent is selected, only show that parent chip + new-category chip.
     // Tapping the selected parent chip again collapses back to all parents.
-    final visibleParents = _selectedParentId != null
-        ? cats.where((c) => c.id == _selectedParentId).toList()
-        : cats;
+    // When no parent is selected, show top favorites first, then any "more…"-revealed
+    // extras. The rest is hidden behind the more chip.
+    List<Category> visibleParents;
+    int hiddenCount = 0;
+    if (_selectedParentId != null) {
+      visibleParents = cats.where((c) => c.id == _selectedParentId).toList();
+    } else {
+      final catIds = cats.map((c) => c.id).toSet();
+      final favIds = <int>{};
+      final favs = <Category>[];
+      for (final f in vm.favoriteCategories) {
+        if (favs.length >= _initialFavoritesCount) break;
+        if (!catIds.contains(f.id) || favIds.contains(f.id)) continue;
+        final match = cats.firstWhere((c) => c.id == f.id, orElse: () => f);
+        favs.add(match);
+        favIds.add(f.id);
+      }
+      final rest = cats.where((c) => !favIds.contains(c.id)).toList();
+      final revealed = _extraRevealed.clamp(0, rest.length);
+      visibleParents = [...favs, ...rest.take(revealed)];
+      hiddenCount = rest.length - revealed;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -582,6 +605,7 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
                 ),
               );
             }),
+            if (hiddenCount > 0) _buildMoreChip(l10n, hiddenCount),
             _buildNewCategoryChip(vm, l10n),
           ],
         ),
@@ -653,6 +677,29 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildMoreChip(AppLocalizations l10n, int hiddenCount) {
+    return GestureDetector(
+      onTap: () => setState(() => _extraRevealed += _moreRevealStep),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F0F0),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFDDDDDD)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.more_horiz, size: 16, color: Color(0xFF666666)),
+            const SizedBox(width: 4),
+            Text(l10n.commonMore,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF666666))),
+          ],
+        ),
+      ),
     );
   }
 

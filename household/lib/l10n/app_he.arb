@@ -182,6 +182,22 @@
   "boardWritePlaceholder": "כתוב את הפתק שלך…",
   "boardImagePlaceholder": "הדבק כתובת URL של תמונה...",
   "boardTryAgain": "נסה שוב",
+  "boardNoteHeaderPlaceholder": "הקש להוספת כותרת…",
+  "boardSave": "שמור",
+  "boardLockNote": "נעל פתק",
+  "boardUnlockNote": "בטל נעילה",
+  "boardLockedByOwner": "ננעל על ידי {user}",
+  "@boardLockedByOwner": {
+    "placeholders": {
+      "user": { "type": "String" }
+    }
+  },
+  "boardWatermarkBy": "מאת {user}",
+  "@boardWatermarkBy": {
+    "placeholders": {
+      "user": { "type": "String" }
+    }
+  },
 
   "shoppingTab": "קניות",
   "shoppingNewList": "רשימה חדשה",
@@ -277,6 +293,7 @@
   "commonNoHouseholdMsg": "צור קשר עם המנהל כדי להצטרף למשק בית.",
   "commonOptional": "(אופציונלי)",
   "commonNew": "חדש",
+  "commonMore": "עוד…",
   "commonDeleteExpense": "מחק הוצאה?",
   "commonDeleteIncome": "מחק הכנסה?",
   "commonDeleteAsset": "מחק נכס?",
@@ -399,5 +416,17 @@
     "placeholders": {
       "count": { "type": "int" }
     }
-  }
+  },
+  "commonClose": "סגור",
+  "categorySummary": "סיכום",
+  "summaryDialogTitle": "סיכום תקופה",
+  "summaryNet": "נטו",
+  "summaryTransactionCount": "תנועות: {count}",
+  "@summaryTransactionCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "summaryOverBudgetTitle": "חריגה מתקציב",
+  "summaryNoOverBudget": "אין קטגוריות בחריגה"
 }

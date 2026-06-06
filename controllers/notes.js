@@ -103,7 +103,7 @@ class NotesController {
     try {
       const appUser = ctx.state.appUser;
       const { id } = ctx.params;
-      const { content, posX, posY, zIndex, noteColor, textDirection, textSize, isBold, isUnderline, textColor, headerColor, heartColor, width, height, rotation } = ctx.request.body;
+      const { content, posX, posY, zIndex, noteColor, textDirection, textSize, isBold, isUnderline, textColor, headerColor, heartColor, width, height, rotation, headerText, locked } = ctx.request.body;
 
       const note = await Note.findByPk(id);
       if (!note) {
@@ -118,6 +118,20 @@ class NotesController {
       if (!membership) {
         ctx.status = 403;
         ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      const isOwner = note.appUserId === appUser.id;
+
+      if (note.locked && !isOwner) {
+        ctx.status = 403;
+        ctx.body = { error: 'Note is locked by its owner' };
+        return;
+      }
+
+      if (locked !== undefined && !isOwner) {
+        ctx.status = 403;
+        ctx.body = { error: 'Only the note owner can change lock state' };
         return;
       }
 
@@ -137,6 +151,8 @@ class NotesController {
       if (width !== undefined) updates.width = width;
       if (height !== undefined) updates.height = height;
       if (rotation !== undefined) updates.rotation = rotation;
+      if (headerText !== undefined) updates.headerText = headerText;
+      if (locked !== undefined) updates.locked = locked;
 
       await note.update(updates);
 
@@ -178,6 +194,13 @@ class NotesController {
       if (!membership) {
         ctx.status = 403;
         ctx.body = { error: 'Not a member of this household' };
+        return;
+      }
+
+      const isOwner = note.appUserId === appUser.id;
+      if (note.locked && !isOwner) {
+        ctx.status = 403;
+        ctx.body = { error: 'Note is locked by its owner' };
         return;
       }
 
